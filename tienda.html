@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tienda · Tu Marca</title>
-<meta name="description" content="Catálogo completo de ropa para hombre: polos, camisas, poleras, pantalones, jeans, casacas y blazers.">
+<title>Tienda · MAISON</title>
+<meta name="description" content="Catálogo completo de MAISON: colecciones Street y Old Money. Polos, camisas, poleras, pantalones, jeans, casacas, blazers y calzado.">
 <meta name="theme-color" content="#ffffff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MAISON">
+<meta property="og:title" content="Tienda · MAISON">
+<meta property="og:description" content="Street y Old Money en un solo lugar. Pide por WhatsApp.">
+<meta property="og:image" content="https://tienda-ropa-8fi.pages.dev/img/og-maison.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body data-page="tienda">
@@ -17,9 +25,9 @@
   <section class="page-hero">
     <img id="shopHeroImg" src="img/camisas-dobladas.jpg" alt="">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Ruta"><a href="index.html">Inicio</a><span aria-hidden="true">/</span><span id="shopCrumb">Tienda</span></nav>
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><span id="shopCrumb">Tienda</span></nav>
       <h1 id="shopTitle">Tienda</h1>
-      <p id="shopSub">Encuentra tu próxima prenda favorita. Consulta tallas y stock por WhatsApp.</p>
+      <p id="shopSub">Street y Old Money en un solo lugar. Consulta tallas y stock por WhatsApp.</p>
     </div>
   </section>
 
@@ -28,8 +36,8 @@
       <div class="f-overlay" id="fOverlay" data-close-filters></div>
       <aside class="filters" id="filters" aria-label="Filtros">
         <div class="filters__head"><h2>Filtros</h2><button type="button" class="icon-btn" data-close-filters aria-label="Cerrar filtros"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+        <div class="f-group"><h2>Estilo</h2><div class="f-styles" id="fStyles"></div></div>
         <div class="f-group"><h2>Categorías</h2><div class="f-list" id="fCats"></div></div>
-        <div class="f-group"><h2>Colecciones</h2><div class="f-list" id="fCols"></div></div>
         <div class="f-group"><h2>Talla</h2><div class="f-sizes" id="fSizes"></div></div>
         <div class="f-group">
           <h2>Precio (S/)</h2>
@@ -63,6 +71,7 @@
   </section>
 </main>
 
+<script src="assets/js/marca.js"></script>
 <script src="assets/js/datos.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

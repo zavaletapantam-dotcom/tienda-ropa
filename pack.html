@@ -3,12 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pack Deluxe · Tu Marca</title>
-<meta name="description" content="Arma tu Pack Deluxe: elige un polo, un pantalón y un abrigo y obtén un descuento especial.">
+<title>Pack Deluxe · MAISON</title>
+<meta name="description" content="Arma tu Pack Deluxe Street u Old Money: elige 3 prendas y obtén un descuento especial.">
 <meta name="theme-color" content="#ffffff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MAISON">
+<meta property="og:title" content="Pack Deluxe · MAISON">
+<meta property="og:description" content="Arma tu outfit de 3 prendas, Street u Old Money, con descuento.">
+<meta property="og:image" content="https://tienda-ropa-8fi.pages.dev/img/og-maison.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body data-page="pack">
@@ -17,17 +25,21 @@
   <section class="page-hero">
     <img src="img/outfit-flatlay.jpg" alt="">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Ruta"><a href="index.html">Inicio</a><span aria-hidden="true">/</span><span>Pack Deluxe</span></nav>
-      <h1>Arma tu Pack Deluxe</h1>
-      <p>Elige 3 prendas seleccionadas, una de cada paso, y llévate tu outfit completo con descuento.</p>
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><span>Pack Deluxe</span></nav>
+      <h1 id="packName">Pack Deluxe</h1>
+      <p>Elige tu estilo y 3 prendas seleccionadas, una de cada paso. Llévate tu outfit completo con descuento.</p>
     </div>
   </section>
 
   <section class="pack">
     <div class="wrap">
-      <div class="pack__intro">
+      <div class="pack__top">
         <strong>−<span data-c="packDiscount">20%</span></strong>
-        <p>Elige <b>un polo</b>, <b>un pantalón o jean</b> y <b>una casaca o polera</b>. Cuando completes las 3 prendas con su talla, el descuento se aplica solo y puedes pedir tu pack por WhatsApp.</p>
+        <p>Elige <b>un polo o camisa</b>, <b>un pantalón</b> y <b>un abrigo</b>. Cuando completes las 3 prendas con su talla, el descuento se aplica solo y puedes pedir tu pack por WhatsApp.</p>
+        <div class="pack-style" id="packStyle" role="group" aria-label="Estilo del pack">
+          <button type="button" data-v="street">Street</button>
+          <button type="button" data-v="old-money">Old Money</button>
+        </div>
       </div>
       <div class="pack__layout">
         <div id="packSteps"></div>
@@ -53,6 +65,7 @@
   </div>
 </main>
 
+<script src="assets/js/marca.js"></script>
 <script src="assets/js/datos.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

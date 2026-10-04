@@ -3,156 +3,71 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tu Marca · Ropa para hombre</title>
-<meta name="description" content="Polos, camisas, jeans, casacas y blazers para hombre. Envíos a todo el Perú y atención personalizada por WhatsApp.">
-<meta name="theme-color" content="#ffffff">
+<title>MAISON · Street & Old Money</title>
+<meta name="description" content="MAISON — Líneas, estilo, identidad. Elige tu estilo: Street u Old Money. Envíos a todo el Perú y atención por WhatsApp.">
+<meta name="theme-color" content="#DDE8E7">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MAISON">
+<meta property="og:title" content="MAISON · Street & Old Money">
+<meta property="og:description" content="Líneas, estilo, identidad. Elige tu estilo y pide por WhatsApp.">
+<meta property="og:image" content="https://tienda-ropa-8fi.pages.dev/img/og-maison.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body data-page="inicio">
+<body data-page="intro" class="intro-page">
 
-<main>
-  <!-- Banner principal -->
-  <section class="hero" id="hero" aria-label="Destacados">
-    <div class="slide active">
-      <img src="img/hero-terno-azul.jpg" alt="">
-      <div class="slide__txt"><div class="wrap">
-        <span class="kicker-light">Nueva colección</span>
-        <h1 class="slide__title">Perfect<em>Business</em></h1>
-        <p class="slide__sub">Prendas de corte entallado y tela premium para la oficina y después.</p>
-        <a href="tienda.html?col=perfect-business" class="btn btn--light">Ver colección <span>→</span></a>
-      </div></div>
-    </div>
-    <div class="slide">
-      <img src="img/hero-terno-detalle.jpg" alt="">
-      <div class="slide__txt"><div class="wrap">
-        <span class="kicker-light">Temporada 2026</span>
-        <h2 class="slide__title">Estilo<em>Sastre</em></h2>
-        <p class="slide__sub">Blazers, camisas y pantalones de vestir para ocasiones importantes.</p>
-        <a href="tienda.html?col=sastre" class="btn btn--light">Comprar ahora <span>→</span></a>
-      </div></div>
-    </div>
-    <div class="slide">
-      <img src="img/lifestyle-amigos.jpg" alt="">
-      <div class="slide__txt"><div class="wrap">
-        <span class="kicker-light">Esenciales</span>
-        <h2 class="slide__title">Hecho para<em>Destacar</em></h2>
-        <p class="slide__sub">Básicos con actitud. Calidad que se nota en cada detalle.</p>
-        <a href="tienda.html?col=esenciales" class="btn btn--light">Explorar <span>→</span></a>
-      </div></div>
-    </div>
-    <div class="hero__ctrl">
-      <button class="hero__arrow" id="heroPrev" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
-      <span class="hero__count" id="heroCount">01 / 03</span>
-      <div class="hero__dots" id="heroDots"></div>
-      <button class="hero__arrow" id="heroNext" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
-    </div>
-    <div class="hero__bar" id="heroBar"></div>
-  </section>
-
-  <!-- Ofertas del día -->
-  <section id="ofertas">
-    <div class="wrap">
-      <div class="deals__head reveal">
-        <div class="label center"><span class="line"></span>Solo por hoy<span class="line"></span></div>
-        <h2 class="h2">OFERTAS DEL DÍA</h2>
-        <p class="deals__sub">Precios especiales que cambian cada mañana</p>
-        <div class="timer">
-          <span class="timer__label">Terminan en</span>
-          <div class="clock" role="timer" aria-label="Tiempo restante de las ofertas">
-            <div class="unit"><b id="tH">00</b><small>Horas</small></div><span class="sep">:</span>
-            <div class="unit"><b id="tM">00</b><small>Minutos</small></div><span class="sep">:</span>
-            <div class="unit"><b id="tS">00</b><small>Segundos</small></div>
-          </div>
-        </div>
-      </div>
-      <div class="sec-head" style="margin-bottom:22px;justify-content:flex-end">
-        <div class="head-right">
-          <a href="tienda.html?ofertas=1" class="see-all">Ver todo <span>→</span></a>
-          <div class="arrows" data-for="trackDeals"><button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button><button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button></div>
-        </div>
-      </div>
-      <div class="track" id="trackDeals"></div>
-      <a href="tienda.html?ofertas=1" class="btn-outline m-only">Ver todas las ofertas <span>→</span></a>
-    </div>
-  </section>
-
-  <!-- Categorías -->
-  <section class="cats" id="categorias">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div>
-          <div class="label">Categorías<span class="line"></span></div>
-          <h2 class="h2">Compra por estilo</h2>
-        </div>
-        <div class="head-right">
-          <a href="tienda.html" class="see-all">Ver todas <span>→</span></a>
-          <div class="arrows" data-for="trackCats"><button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button><button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button></div>
-        </div>
-      </div>
-      <div class="track" id="trackCats"></div>
-    </div>
-  </section>
-
-  <!-- Recién llegado -->
-  <section id="nuevo">
-    <div class="wrap">
-      <div class="reveal">
-        <div class="label">Nuevas entradas<span class="line"></span></div>
-        <h2 class="h2">Recién Llegado</h2>
-      </div>
-
-      <div class="subhead">
-        <h3 class="h3">Colección Perfect Business</h3>
-        <div class="head-right">
-          <a href="tienda.html?col=perfect-business" class="see-all">Ver todo <span>→</span></a>
-          <div class="arrows" data-for="trackNew1"><button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button><button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button></div>
-        </div>
-      </div>
-      <div class="track" id="trackNew1" data-grid></div>
-
-      <div class="subhead">
-        <h3 class="h3">Novedades de la semana</h3>
-        <div class="head-right">
-          <a href="tienda.html?orden=nuevo" class="see-all">Ver todo <span>→</span></a>
-          <div class="arrows" data-for="trackNew2"><button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button><button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button></div>
-        </div>
-      </div>
-      <div class="track" id="trackNew2" data-grid data-auto></div>
-      <a href="tienda.html?orden=nuevo" class="btn-outline m-only">Ver todas las novedades <span>→</span></a>
-    </div>
-  </section>
-
-  <!-- Pack Deluxe -->
-  <div class="cta-band">
-    <div class="wrap">
-      <div>
-        <span class="kicker-light">Pack Deluxe · 3 prendas</span>
-        <h2 style="margin-top:10px">Arma tu outfit completo y ahorra <span data-c="packDiscount">20%</span></h2>
-      </div>
-      <a href="pack.html" class="btn btn--light">Armar mi pack <span>→</span></a>
+<main class="intro" id="intro">
+  <!-- Logo animado -->
+  <div class="intro__stage" aria-hidden="true">
+    <div class="intro__center">
+      <div class="intro__mark" id="introMark"></div>
+      <p class="intro__tag">Líneas · Estilo · Identidad</p>
     </div>
   </div>
 
-  <!-- Banner colección -->
-  <section class="promo" style="margin-top:84px">
-    <div class="promo__in">
-      <div class="promo__img"><img src="img/banner-urbano.jpg" alt="" loading="lazy"></div>
-      <div class="promo__txt reveal">
-        <span class="kicker-light">Nueva colección · Esenciales</span>
-        <h2 class="promo__title">Hecha Para<br><span>Destacar.</span></h2>
-        <p>Una colección que combina actitud, presencia y estilo masculino contemporáneo. Prendas esenciales para quienes prefieren marcar su propio camino.</p>
-        <a href="tienda.html?col=esenciales" class="btn btn--light">Ver colección <span>→</span></a>
-      </div>
+  <!-- Elección de estilo -->
+  <section class="choose" aria-labelledby="chooseTitle">
+    <header class="choose__head">
+      <span class="choose__side">Líneas · Estilo · Identidad</span>
+      <a href="index.html" class="choose__slot" id="logoSlot" aria-label="MAISON"></a>
+      <span class="choose__side choose__side--r"><a href="tienda.html">Ver toda la tienda</a></span>
+    </header>
+    <div class="choose__title">
+      <h1 id="chooseTitle">Elige tu estilo</h1>
+      <p>Dos colecciones, una misma identidad.</p>
     </div>
+    <div class="choose__panels">
+      <a class="choice choice--street" href="street.html" data-estilo="street">
+        <img src="img/st-ciudad.jpg" alt="">
+        <div class="choice__body">
+          <span class="choice__kicker">Colección</span>
+          <h2 class="choice__title">Street</h2>
+          <p>Oversize, gráficos, hoodies y denim. Actitud de ciudad.</p>
+          <span class="choice__cta">Explorar Street <span>→</span></span>
+        </div>
+      </a>
+      <a class="choice choice--old-money" href="old-money.html" data-estilo="old-money">
+        <img src="img/om-lino-arena.jpg" alt="">
+        <div class="choice__body">
+          <span class="choice__kicker">Colección</span>
+          <h2 class="choice__title">Old Money</h2>
+          <p>Lino, tweed, camisas y blazers. Lujo silencioso.</p>
+          <span class="choice__cta">Explorar Old Money <span>→</span></span>
+        </div>
+      </a>
+    </div>
+    <a class="choose__all" href="tienda.html">Ver toda la tienda →</a>
   </section>
 
-  <!-- Garantías -->
-  <section class="perks" data-perks></section>
+  <button type="button" class="intro__skip" id="introSkip">Saltar intro</button>
 </main>
 
+<script src="assets/js/marca.js"></script>
 <script src="assets/js/datos.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

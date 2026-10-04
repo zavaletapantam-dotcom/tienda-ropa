@@ -3,21 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Contacto · Tu Marca</title>
+<title>Contacto · MAISON</title>
 <meta name="description" content="Escríbenos por WhatsApp o correo. Te ayudamos con tallas, envíos, cambios y ventas por mayor.">
 <meta name="theme-color" content="#ffffff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MAISON">
+<meta property="og:title" content="Contacto · MAISON">
+<meta property="og:description" content="Te respondemos rápido por WhatsApp de lunes a sábado.">
+<meta property="og:image" content="https://tienda-ropa-8fi.pages.dev/img/og-maison.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body data-page="contacto">
 
 <main>
   <section class="page-hero">
-    <img src="img/camisas-dobladas.jpg" alt="">
+    <img src="img/om-lino-salvia.jpg" alt="">
     <div class="wrap">
-      <nav class="crumbs" aria-label="Ruta"><a href="index.html">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav>
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav>
       <h1>Contacto</h1>
       <p>Respondemos rápido por WhatsApp de lunes a sábado.</p>
     </div>
@@ -28,7 +36,7 @@
       <div class="contact__grid">
         <div>
           <p class="contact__hello">¡Hola!</p>
-          <p class="contact__intro">Sé parte de nuestra comunidad. Si tienes una pregunta sobre tallas, envíos o tu pedido, escríbenos por el medio que prefieras.</p>
+          <p class="contact__intro">Sé parte de la comunidad MAISON. Si tienes una pregunta sobre tallas, envíos o tu pedido, escríbenos por el medio que prefieras.</p>
           <div class="cards" id="contactCards"></div>
           <div class="socials-row" id="contactSocial"></div>
         </div>
@@ -44,6 +52,8 @@
             <label for="cTopic">Motivo</label>
             <select id="cTopic" name="motivo">
               <option>Consulta sobre un producto</option>
+              <option>Colección Street</option>
+              <option>Colección Old Money</option>
               <option>Ayuda con mi talla</option>
               <option>Envíos y estado de mi pedido</option>
               <option>Cambios y devoluciones</option>
@@ -74,6 +84,7 @@
   </section>
 </main>
 
+<script src="assets/js/marca.js"></script>
 <script src="assets/js/datos.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
