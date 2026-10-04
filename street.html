@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-estilo="street">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -18,6 +18,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
+<script>
+/* Continúa la transición desde la intro: primer cuadro idéntico al panel elegido */
+(function(){try{var s=sessionStorage.getItem("maison_vt");if(!s)return;sessionStorage.removeItem("maison_vt");var v=JSON.parse(s),r=document.documentElement;if(v.e!==r.getAttribute("data-estilo")||Date.now()-v.t>6000||matchMedia("(prefers-reduced-motion: reduce)").matches)return;var p=function(k,x){r.style.setProperty(k,x)};p("--vt-bx",v.box[0]+"px");p("--vt-by",v.box[1]+"px");p("--vt-bw",v.box[2]+"px");p("--vt-bh",v.box[3]+"px");p("--vt-ix",(v.img[0]-v.box[0])+"px");p("--vt-iy",(v.img[1]-v.box[1])+"px");p("--vt-iw",v.img[2]+"px");p("--vt-ih",v.img[3]+"px");p("--vt-src","url(\""+v.src+"\")");if(v.bg)p("--vt-bg",v.bg);r.classList.add("vt-in","vt-run");window.__VT=v}catch(e){}})();
+</script>
 </head>
 <body data-page="coleccion" data-estilo="street">
 

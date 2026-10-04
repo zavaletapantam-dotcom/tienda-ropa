@@ -409,7 +409,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}"><img src="${imgSrc(h.img)}" alt=""><div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${esc(h.title)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}"><img src="${imgSrc(h.img)}" alt=""${i ? ' loading="lazy"' : ' fetchpriority="high"'}><div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${esc(h.title)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>
@@ -498,6 +498,76 @@ function initQV() {
 }
 
 /* =========================================================
+   TRANSICIÓN EXACTA: panel de la intro → banner de la colección
+   ========================================================= */
+const VT_KEY = "maison_vt";
+/* Rectángulo real que ocupa una foto con object-fit:cover (y zoom s) dentro de una caja */
+function coverRect(box, nw, nh, posY = 0.3, s = 1) {
+  const k = Math.max(box.width / nw, box.height / nh), cw = nw * k, ch = nh * k;
+  const ox = (box.width - cw) / 2, oy = (box.height - ch) * posY;
+  return { x: box.left + box.width / 2 + (ox - box.width / 2) * s, y: box.top + box.height / 2 + (oy - box.height / 2) * s, w: cw * s, h: ch * s };
+}
+/* Color promedio de la foto (relleno mientras se decodifica en la página nueva) */
+function avgColor(img) {
+  try {
+    const c = document.createElement("canvas"); c.width = c.height = 1;
+    const g = c.getContext("2d"); g.drawImage(img, 0, 0, 1, 1);
+    const [r, gg, b] = g.getImageData(0, 0, 1, 1).data; return `rgb(${r},${gg},${b})`;
+  } catch (_) { return ""; }
+}
+/* En la colección: la foto parte exactamente de donde estaba el panel y vuela hasta el banner */
+function flyIn() {
+  const v = window.__VT, root = document.documentElement;
+  if (!v) return;
+  window.__VT = null;
+  const finish = () => root.classList.remove("vt-in", "vt-run");
+  const hero = $("#hero"), slideImg = hero && $(".slide img", hero);
+  if (!hero || !slideImg || !v.nw || !v.nh) { finish(); return; }
+  if (!slideImg.src.endsWith(v.src.split("/").pop())) slideImg.src = v.src;
+  hero.classList.add("vt-hold");
+
+  const fly = document.createElement("div");
+  fly.className = "vt-fly"; fly.dataset.estilo = ESTILO; fly.setAttribute("aria-hidden", "true");
+  fly.innerHTML = `<div class="vt-cover"></div><div class="vt-clip"><img class="vt-img" alt=""><i class="vt-shade vt-shade--from"></i><i class="vt-shade vt-shade--to"></i></div>`;
+  document.body.appendChild(fly);
+  const im = $(".vt-img", fly);
+  im.src = v.src;
+
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    const W = fly.clientWidth, H = fly.clientHeight, T = hero.getBoundingClientRect();
+    const F = coverRect(T, v.nw, v.nh, 0.3, 1);
+    const [bx, by, bw, bh] = v.box, [ix, iy, iw] = v.img;
+    const inset = (x, y, w, h) => `inset(${y}px ${W - x - w}px ${H - y - h}px ${x}px)`;
+    const rect = (x, y, w, h) => ({ left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
+    Object.assign(im.style, rect(F.x, F.y, F.w, F.h));
+    const opt = { duration: 950, easing: "cubic-bezier(.7,0,.2,1)", fill: "both" };
+    const anims = [
+      $(".vt-clip", fly).animate([{ clipPath: inset(bx, by, bw, bh) }, { clipPath: inset(T.left, T.top, T.width, T.height) }], opt),
+      im.animate([{ transform: `translate(${ix - F.x}px, ${iy - F.y}px) scale(${iw / F.w})` }, { transform: "none" }], opt),
+      $(".vt-shade--from", fly).animate([{ ...rect(bx, by, bw, bh), opacity: 1 }, { ...rect(T.left, T.top, T.width, T.height), opacity: 0 }], opt),
+      $(".vt-shade--to", fly).animate([{ ...rect(bx, by, bw, bh), opacity: 0 }, { ...rect(T.left, T.top, T.width, T.height), opacity: 1 }], opt),
+      $(".vt-cover", fly).animate([{ opacity: 1 }, { opacity: 0 }], { duration: 620, delay: 330, easing: "ease-out", fill: "both" }),
+    ];
+    // Mismo cuadro: se reemplaza el dibujo inicial (CSS) por la foto real, sin que se note
+    fly.classList.add("go");
+    root.classList.remove("vt-in");
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return; cleaned = true;
+      hero.classList.remove("vt-hold");
+      fly.remove();
+      root.classList.remove("vt-run");
+    };
+    Promise.all(anims.map(a => a.finished)).then(cleanup, cleanup);
+    setTimeout(cleanup, 950 + 1500); // por si el navegador pausa la animación
+  };
+  (im.decode ? im.decode() : Promise.resolve()).then(() => requestAnimationFrame(start), () => requestAnimationFrame(start));
+  setTimeout(start, 900);
+}
+
+/* =========================================================
    PÁGINA: INTRO (index.html)
    ========================================================= */
 function initIntro() {
@@ -506,7 +576,11 @@ function initIntro() {
   mark.innerHTML = logoAnimSVG();
   slot.innerHTML = logoSVG("stacked");
   intro.style.setProperty("--logo-ratio", (VB.stacked[2] / VB.stacked[3]).toFixed(3));
-  $$(".choice").forEach(a => { const st = styleOf(a.dataset.estilo); if (st) a.href = st.page; });
+  $$(".choice").forEach(a => {
+    const st = styleOf(a.dataset.estilo), im = $("img", a); if (!st) return;
+    a.href = st.page;
+    if (im && !im.src.endsWith("/" + st.panel)) im.src = imgSrc(st.panel);
+  });
 
   let timer;
   const goChoose = () => {
@@ -534,20 +608,40 @@ function initIntro() {
     document.addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") goChoose(); }, { once: true });
   }
 
+  /* Al elegir: el panel elegido queda quieto (se congela su tamaño y zoom), lo demás se desvanece,
+     y se guarda la posición exacta de la foto para que la colección continúe el movimiento. */
   $$(".choice").forEach(a => a.addEventListener("click", e => {
     if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     remember(a.dataset.estilo);
     if (REDUCE) return;
     e.preventDefault();
+    if (intro.classList.contains("leaving")) return;
+    $$(".choice").forEach(c => { c.style.flexGrow = getComputedStyle(c).flexGrow; c.style.transition = "opacity .28s"; });
+    const img = $("img", a), zoom = getComputedStyle(img).transform;
+    img.style.transform = zoom; img.style.transition = "none";
     intro.classList.add("leaving");
     a.classList.add("chosen");
     $$(".choice").forEach(o => o !== a && o.classList.add("dim"));
-    setTimeout(() => (location.href = a.href), 800);
+    setTimeout(() => {
+      const box = a.getBoundingClientRect();
+      const s = zoom && zoom !== "none" ? new DOMMatrixReadOnly(zoom).a : 1;
+      const r = coverRect(box, img.naturalWidth, img.naturalHeight, 0.3, s);
+      try {
+        sessionStorage.setItem(VT_KEY, JSON.stringify({
+          e: a.dataset.estilo, t: Date.now(), src: img.currentSrc || img.src, nw: img.naturalWidth, nh: img.naturalHeight,
+          box: [box.left, box.top, box.width, box.height], img: [r.x, r.y, r.w, r.h], bg: avgColor(img),
+        }));
+      } catch (_) {}
+      location.href = a.href;
+    }, 300);
   }));
   addEventListener("pageshow", e => {
     if (!e.persisted) return;
     intro.classList.remove("leaving");
-    $$(".choice").forEach(c => c.classList.remove("chosen", "dim"));
+    $$(".choice").forEach(c => {
+      c.classList.remove("chosen", "dim"); c.style.flexGrow = ""; c.style.transition = "";
+      const im = $("img", c); im.style.transform = ""; im.style.transition = "";
+    });
   });
 }
 
@@ -1086,4 +1180,6 @@ initHeader();
 initQV();
 initCarousels();
 initReveal();
+if (PAGE === "coleccion") flyIn();
+else document.documentElement.classList.remove("vt-in", "vt-run");
 })();
