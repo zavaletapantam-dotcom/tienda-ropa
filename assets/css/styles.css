@@ -366,7 +366,7 @@ section{padding:clamp(56px,6vw,96px) 0}
 .logo-anim .mk{fill:none;stroke:#fff;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 1.2;stroke-dashoffset:1.01}
 .logo-anim .logo-m--full{opacity:0}
 .logo-anim .lt{transform:translateY(420px)}
-.intro.play .mk{animation:draw var(--du) var(--dl) var(--ez,linear) forwards}
+.intro.play .mk{animation-name:var(--an,draw);animation-duration:var(--du);animation-delay:var(--dl);animation-timing-function:var(--ez,linear);animation-fill-mode:forwards}
 .intro.play .logo-m--full{animation:fadeIn .01s 2.3s forwards}
 .intro.play .logo-m-segs{animation:hideAfter .01s 2.32s forwards}
 @keyframes hideAfter{to{visibility:hidden}}

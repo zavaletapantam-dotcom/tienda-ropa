@@ -134,9 +134,12 @@ function logoSVG(variant = "stacked", cls = "") {
    así ningún trazo deja ver bordes del siguiente. Al final se muestra la M original completa. */
 function logoAnimSVG() {
   const [x, y, w, h] = VB.stacked, segs = LOGO.draw2.segs;
+  // Cada pieza sigue el avance exacto del pincel (fotogramas clave calculados con la curva de aceleración)
+  const kfs = segs.map((s, i) => s.kf ? `@keyframes mkf${i}{${s.kf.map(([pc, p]) => `${pc}%{stroke-dashoffset:${p > 0 ? +(1 - p).toFixed(4) : 1.01}}`).join("")}}` : "").join("");
   return `<svg class="logo-svg logo-anim" viewBox="${VB.stacked.join(" ")}" role="img" aria-label="${esc(C.store)}">
+    <style>${kfs}</style>
     <defs>
-      ${segs.map((s, i) => `<mask id="mk${i}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><path class="mk" d="${s.m}" stroke-width="${s.w}" pathLength="1" style="--dl:${s.dl}s;--du:${s.du}s;--ez:${s.ez}"/></mask>`).join("")}
+      ${segs.map((s, i) => `<mask id="mk${i}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><path class="mk" d="${s.m}" stroke-width="${s.w}" pathLength="1" style="--dl:${s.dl}s;--du:${s.du}s;--ez:${s.ez}${s.kf ? `;--an:mkf${i}` : ""}"/></mask>`).join("")}
       <clipPath id="wClip"><rect x="${WX0 - 40}" y="${WY0 - 70}" width="${WX1 - WX0 + 80}" height="${WY1 - WY0 + 100}"/></clipPath>
     </defs>
     <g class="logo-m-segs">${segs.map((s, i) => `<path class="logo-m" d="${s.r}" fill-rule="evenodd" mask="url(#mk${i})"/>`).join("")}</g>
