@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tienda Menswear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff;
+  --ink:#1A1A18;
+  --ink-2:#212121;
+  --muted:#767676;
+  --muted-2:#8A8A8A;
+  --accent:#8A6240;      /* marrón (menú activo, detalles) */
+  --gold:#C4A87A;        /* dorado suave */
+  --line:#E9E6DC;
+  --soft:#F5F3F0;        /* fondo de fotos */
+  --wa:#25D366;
+  --wa-dark:#1EB257;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Jost',Helvetica,Arial,sans-serif;font-size:14px;color:var(--muted);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+.wrap{max-width:1320px;margin:0 auto;padding:0 32px}
+@media (max-width:640px){.wrap{padding:0 16px}}
+
+/* ---------- Barra superior ---------- */
+.topbar{background:var(--ink);color:#FAF9F5;font-size:11.5px;letter-spacing:2px;text-transform:uppercase;overflow:hidden;white-space:nowrap;height:34px;display:flex;align-items:center}
+.topbar__track{display:inline-flex;gap:60px;animation:marquee 28s linear infinite;padding-left:60px}
+.topbar__track span::before{content:"◆";color:var(--gold);margin-right:14px;font-size:8px;vertical-align:middle}
+@keyframes marquee{to{transform:translateX(-50%)}}
+
+/* ---------- Header ---------- */
+.header{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);transition:box-shadow .3s}
+.header.is-scrolled{box-shadow:0 6px 24px rgba(0,0,0,.06)}
+.header__in{display:flex;align-items:center;justify-content:space-between;height:76px}
+.logo{font-weight:700;font-size:20px;letter-spacing:3px;color:var(--ink);text-transform:uppercase}
+.logo small{display:block;font-size:9px;letter-spacing:4px;font-weight:500;color:var(--accent);margin-top:-2px}
+.nav{display:flex;gap:36px}
+.nav a{font-size:12.6px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--ink);position:relative;padding:6px 0}
+.nav a::after{content:"";position:absolute;left:0;bottom:0;height:1px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:right;transition:transform .35s var(--ease)}
+.nav a:hover::after,.nav a.active::after{transform:scaleX(1);transform-origin:left}
+.nav a.active{color:var(--accent)}
+.header__icons{display:flex;align-items:center;gap:18px}
+.icon-btn{width:38px;height:38px;display:grid;place-items:center;color:var(--ink);transition:color .2s}
+.icon-btn:hover{color:var(--accent)}
+.header__wa{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);border:1px solid var(--ink);padding:9px 14px;transition:.25s}
+.header__wa:hover{background:var(--ink);color:#fff}
+.header__wa svg{width:15px;height:15px}
+.burger{display:none}
+@media (max-width:960px){
+  .nav,.header__wa span{display:none}
+  .burger{display:grid}
+  .header__wa{border:0;padding:0;width:38px;height:38px;justify-content:center}
+  .header__wa svg{width:20px;height:20px}
+}
+/* Buscador desplegable */
+.search{max-height:0;overflow:hidden;transition:max-height .35s var(--ease);border-top:1px solid transparent}
+.search.open{max-height:90px;border-top-color:var(--line)}
+.search input{width:100%;border:0;outline:0;font:inherit;font-size:16px;padding:22px 0;color:var(--ink);background:transparent;letter-spacing:.5px}
+/* Menú móvil */
+.drawer{position:fixed;inset:0;z-index:80;pointer-events:none}
+.drawer__bg{position:absolute;inset:0;background:rgba(26,26,24,.45);opacity:0;transition:opacity .3s}
+.drawer__panel{position:absolute;top:0;left:0;bottom:0;width:min(320px,85vw);background:#fff;transform:translateX(-100%);transition:transform .4s var(--ease);padding:28px 24px;display:flex;flex-direction:column;gap:6px}
+.drawer.open{pointer-events:auto}
+.drawer.open .drawer__bg{opacity:1}
+.drawer.open .drawer__panel{transform:none}
+.drawer__panel a{font-size:15px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink);padding:14px 0;border-bottom:1px solid var(--line)}
+.drawer__close{align-self:flex-end;margin-bottom:12px}
+
+/* ---------- Hero ---------- */
+.hero{position:relative;height:min(78vh,640px);min-height:440px;overflow:hidden;background:var(--soft)}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity 1s var(--ease),visibility 1s}
+.slide.active{opacity:1;visibility:visible}
+.slide img{width:100%;height:100%;object-fit:cover;transform:scale(1.08);transition:transform 7s linear}
+.slide.active img{transform:scale(1)}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(26,26,24,.62) 0%,rgba(26,26,24,.25) 45%,rgba(26,26,24,0) 70%)}
+.slide__txt{position:absolute;z-index:2;left:0;right:0;top:50%;transform:translateY(-50%);color:#fff}
+.slide__txt > *{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.active .slide__txt > *{opacity:1;transform:none}
+.slide.active .slide__txt > *:nth-child(2){transition-delay:.15s}
+.slide.active .slide__txt > *:nth-child(3){transition-delay:.3s}
+.slide.active .slide__txt > *:nth-child(4){transition-delay:.45s}
+.kicker-light{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:500}
+.slide__title{font-size:clamp(44px,7.5vw,96px);line-height:.92;font-weight:700;letter-spacing:-2px;text-transform:uppercase;margin:14px 0 18px}
+.slide__title em{font-style:normal;font-weight:300;display:block}
+.slide__sub{font-size:16px;max-width:420px;color:rgba(255,255,255,.85);margin-bottom:28px;line-height:1.55}
+.btn{display:inline-flex;align-items:center;gap:12px;font-size:12px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;padding:16px 30px;transition:.3s var(--ease)}
+.btn span{transition:transform .3s var(--ease)}
+.btn:hover span{transform:translateX(5px)}
+.btn--light{background:#fff;color:var(--ink)}
+.btn--light:hover{background:var(--ink);color:#fff}
+.btn--dark{background:var(--ink);color:#fff}
+.btn--dark:hover{background:var(--accent)}
+.hero__ctrl{position:absolute;z-index:5;bottom:28px;right:32px;display:flex;align-items:center;gap:14px;color:#fff}
+.hero__count{font-size:13px;letter-spacing:2px;font-weight:500;min-width:62px;text-align:center}
+.hero__arrow{width:44px;height:44px;border:1px solid rgba(255,255,255,.55);display:grid;place-items:center;color:#fff;transition:.25s}
+.hero__arrow:hover{background:#fff;color:var(--ink)}
+.hero__bar{position:absolute;left:0;bottom:0;height:3px;background:var(--gold);z-index:5;width:0}
+.hero__bar.run{animation:bar 6s linear forwards}
+@keyframes bar{to{width:100%}}
+
+/* ---------- Encabezados de sección ---------- */
+section{padding:84px 0}
+.label{display:flex;align-items:center;gap:14px;font-size:12px;letter-spacing:3.5px;text-transform:uppercase;color:var(--accent);font-weight:500}
+.label .line{display:block;width:48px;height:1px;background:var(--gold)}
+.label.center{justify-content:center}
+.h2{font-size:clamp(32px,4.2vw,50px);font-weight:700;letter-spacing:-1.5px;color:var(--ink);line-height:1.05;margin-top:12px}
+.h3{font-size:clamp(22px,2.4vw,28px);font-weight:600;letter-spacing:-.5px;color:var(--ink)}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:36px;flex-wrap:wrap}
+.see-all{font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--ink);display:inline-flex;gap:10px;align-items:center;border-bottom:1px solid var(--ink);padding-bottom:4px}
+.see-all span{transition:transform .3s var(--ease)}
+.see-all:hover span{transform:translateX(5px)}
+.arrows{display:flex;gap:8px}
+.arrow{width:42px;height:42px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);transition:.25s}
+.arrow:hover:not(:disabled){background:var(--ink);border-color:var(--ink);color:#fff}
+.arrow:disabled{opacity:.35;cursor:default}
+.head-right{display:flex;align-items:center;gap:22px}
+
+/* ---------- Ofertas del día ---------- */
+.deals__head{text-align:center;margin-bottom:44px}
+.deals__sub{margin-top:10px;font-size:15px}
+.timer{display:inline-flex;align-items:center;gap:18px;margin-top:26px;flex-wrap:wrap;justify-content:center}
+.timer__label{font-size:11.5px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);font-weight:600}
+.clock{display:flex;align-items:center;gap:8px}
+.unit{background:var(--ink);color:#FAF9F5;min-width:64px;padding:10px 8px 8px;text-align:center}
+.unit b{display:block;font-size:26px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.unit small{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--gold)}
+.sep{font-size:24px;font-weight:600;color:var(--ink)}
+.unit b.tick{animation:tick .4s var(--ease)}
+@keyframes tick{from{opacity:.2;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* ---------- Carrusel genérico ---------- */
+.track{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 3*22px)/4);gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;padding-bottom:4px}
+.track::-webkit-scrollbar{display:none}
+.track > *{scroll-snap-align:start}
+@media (max-width:1024px){.track{grid-auto-columns:calc((100% - 2*18px)/3);gap:18px}}
+@media (max-width:720px){.track{grid-auto-columns:calc((100% - 14px)/2);gap:14px}}
+@media (max-width:420px){.track{grid-auto-columns:78%}}
+
+/* ---------- Tarjeta de producto ---------- */
+.card{position:relative}
+.card__img{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--soft);cursor:pointer}
+.card__img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .6s var(--ease),transform 1.2s var(--ease)}
+.card__img .img-hover{opacity:0}
+.card:hover .img-hover{opacity:1}
+.card:hover .card__img img{transform:scale(1.05)}
+.tag{position:absolute;top:12px;left:12px;z-index:3;background:var(--ink);color:#FAF9F5;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:5px 10px}
+.tag--gold{background:var(--accent)}
+.sizes{position:absolute;left:0;right:0;bottom:0;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(250,249,245,.25);transform:translateY(100%);transition:transform .3s var(--ease)}
+.card:hover .sizes{transform:none}
+.sizes button{background:var(--ink);color:#FAF9F5;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;height:36px;transition:.2s}
+.sizes button:hover{background:var(--accent)}
+.card__info{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-top:14px}
+.card__name{font-size:14px;font-weight:500;color:var(--ink);text-transform:uppercase;letter-spacing:.4px;line-height:1.35;cursor:pointer}
+.card__name:hover{color:var(--accent)}
+.price{display:flex;gap:10px;align-items:baseline;margin-top:6px;font-size:15px}
+.price b{color:var(--ink);font-weight:600}
+.price s{color:var(--muted-2);font-size:13px}
+.price .off{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:1px}
+.wa-mini{flex:none;width:38px;height:38px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink);transition:.25s}
+.wa-mini svg{width:17px;height:17px}
+.wa-mini:hover{background:var(--wa);border-color:var(--wa);color:#fff}
+@media (hover:none){.sizes{transform:none}.sizes button{height:30px;font-size:10px}}
+
+/* ---------- Categorías ---------- */
+.cats{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cat{position:relative;aspect-ratio:3/4;overflow:hidden;display:block;background:var(--soft)}
+.cat img{width:100%;height:100%;object-fit:cover;transition:transform 1.2s var(--ease)}
+.cat::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(26,26,24,.75),rgba(26,26,24,0) 55%);transition:background .4s}
+.cat:hover img{transform:scale(1.07)}
+.cat__txt{position:absolute;z-index:2;left:18px;right:18px;bottom:18px;color:#fff}
+.cat__txt h4{font-size:18px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+.cat__txt span{font-size:11px;letter-spacing:2.5px;color:var(--gold);text-transform:uppercase}
+.cat__go{position:absolute;right:0;bottom:2px;opacity:0;transform:translateX(-8px);transition:.35s var(--ease)}
+.cat:hover .cat__go{opacity:1;transform:none}
+.cats .track{grid-auto-columns:calc((100% - 4*18px)/5);gap:18px}
+@media (max-width:1024px){.cats .track{grid-auto-columns:calc((100% - 2*14px)/3);gap:14px}}
+@media (max-width:640px){.cats .track{grid-auto-columns:44%}}
+
+/* ---------- Recién llegado ---------- */
+.subhead{display:flex;justify-content:space-between;align-items:center;margin:44px 0 22px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+
+/* ---------- Banner colección ---------- */
+.promo{padding:0}
+.promo__in{display:grid;grid-template-columns:1.1fr 1fr;min-height:560px;background:var(--ink);color:#FAF9F5}
+.promo__img{position:relative;overflow:hidden}
+.promo__img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 1.5s var(--ease)}
+.promo:hover .promo__img img{transform:scale(1.04)}
+.promo__txt{padding:72px 64px;display:flex;flex-direction:column;justify-content:center}
+.promo__title{font-size:clamp(42px,5.5vw,76px);font-weight:700;letter-spacing:-2px;line-height:.95;margin:18px 0 22px;color:#fff}
+.promo__title span{color:var(--gold);font-weight:300;font-style:italic}
+.promo__txt p{color:rgba(250,249,245,.7);font-size:16px;line-height:1.7;max-width:440px;margin-bottom:34px}
+@media (max-width:860px){.promo__in{grid-template-columns:1fr}.promo__img{min-height:380px}.promo__txt{padding:48px 24px}}
+
+/* ---------- Garantías ---------- */
+.perks{padding:64px 0}
+.perks__grid{display:grid;grid-template-columns:repeat(6,1fr);gap:0;border:1px solid var(--line)}
+.perk{padding:28px 20px;text-align:center;border-right:1px solid var(--line);transition:background .3s}
+.perk:last-child{border-right:0}
+.perk:hover{background:var(--soft)}
+.perk svg{width:28px;height:28px;color:var(--accent);margin:0 auto 14px;stroke-width:1.5}
+.perk h5{font-size:13px;font-weight:600;color:var(--ink);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
+.perk p{font-size:12.5px;line-height:1.5}
+@media (max-width:1024px){.perks__grid{grid-template-columns:repeat(3,1fr)}.perk:nth-child(3){border-right:0}.perk:nth-child(-n+3){border-bottom:1px solid var(--line)}}
+@media (max-width:560px){.perks__grid{grid-template-columns:repeat(2,1fr)}.perk{border-right:1px solid var(--line)!important;border-bottom:1px solid var(--line)}.perk:nth-child(2n){border-right:0!important}}
+
+/* ---------- Footer ---------- */
+.footer{background:var(--ink);color:rgba(250,249,245,.65);padding:72px 0 0}
+.footer__grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1.2fr;gap:40px}
+.footer h6{font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#fff;font-weight:600;margin-bottom:20px}
+.footer a{display:block;padding:5px 0;transition:color .2s}
+.footer a:hover{color:var(--gold)}
+.footer .logo{color:#fff;margin-bottom:16px}
+.footer p{line-height:1.7;max-width:300px}
+.socials{display:flex;gap:10px;margin-top:20px}
+.socials a{width:38px;height:38px;border:1px solid rgba(250,249,245,.25);display:grid;place-items:center;padding:0}
+.socials a:hover{border-color:var(--gold)}
+.footer__bottom{margin-top:56px;border-top:1px solid rgba(250,249,245,.12);padding:22px 0;display:flex;justify-content:space-between;font-size:12px;letter-spacing:1px;flex-wrap:wrap;gap:10px}
+@media (max-width:860px){.footer__grid{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.footer__grid{grid-template-columns:1fr}}
+
+/* ---------- WhatsApp flotante ---------- */
+.wa-float{position:fixed;right:22px;bottom:22px;z-index:60;width:58px;height:58px;border-radius:50%;background:var(--wa);color:#fff;display:grid;place-items:center;box-shadow:0 10px 28px rgba(37,211,102,.4);transition:transform .3s var(--ease)}
+.wa-float:hover{transform:scale(1.08)}
+.wa-float svg{width:28px;height:28px}
+.wa-float::before{content:"";position:absolute;inset:0;border-radius:50%;background:var(--wa);animation:pulse 2.2s ease-out infinite;z-index:-1}
+@keyframes pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.7);opacity:0}}
+.wa-float__tip{position:absolute;right:70px;background:#fff;color:var(--ink);font-size:12.5px;font-weight:500;padding:9px 14px;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.12);opacity:0;transform:translateX(8px);transition:.3s;pointer-events:none}
+.wa-float:hover .wa-float__tip{opacity:1;transform:none}
+
+/* ---------- Vista rápida (modal) ---------- */
+.modal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;pointer-events:none}
+.modal__bg{position:absolute;inset:0;background:rgba(26,26,24,.55);opacity:0;transition:opacity .3s}
+.modal__box{position:relative;background:#fff;width:min(980px,100%);max-height:calc(100vh - 40px);overflow:auto;display:grid;grid-template-columns:1fr 1fr;opacity:0;transform:translateY(24px) scale(.98);transition:.4s var(--ease)}
+.modal.open{pointer-events:auto}
+.modal.open .modal__bg{opacity:1}
+.modal.open .modal__box{opacity:1;transform:none}
+.modal__close{position:absolute;top:12px;right:12px;z-index:3;width:40px;height:40px;background:#fff;display:grid;place-items:center;color:var(--ink)}
+.qv__gallery{background:var(--soft);position:relative}
+.qv__main{aspect-ratio:4/5;overflow:hidden}
+.qv__main img{width:100%;height:100%;object-fit:cover}
+.qv__thumbs{display:flex;gap:8px;padding:10px}
+.qv__thumbs button{width:64px;aspect-ratio:4/5;overflow:hidden;opacity:.5;outline:1px solid transparent;transition:.2s}
+.qv__thumbs button.on{opacity:1;outline-color:var(--ink)}
+.qv__thumbs img{width:100%;height:100%;object-fit:cover}
+.qv__info{padding:44px 40px;display:flex;flex-direction:column}
+.qv__cat{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);font-weight:500}
+.qv__name{font-size:26px;font-weight:600;color:var(--ink);letter-spacing:-.4px;text-transform:uppercase;line-height:1.15;margin:10px 0 14px}
+.qv__price{font-size:22px}
+.qv__price b{color:var(--ink);font-weight:600}
+.qv__price s{font-size:16px;color:var(--muted-2);margin-left:10px}
+.qv__price .tag{position:static;font-size:11px;margin-left:12px;vertical-align:middle}
+.qv__desc{margin:18px 0 24px;line-height:1.7;font-size:14.5px}
+.opt-label{display:flex;justify-content:space-between;font-size:11.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink);font-weight:600;margin-bottom:10px}
+.opt-label a{color:var(--accent);border-bottom:1px solid currentColor;font-weight:500;letter-spacing:1.5px;cursor:pointer}
+.qv__sizes{display:flex;gap:8px;margin-bottom:22px}
+.qv__sizes button{width:52px;height:44px;border:1px solid var(--line);font-weight:600;color:var(--ink);letter-spacing:1px;transition:.2s}
+.qv__sizes button:hover{border-color:var(--ink)}
+.qv__sizes button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.qv__colors{display:flex;gap:10px;margin-bottom:26px}
+.qv__colors span{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);outline:1px solid transparent;outline-offset:3px;cursor:pointer;transition:.2s}
+.qv__colors span.on{outline-color:var(--ink)}
+.guide{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
+.guide.open{max-height:260px;margin-bottom:22px}
+.guide table{width:100%;border-collapse:collapse;font-size:13px;text-align:center}
+.guide th{background:var(--ink);color:#fff;font-weight:500;letter-spacing:1px;padding:8px;font-size:11.5px;text-transform:uppercase}
+.guide td{border-bottom:1px solid var(--line);padding:8px;color:var(--ink)}
+.btn-wa{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:var(--wa);color:#fff;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:18px;transition:.25s}
+.btn-wa:hover{background:var(--wa-dark)}
+.btn-wa svg{width:20px;height:20px}
+.qv__note{font-size:12.5px;margin-top:12px;text-align:center}
+.qv__note b{color:var(--ink);font-weight:500}
+.qv__meta{margin-top:auto;padding-top:24px;border-top:1px solid var(--line);display:grid;gap:8px;font-size:12.5px}
+.qv__meta div{display:flex;gap:10px;align-items:center}
+.qv__meta svg{width:16px;height:16px;color:var(--accent);flex:none}
+@media (max-width:760px){.modal{padding:0;align-items:end}.modal__box{grid-template-columns:1fr;max-height:92vh}.qv__info{padding:28px 20px}}
+
+/* ---------- Toast ---------- */
+.toast{position:fixed;left:50%;bottom:28px;z-index:95;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 20px;font-size:13px;letter-spacing:.5px;opacity:0;transition:.35s var(--ease);pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- Animación al hacer scroll ---------- */
+/* Visible por defecto; solo lo que está debajo del primer pantallazo se anima al aparecer */
+.reveal{transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.reveal.pre{opacity:0;transform:translateY(34px)}
+/* ---------- Puntos del hero ---------- */
+.hero__dots{display:flex;gap:6px;align-items:center}
+.hero__dots button{width:7px;height:7px;border-radius:4px;background:rgba(255,255,255,.5);transition:width .35s var(--ease),background .35s}
+.hero__dots button.on{width:24px;background:#fff}
+
+/* ---------- Barra inferior (solo móvil) ---------- */
+.m-only{display:none}
+.tabbar{display:none}
+.btn-outline{display:flex;justify-content:center;align-items:center;gap:10px;width:100%;border:1px solid var(--ink);color:var(--ink);font-size:12px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;padding:16px;margin-top:26px;transition:.25s}
+.btn-outline:active,.btn-outline:hover{background:var(--ink);color:#fff}
+
+/* =========================================================
+   MÓVIL  (≤ 640px)
+   ========================================================= */
+@media (max-width:640px){
+  body{padding-bottom:64px}
+  section{padding:56px 0}
+  .m-only{display:flex}
+  .arrows,.head-right .see-all{display:none}
+
+  /* Header: logo izquierda · buscar + menú derecha */
+  .topbar{height:30px;font-size:10.5px}
+  .header__in{height:62px}
+  .logo{font-size:17px;letter-spacing:2.5px}
+  .header__icons{gap:2px}
+  .header__wa{display:none}
+
+  /* Hero */
+  .hero{height:auto;aspect-ratio:4/5;min-height:0;max-height:560px}
+  .slide::after{background:linear-gradient(to top,rgba(26,26,24,.78) 0%,rgba(26,26,24,.25) 50%,rgba(26,26,24,0) 75%)}
+  .slide__txt{top:auto;bottom:78px;transform:none}
+  .slide__title{font-size:46px;letter-spacing:-1px;margin:8px 0 10px}
+  .slide__sub{font-size:14px;margin-bottom:18px;max-width:300px}
+  .btn{padding:14px 22px;font-size:11px}
+  .hero__ctrl{left:16px;right:16px;bottom:22px;justify-content:space-between}
+  .hero__arrow{width:38px;height:38px;border-radius:50%}
+  .hero__count{display:none}
+
+  /* Encabezados */
+  .label{font-size:10.5px;letter-spacing:3px}
+  .label .line{width:32px}
+  .h2{font-size:32px;letter-spacing:-1px}
+  .h3{font-size:19px}
+  .sec-head{margin-bottom:22px}
+  .subhead{margin:34px 0 16px;padding-bottom:10px}
+
+  /* Ofertas: timer */
+  .deals__head{margin-bottom:28px}
+  .deals__sub{font-size:14px}
+  .timer{flex-direction:column;gap:12px;margin-top:20px}
+  .unit{min-width:72px;padding:12px 8px 9px}
+  .unit b{font-size:30px}
+
+  /* Carruseles: 2 tarjetas + un pedazo de la siguiente */
+  .track{grid-auto-columns:44%;gap:12px;margin-right:-16px;padding-right:16px;scroll-padding-left:0}
+  .cats .track{grid-auto-columns:72%;gap:12px}
+
+  /* Recién llegado: grilla de 2 columnas (como la referencia) */
+  .track[data-auto]{grid-auto-flow:row;grid-template-columns:1fr 1fr;grid-auto-columns:auto;overflow:visible;margin-right:0;padding-right:0;column-gap:12px;row-gap:26px}
+  .track[data-auto] > .card:nth-child(n+5){display:none}
+
+  /* Tarjeta */
+  .tag{top:8px;left:8px;font-size:10.5px;padding:4px 7px;letter-spacing:1.5px}
+  .card__info{padding-top:10px;gap:6px}
+  .card__name{font-size:12.5px;letter-spacing:.2px}
+  .price{flex-wrap:wrap;gap:2px 8px;font-size:14px;margin-top:4px}
+  .price s{font-size:12px}
+  .wa-mini{width:32px;height:32px}
+  .wa-mini svg{width:15px;height:15px}
+
+  /* Categorías: texto centrado como la referencia */
+  .cat__txt{text-align:center;bottom:22px}
+  .cat__txt h4{font-size:20px}
+  .cat__txt span{font-size:12px}
+  .cat__go{display:none}
+
+  /* Banner colección */
+  .promo{padding:0 16px}
+  .promo__in{min-height:0}
+  .promo__img{min-height:300px}
+  .promo__txt{padding:36px 22px 40px}
+  .promo__title{font-size:44px;margin:14px 0 16px}
+  .promo__txt p{font-size:14.5px;margin-bottom:26px}
+
+  /* Garantías: 2 columnas, ícono a la izquierda */
+  .perks{padding:48px 0}
+  .perks__grid{border:0;gap:22px 14px}
+  .perk{display:grid;grid-template-columns:30px 1fr;gap:4px 10px;text-align:left;padding:0;border:0!important}
+  .perk:hover{background:none}
+  .perk svg{grid-row:span 2;margin:0;width:26px;height:26px}
+  .perk h5{font-size:12px;letter-spacing:.6px;margin:0}
+  .perk p{font-size:12px}
+
+  /* Footer */
+  .footer{padding-top:48px}
+  .footer__grid{grid-template-columns:1fr 1fr;gap:30px 20px}
+  .footer__grid > div:first-child{grid-column:1/-1;text-align:center}
+  .footer__grid > div:first-child p{margin:0 auto}
+  .footer__grid > div:first-child .logo{font-size:26px;letter-spacing:4px}
+  .footer__grid > div:last-child{grid-column:1/-1}
+  .socials{justify-content:center}
+  .footer__bottom{justify-content:center;text-align:center;margin-top:36px}
+
+  /* WhatsApp flotante encima de la barra inferior */
+  .wa-float{bottom:80px;right:16px;width:52px;height:52px}
+  .wa-float__tip{display:none}
+
+  /* Barra inferior fija */
+  .tabbar{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:70;height:calc(64px + env(safe-area-inset-bottom,0px));background:var(--bg);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .tabbar a,.tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10.5px;font-weight:500;letter-spacing:.5px;color:var(--ink)}
+  .tabbar svg{width:21px;height:21px}
+  .tabbar .is-wa{color:var(--wa-dark);font-weight:600}
+  .tabbar .on{color:var(--accent)}
+
+  /* Vista rápida = hoja inferior, botón WhatsApp siempre visible */
+  .qv__main{aspect-ratio:1/1}
+  .qv__thumbs{position:absolute;left:0;bottom:0;padding:10px}
+  .qv__thumbs button{width:46px}
+  .qv__name{font-size:21px}
+  .qv__desc{font-size:13.5px;margin:12px 0 18px}
+  .qv__sizes button{flex:1}
+  .btn-wa{position:sticky;bottom:0;z-index:2;box-shadow:0 -10px 20px #fff}
+  .modal__close{background:rgba(255,255,255,.9);border-radius:50%}
+}
+@media (max-width:360px){
+  .track{grid-auto-columns:46%}
+  .slide__title{font-size:40px}
+}
+
+@media (prefers-reduced-motion:reduce){*,*::before{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<!-- Barra superior animada -->
+<div class="topbar" aria-hidden="true">
+  <div class="topbar__track" id="marquee">
+    <span>Envíos a todo el Perú</span><span>Envío gratis desde S/ 200</span><span>Nueva colección disponible</span><span>Atención personalizada por WhatsApp</span><span>Cambios hasta 2 días después</span>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="header" id="header">
+  <div class="wrap header__in">
+    <a href="#" class="logo">Tu Marca<small>Menswear</small></a>
+    <nav class="nav" aria-label="Principal">
+      <a href="#" class="active">Inicio</a>
+      <a href="#ofertas">Tienda</a>
+      <a href="#categorias">Categorías</a>
+      <a href="#nuevo">Novedades</a>
+      <a href="#contacto">Contacto</a>
+    </nav>
+    <div class="header__icons">
+      <button class="icon-btn" id="openSearch" aria-label="Buscar">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+      <a class="header__wa js-wa" data-msg="general" href="#" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg><span>Asesor</span>
+      </a>
+      <button class="icon-btn burger" id="openMenu" aria-label="Abrir menú">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h18M3 12h18M9 17h12"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="wrap search" id="search">
+    <input type="search" id="searchInput" placeholder="Buscar polos, pantalones, casacas…" aria-label="Buscar productos">
+  </div>
+</header>
+
+<!-- Menú móvil -->
+<div class="drawer" id="drawer">
+  <div class="drawer__bg" data-close></div>
+  <div class="drawer__panel">
+    <button class="icon-btn drawer__close" data-close aria-label="Cerrar menú">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <a href="#" data-close>Inicio</a>
+    <a href="#ofertas" data-close>Tienda</a>
+    <a href="#categorias" data-close>Categorías</a>
+    <a href="#nuevo" data-close>Novedades</a>
+    <a href="#contacto" data-close>Contacto</a>
+  </div>
+</div>
+
+<!-- Hero -->
+<section class="hero" id="hero" style="padding:0">
+  <div class="slide active">
+    <img src="img/photo-1617137968427-85924c800a22.jpg" alt="">
+    <div class="slide__txt"><div class="wrap">
+      <span class="kicker-light">Nueva colección</span>
+      <h1 class="slide__title">Perfect<em>Business</em></h1>
+      <p class="slide__sub">Polos de corte entallado y tela premium. Disponible en varios colores.</p>
+      <a href="#nuevo" class="btn btn--light">Ver colección <span>→</span></a>
+    </div></div>
+  </div>
+  <div class="slide">
+    <img src="img/photo-1507679799987-c73779587ccf.jpg" alt="">
+    <div class="slide__txt"><div class="wrap">
+      <span class="kicker-light">Temporada 2026</span>
+      <h1 class="slide__title">Estilo<em>Sastre</em></h1>
+      <p class="slide__sub">Pantalones de vestir que combinan con todo. Elegancia para tu día a día.</p>
+      <a href="#ofertas" class="btn btn--light">Comprar ahora <span>→</span></a>
+    </div></div>
+  </div>
+  <div class="slide">
+    <img src="img/photo-1490578474895-699cd4e2cf59.jpg" alt="">
+    <div class="slide__txt"><div class="wrap">
+      <span class="kicker-light">Esenciales</span>
+      <h1 class="slide__title">Hecho para<em>Destacar</em></h1>
+      <p class="slide__sub">Prendas básicas con actitud. Calidad que se nota en cada detalle.</p>
+      <a href="#categorias" class="btn btn--light">Explorar <span>→</span></a>
+    </div></div>
+  </div>
+  <div class="hero__ctrl">
+    <button class="hero__arrow" id="heroPrev" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+    <span class="hero__count" id="heroCount">01 / 03</span>
+    <div class="hero__dots" id="heroDots"></div>
+    <button class="hero__arrow" id="heroNext" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+  </div>
+  <div class="hero__bar" id="heroBar"></div>
+</section>
+
+<!-- Ofertas del día -->
+<section id="ofertas">
+  <div class="wrap">
+    <div class="deals__head reveal">
+      <div class="label center"><span class="line"></span>Solo por hoy<span class="line"></span></div>
+      <h2 class="h2">OFERTAS DEL DÍA</h2>
+      <p class="deals__sub">Precios especiales que cambian cada mañana</p>
+      <div class="timer">
+        <span class="timer__label">Terminan en</span>
+        <div class="clock" role="timer">
+          <div class="unit"><b id="tH">00</b><small>Horas</small></div><span class="sep">:</span>
+          <div class="unit"><b id="tM">00</b><small>Minutos</small></div><span class="sep">:</span>
+          <div class="unit"><b id="tS">00</b><small>Segundos</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="sec-head reveal" style="margin-bottom:22px">
+      <span></span>
+      <div class="head-right">
+        <a href="#" class="see-all">Ver todo <span>→</span></a>
+        <div class="arrows" data-for="trackDeals">
+          <button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="track reveal" id="trackDeals"></div>
+    <a href="#" class="btn-outline m-only">Ver todas las ofertas <span>→</span></a>
+  </div>
+</section>
+
+<!-- Categorías -->
+<section class="cats" id="categorias">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div>
+        <div class="label">Categorías<span class="line"></span></div>
+        <h2 class="h2">Compra por estilo</h2>
+      </div>
+      <div class="head-right">
+        <a href="#" class="see-all">Ver todas <span>→</span></a>
+        <div class="arrows" data-for="trackCats">
+          <button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="track reveal" id="trackCats"></div>
+  </div>
+</section>
+
+<!-- Recién llegado -->
+<section id="nuevo">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="label">Nuevas entradas<span class="line"></span></div>
+      <h2 class="h2">Recién Llegado</h2>
+    </div>
+
+    <div class="subhead reveal">
+      <h3 class="h3">Colección Perfect Business</h3>
+      <div class="head-right">
+        <a href="#" class="see-all">Ver todo <span>→</span></a>
+        <div class="arrows" data-for="trackNew1">
+          <button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="track reveal" id="trackNew1" data-auto></div>
+
+    <div class="subhead reveal">
+      <h3 class="h3">Colección Esenciales</h3>
+      <div class="head-right">
+        <a href="#" class="see-all">Ver todo <span>→</span></a>
+        <div class="arrows" data-for="trackNew2">
+          <button class="arrow" data-dir="-1" aria-label="Anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="arrow" data-dir="1" aria-label="Siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="track reveal" id="trackNew2" data-auto></div>
+    <a href="#" class="btn-outline m-only">Ver todas las novedades <span>→</span></a>
+  </div>
+</section>
+
+<!-- Banner colección -->
+<section class="promo">
+  <div class="promo__in">
+    <div class="promo__img"><img src="img/photo-1516826957135-700dedea698c.jpg" alt="" loading="lazy"></div>
+    <div class="promo__txt reveal">
+      <span class="kicker-light">Nueva colección · Esenciales</span>
+      <h2 class="promo__title">Hecha Para<br><span>Destacar.</span></h2>
+      <p>Una nueva colección que combina actitud, presencia y estilo masculino contemporáneo. Prendas esenciales diseñadas para quienes prefieren marcar su propio camino.</p>
+      <div><a href="#nuevo" class="btn btn--light">Ver colección <span>→</span></a></div>
+    </div>
+  </div>
+</section>
+
+<!-- Garantías -->
+<section class="perks">
+  <div class="wrap">
+    <div class="label center reveal" style="margin-bottom:28px"><span class="line"></span>Garantías<span class="line"></span></div>
+    <div class="perks__grid reveal">
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg><h5>Envío gratis</h5><p>En compras desde S/ 200.00</p></div>
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg><h5>Envíos a todo el Perú</h5><p>Lima S/ 10.00 · Provincia S/ 15.00</p></div>
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><h5>Cambios</h5><p>Hasta 2 días después de tu compra</p></div>
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="13" rx="1"/><path d="M3 10h18M7 15h4"/></svg><h5>Pago seguro</h5><p>Yape, Plin, tarjeta y transferencia</p></div>
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><h5>Calidad garantizada</h5><p>Telas premium en cada prenda</p></div>
+      <div class="perk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12Z"/></svg><h5>Asesoría</h5><p>Te atendemos por WhatsApp</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer" id="contacto">
+  <div class="wrap">
+    <div class="footer__grid">
+      <div>
+        <div class="logo">Tu Marca<small>Menswear</small></div>
+        <p>Ropa masculina con estilo y actitud. Escríbenos y un asesor te ayudará a elegir tu talla y prenda ideal.</p>
+        <div class="socials">
+          <a href="#" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor"/></svg></a>
+          <a href="#" aria-label="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8h3V4h-3c-2.8 0-4 1.8-4 4.3V10H7v4h3v7h4v-7h3l1-4h-4V8.6c0-.4.3-.6.6-.6Z"/></svg></a>
+          <a href="#" aria-label="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 3c.4 2.3 1.9 3.8 4 4v3.3c-1.5 0-2.9-.5-4-1.2V16a5.5 5.5 0 1 1-5.5-5.5c.3 0 .6 0 .9.1v3.4a2.2 2.2 0 1 0 1.3 2V3h3.3Z"/></svg></a>
+          <a href="#" class="js-wa" data-msg="general" target="_blank" rel="noopener" aria-label="WhatsApp"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h6>Nosotros</h6>
+        <a href="#">Quiénes somos</a><a href="#">Contáctanos</a><a href="#ofertas">Tienda</a>
+      </div>
+      <div>
+        <h6>Políticas</h6>
+        <a href="#">Políticas de privacidad</a><a href="#">Términos y condiciones</a><a href="#">Cambios y devoluciones</a><a href="#">Libro de reclamaciones</a>
+      </div>
+      <div>
+        <h6>Ayuda</h6>
+        <a href="#" class="js-wa" data-msg="general" target="_blank" rel="noopener">WhatsApp: <span class="js-wa-num">+51 900 000 000</span></a>
+        <a href="mailto:contacto@tumarca.com">contacto@tumarca.com</a>
+        <a href="#">Lun – Sáb · 9:00 a 20:00</a>
+      </div>
+    </div>
+    <div class="footer__bottom"><span>© <span id="year"></span> Tu Marca. Todos los derechos reservados.</span><span>Lima, Perú</span></div>
+  </div>
+</footer>
+
+<!-- WhatsApp flotante -->
+<a class="wa-float js-wa" data-msg="general" href="#" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg>
+  <span class="wa-float__tip">¿Te ayudamos con tu talla?</span>
+</a>
+
+<!-- Vista rápida -->
+<div class="modal" id="modal" aria-hidden="true">
+  <div class="modal__bg" data-close></div>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="qvName">
+    <button class="modal__close" data-close aria-label="Cerrar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div class="qv__gallery">
+      <div class="qv__main"><img id="qvImg" src="" alt=""></div>
+      <div class="qv__thumbs" id="qvThumbs"></div>
+    </div>
+    <div class="qv__info">
+      <span class="qv__cat" id="qvCat"></span>
+      <h3 class="qv__name" id="qvName"></h3>
+      <div class="qv__price" id="qvPrice"></div>
+      <p class="qv__desc" id="qvDesc"></p>
+      <div class="opt-label">Color: <span id="qvColorName" style="font-weight:500;letter-spacing:1px;margin-left:auto;margin-right:0"></span></div>
+      <div class="qv__colors" id="qvColors"></div>
+      <div class="opt-label">Talla <a id="guideBtn">Guía de tallas</a></div>
+      <div class="qv__sizes" id="qvSizes"></div>
+      <div class="guide" id="guide">
+        <table>
+          <tr><th>Talla</th><th>Pecho (cm)</th><th>Largo (cm)</th><th>Hombro (cm)</th></tr>
+          <tr><td>S</td><td>96 – 100</td><td>68</td><td>43</td></tr>
+          <tr><td>M</td><td>100 – 104</td><td>70</td><td>45</td></tr>
+          <tr><td>L</td><td>104 – 110</td><td>72</td><td>47</td></tr>
+          <tr><td>XL</td><td>110 – 116</td><td>74</td><td>49</td></tr>
+        </table>
+      </div>
+      <a class="btn-wa" id="qvWa" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg>Consultar por WhatsApp
+      </a>
+      <p class="qv__note">Un asesor confirmará <b>stock, talla y envío</b> contigo.</p>
+      <div class="qv__meta">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>Envíos a todo el Perú · Gratis desde S/ 200</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg>Cambios hasta 2 días después de tu compra</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Barra inferior móvil -->
+<nav class="tabbar" aria-label="Navegación móvil">
+  <a href="#" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/></svg>Inicio</a>
+  <a href="#ofertas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3c0 2-2 3.5-4 3.5S8 5 8 3Z"/></svg>Tienda</a>
+  <a href="#categorias"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Categorías</a>
+  <a href="#" class="is-wa js-wa" data-msg="general" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg>WhatsApp</a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<!-- Ícono WhatsApp reutilizable -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-wa" viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.27-.2-.57-.35Zm-5.42 7.4h-.01a9.87 9.87 0 0 1-5.03-1.37l-.36-.22-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88a9.82 9.82 0 0 1 9.88 9.89c0 5.45-4.44 9.88-9.88 9.88Zm8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.42Z"/></symbol>
+</svg>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN — cambia aquí el número de WhatsApp
+   Formato: código de país + número, sin "+", espacios ni guiones.
+   Ej. Perú: 51 + 9XXXXXXXX  →  "51987654321"
+   ========================================================= */
+const WHATSAPP_NUMBER = "51900000000";
+const STORE_NAME = "Tu Marca";
+
+const U = (id) => `img/${id}.jpg`;   // fotos en la carpeta img/
+const FALLBACK = (txt) => "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='600' height='750'><rect width='100%' height='100%' fill='#F0EEE8'/><text x='50%' y='50%' font-family='Arial' font-size='22' fill='#8A6240' text-anchor='middle' letter-spacing='3'>${txt}</text></svg>`);
+
+/* ---------- Catálogo (edítalo con los productos reales) ---------- */
+const PRODUCTS = [
+  // Ofertas del día
+  {id:1,  group:"deals", cat:"Polos",       name:"Polo Blanco Prime",            price:35, old:70,  colors:[["Blanco","#F4F4F2"]],               imgs:["photo-1521572163474-6864f9cf17ab","photo-1622445275463-afa2ab738c34"]},
+  {id:2,  group:"deals", cat:"Polos",       name:"Polo Luxury Negro",            price:50, old:100, colors:[["Negro","#1A1A18"]],                imgs:["photo-1583743814966-8936f5b7be1a","photo-1503341504253-dff4815485f1"]},
+  {id:3,  group:"deals", cat:"Polos",       name:"Polo Camel Prime V",           price:35, old:70,  colors:[["Camel","#B8946A"]],                imgs:["photo-1576566588028-4147f3842f27","photo-1586790170083-2f9ceadc732d"]},
+  {id:4,  group:"deals", cat:"Polos",       name:"Polo Perfect Business Beige",  price:40, old:80,  colors:[["Beige","#D9C9AE"]],                imgs:["photo-1618354691373-d851c5c3a990","photo-1562157873-818bc0726f68"]},
+  {id:5,  group:"deals", cat:"Pantalones",  name:"Pantalón Sastre Hueso",        price:65, old:130, colors:[["Hueso","#E8E1D3"]],                imgs:["photo-1473966968600-fa801b869a1a","photo-1594938298603-c8148c4dae35"], sizes:["28","30","32","34"]},
+  {id:6,  group:"deals", cat:"Casacas",     name:"Casaca Milano Uva",            price:90, old:180, colors:[["Uva","#4B2C3A"]],                  imgs:["photo-1551028719-00167b16eac5","photo-1591047139829-d91aecb6caea"]},
+  // Recién llegado — colección 1
+  {id:7,  group:"new1", cat:"Perfect Business", name:"Polo Perfect Business Verde", price:50, old:80, colors:[["Verde","#2F4A3A"],["Negro","#1A1A18"],["Plomo","#8C8C88"]], imgs:["photo-1618354691373-d851c5c3a990","photo-1521572163474-6864f9cf17ab"]},
+  {id:8,  group:"new1", cat:"Perfect Business", name:"Polo Perfect Business Plomo", price:50, old:80, colors:[["Plomo","#8C8C88"],["Negro","#1A1A18"]], imgs:["photo-1586790170083-2f9ceadc732d","photo-1583743814966-8936f5b7be1a"]},
+  {id:9,  group:"new1", cat:"Perfect Business", name:"Polo Perfect Business Perla", price:50, old:80, colors:[["Perla","#ECE8E0"]], imgs:["photo-1622445275463-afa2ab738c34","photo-1576566588028-4147f3842f27"]},
+  {id:10, group:"new1", cat:"Perfect Business", name:"Polo Perfect Business Negro", price:50, old:80, colors:[["Negro","#1A1A18"]], imgs:["photo-1583743814966-8936f5b7be1a","photo-1503341504253-dff4815485f1"]},
+  {id:11, group:"new1", cat:"Perfect Business", name:"Polo Perfect Business Beige", price:40, old:80, colors:[["Beige","#D9C9AE"]], imgs:["photo-1562157873-818bc0726f68","photo-1618354691373-d851c5c3a990"]},
+  // Recién llegado — colección 2
+  {id:12, group:"new2", cat:"Esenciales", name:"Polo Esencial Topo",     price:50, old:75, colors:[["Topo","#7A6A5C"]],   imgs:["photo-1503341504253-dff4815485f1","photo-1586790170083-2f9ceadc732d"]},
+  {id:13, group:"new2", cat:"Esenciales", name:"Polo Esencial Melange",  price:50, old:75, colors:[["Melange","#B5B5B0"]], imgs:["photo-1576566588028-4147f3842f27","photo-1521572163474-6864f9cf17ab"]},
+  {id:14, group:"new2", cat:"Esenciales", name:"Polo Esencial Blanco",   price:50, old:75, colors:[["Blanco","#F4F4F2"]], imgs:["photo-1521572163474-6864f9cf17ab","photo-1622445275463-afa2ab738c34"]},
+  {id:15, group:"new2", cat:"Tank Top",   name:"Tank Top Negro",         price:35, old:55, colors:[["Negro","#1A1A18"]],  imgs:["photo-1583743814966-8936f5b7be1a","photo-1562157873-818bc0726f68"]},
+  {id:16, group:"new2", cat:"Casacas",    name:"Casaca Bomber Olivo",    price:95, old:150,colors:[["Olivo","#55593F"]],  imgs:["photo-1591047139829-d91aecb6caea","photo-1551028719-00167b16eac5"]},
+];
+
+const CATEGORIES = [
+  {name:"Polos",            count:26, img:"photo-1521572163474-6864f9cf17ab"},
+  {name:"Pantalones",       count:12, img:"photo-1473966968600-fa801b869a1a"},
+  {name:"Casacas",          count:6,  img:"photo-1551028719-00167b16eac5"},
+  {name:"Perfect Business", count:5,  img:"photo-1618354691373-d851c5c3a990"},
+  {name:"Tank Top",         count:5,  img:"photo-1583743814966-8936f5b7be1a"},
+  {name:"Esenciales",       count:5,  img:"photo-1576566588028-4147f3842f27"},
+  {name:"Sastre",           count:4,  img:"photo-1594938298603-c8148c4dae35"},
+];
+
+/* ---------- Helpers ---------- */
+const $ = (s, c = document) => c.querySelector(s);
+const $$ = (s, c = document) => [...c.querySelectorAll(s)];
+const money = n => "S/" + n.toFixed(2);
+const pct = p => Math.round((1 - p.price / p.old) * 100);
+const waLink = msg => `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+const productMsg = (p, size, color) =>
+  `Hola ${STORE_NAME} 👋, me interesa este producto:\n\n` +
+  `🛍️ *${p.name}*\n` +
+  (color ? `🎨 Color: ${color}\n` : "") +
+  (size ? `📏 Talla: ${size.toUpperCase()}\n` : "") +
+  `💰 Precio: ${money(p.price)}\n\n¿Está disponible?`;
+const imgTag = (id, cls, alt, w) =>
+  `<img class="${cls}" src="${U(id, w)}" alt="${alt}" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK(alt.toUpperCase().slice(0,22))}'">`;
+
+/* ---------- Render de tarjetas ---------- */
+function cardHTML(p) {
+  const sizes = p.sizes || ["S","M","L","XL"];
+  const tag = p.group === "deals"
+    ? `<span class="tag">-${pct(p)}%</span>`
+    : `<span class="tag">Nuevo</span>`;
+  return `
+  <article class="card" data-id="${p.id}">
+    <div class="card__img" data-qv="${p.id}">
+      ${imgTag(p.imgs[0], "img-main", p.name)}
+      ${imgTag(p.imgs[1] || p.imgs[0], "img-hover", "", 700)}
+      ${tag}
+      <div class="sizes">${sizes.map(s => `<button type="button" data-size="${s}" data-pid="${p.id}">${s}</button>`).join("")}</div>
+    </div>
+    <div class="card__info">
+      <div>
+        <h3 class="card__name" data-qv="${p.id}">${p.name}</h3>
+        <div class="price"><b>${money(p.price)}</b><s>${money(p.old)}</s>${p.group === "deals" ? "" : `<span class="off">-${pct(p)}%</span>`}</div>
+      </div>
+      <a class="wa-mini" href="${waLink(productMsg(p))}" target="_blank" rel="noopener" aria-label="Consultar ${p.name} por WhatsApp" title="Consultar por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor"><use href="#i-wa"/></svg>
+      </a>
+    </div>
+  </article>`;
+}
+function renderProducts(filter = "") {
+  const f = filter.trim().toLowerCase();
+  const match = p => !f || (p.name + " " + p.cat).toLowerCase().includes(f);
+  [["deals","trackDeals"],["new1","trackNew1"],["new2","trackNew2"]].forEach(([g, id]) => {
+    const list = PRODUCTS.filter(p => p.group === g && match(p));
+    $("#" + id).innerHTML = list.length ? list.map(cardHTML).join("")
+      : `<p style="padding:30px 0;color:var(--muted)">Sin resultados para “${filter}”.</p>`;
+  });
+  updateArrows();
+}
+$("#trackCats").innerHTML = CATEGORIES.map(c => `
+  <a href="#ofertas" class="cat">
+    ${imgTag(c.img, "", c.name, 600)}
+    <div class="cat__txt"><h4>${c.name}</h4><span>${c.count} prendas</span>
+      <svg class="cat__go" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </div>
+  </a>`).join("");
+
+/* ---------- Carruseles (flechas + autoplay) ---------- */
+function step(track) { const c = track.firstElementChild; return c ? c.getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0) : 300; }
+function updateArrows() {
+  $$(".arrows").forEach(a => {
+    const t = $("#" + a.dataset.for); if (!t) return;
+    const [prev, next] = $$(".arrow", a);
+    prev.disabled = t.scrollLeft <= 2;
+    next.disabled = t.scrollLeft + t.clientWidth >= t.scrollWidth - 2;
+  });
+}
+$$(".arrows").forEach(a => {
+  const t = $("#" + a.dataset.for);
+  $$(".arrow", a).forEach(b => b.addEventListener("click", () => t.scrollBy({left: step(t) * +b.dataset.dir})));
+  t.addEventListener("scroll", () => requestAnimationFrame(updateArrows), {passive:true});
+});
+window.addEventListener("resize", updateArrows);
+$$("[data-auto]").forEach(t => {
+  let hover = false;
+  t.addEventListener("mouseenter", () => hover = true);
+  t.addEventListener("mouseleave", () => hover = false);
+  setInterval(() => {
+    if (hover || document.hidden) return;
+    const atEnd = t.scrollLeft + t.clientWidth >= t.scrollWidth - 4;
+    t.scrollTo({left: atEnd ? 0 : t.scrollLeft + step(t)});
+  }, 4200);
+});
+
+/* ---------- Hero slider ---------- */
+(() => {
+  const slides = $$(".slide"), count = $("#heroCount"), bar = $("#heroBar");
+  let i = 0, timer;
+  const dots = $("#heroDots");
+  dots.innerHTML = slides.map((_, k) => `<button type="button" aria-label="Ir a la imagen ${k + 1}"></button>`).join("");
+  $$("button", dots).forEach((d, k) => d.onclick = () => go(k));
+  const go = n => {
+    slides[i].classList.remove("active");
+    i = (n + slides.length) % slides.length;
+    slides[i].classList.add("active");
+    $$("button", dots).forEach((d, k) => d.classList.toggle("on", k === i));
+    count.textContent = `${String(i + 1).padStart(2,"0")} / ${String(slides.length).padStart(2,"0")}`;
+    bar.classList.remove("run"); void bar.offsetWidth; bar.classList.add("run");
+    clearTimeout(timer); timer = setTimeout(() => go(i + 1), 6000);
+  };
+  $("#heroPrev").onclick = () => go(i - 1);
+  $("#heroNext").onclick = () => go(i + 1);
+  let x0 = null;
+  $("#hero").addEventListener("touchstart", e => x0 = e.touches[0].clientX, {passive:true});
+  $("#hero").addEventListener("touchend", e => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 40) go(i + (dx < 0 ? 1 : -1)); x0 = null; });
+  go(0);
+})();
+
+/* ---------- Cuenta regresiva (hasta medianoche) ---------- */
+(() => {
+  const els = [$("#tH"), $("#tM"), $("#tS")];
+  const tick = () => {
+    const now = new Date(), end = new Date(now); end.setHours(24,0,0,0);
+    let s = Math.max(0, Math.floor((end - now) / 1000));
+    const v = [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60].map(n => String(n).padStart(2,"0"));
+    els.forEach((el, k) => { if (el.textContent !== v[k]) { el.textContent = v[k]; el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick"); } });
+  };
+  tick(); setInterval(tick, 1000);
+})();
+
+/* ---------- Vista rápida ---------- */
+const modal = $("#modal");
+let current = null, selSize = null, selColor = null;
+function openQV(id, size) {
+  const p = PRODUCTS.find(x => x.id === +id); if (!p) return;
+  current = p; selSize = size || null; selColor = p.colors[0][0];
+  $("#qvCat").textContent = p.cat;
+  $("#qvName").textContent = p.name;
+  $("#qvPrice").innerHTML = `<b>${money(p.price)}</b><s>${money(p.old)}</s><span class="tag">-${pct(p)}%</span>`;
+  $("#qvDesc").textContent = "Prenda de corte moderno confeccionada en algodón de alta calidad. Suave al tacto, transpirable y con acabados que mantienen su forma lavado tras lavado.";
+  const setImg = k => { $("#qvImg").src = U(p.imgs[k], 1000); $("#qvImg").alt = p.name; $$("#qvThumbs button").forEach((b, j) => b.classList.toggle("on", j === k)); };
+  $("#qvImg").onerror = function(){ this.onerror = null; this.src = FALLBACK(p.name.toUpperCase().slice(0,22)); };
+  $("#qvThumbs").innerHTML = p.imgs.map((im, k) => `<button type="button" aria-label="Imagen ${k+1}">${imgTag(im, "", "", 200)}</button>`).join("");
+  $$("#qvThumbs button").forEach((b, k) => b.onclick = () => setImg(k));
+  setImg(0);
+  $("#qvColors").innerHTML = p.colors.map(([n, c], k) => `<span class="${k ? "" : "on"}" style="background:${c}" title="${n}" data-c="${n}"></span>`).join("");
+  $("#qvColorName").textContent = selColor;
+  $$("#qvColors span").forEach(s => s.onclick = () => { $$("#qvColors span").forEach(x => x.classList.remove("on")); s.classList.add("on"); selColor = s.dataset.c; $("#qvColorName").textContent = selColor; updateWa(); });
+  const sizes = p.sizes || ["S","M","L","XL"];
+  $("#qvSizes").innerHTML = sizes.map(s => `<button type="button" class="${s === selSize ? "on" : ""}">${s}</button>`).join("");
+  $$("#qvSizes button").forEach(b => b.onclick = () => { $$("#qvSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on"); selSize = b.textContent; updateWa(); });
+  $("#guide").classList.remove("open");
+  updateWa();
+  modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+  document.body.style.overflow = "hidden";
+}
+function updateWa() { $("#qvWa").href = waLink(productMsg(current, selSize, selColor)); }
+function closeQV() { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true"); document.body.style.overflow = ""; }
+$("#qvWa").addEventListener("click", e => { if (!selSize) { e.preventDefault(); toast("Selecciona una talla primero"); $("#qvSizes").animate([{transform:"translateX(0)"},{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],{duration:300}); } });
+$("#guideBtn").onclick = () => $("#guide").classList.toggle("open");
+$$("[data-close]", modal).forEach(el => el.onclick = closeQV);
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeQV(); closeDrawer(); } });
+document.addEventListener("click", e => {
+  const sz = e.target.closest("[data-size]");
+  if (sz) { e.stopPropagation(); openQV(sz.dataset.pid, sz.dataset.size); return; }
+  const qv = e.target.closest("[data-qv]");
+  if (qv) openQV(qv.dataset.qv);
+});
+
+/* ---------- Toast ---------- */
+let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2200); }
+
+/* ---------- Header, buscador, menú ---------- */
+window.addEventListener("scroll", () => $("#header").classList.toggle("is-scrolled", scrollY > 10), {passive:true});
+$("#openSearch").onclick = () => { $("#search").classList.toggle("open"); if ($("#search").classList.contains("open")) setTimeout(() => $("#searchInput").focus(), 200); };
+$("#searchInput").addEventListener("input", e => { renderProducts(e.target.value); });
+$("#searchInput").addEventListener("keydown", e => { if (e.key === "Enter") $("#ofertas").scrollIntoView(); });
+const drawer = $("#drawer");
+const closeDrawer = () => drawer.classList.remove("open");
+$("#openMenu").onclick = () => drawer.classList.add("open");
+$$("[data-close]", drawer).forEach(el => el.addEventListener("click", closeDrawer));
+
+/* ---------- Enlaces generales de WhatsApp ---------- */
+$$(".js-wa").forEach(a => a.href = waLink(`Hola ${STORE_NAME} 👋, quisiera más información sobre sus productos.`));
+$$(".js-wa-num").forEach(s => s.textContent = "+" + WHATSAPP_NUMBER.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, "$1 $2 $3 $4"));
+
+/* ---------- Marquee duplicado + aparición al hacer scroll ---------- */
+$("#marquee").innerHTML += $("#marquee").innerHTML;
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.remove("pre"); io.unobserve(e.target); } }), {threshold:.12});
+$$(".reveal").forEach(el => { if (el.getBoundingClientRect().top > innerHeight) { el.classList.add("pre"); io.observe(el); } });
+$("#year").textContent = new Date().getFullYear();
+
+renderProducts();
+</script>
+</body>
+</html>
