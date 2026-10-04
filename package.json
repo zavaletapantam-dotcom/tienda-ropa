@@ -1,0 +1,12 @@
+{
+  "name": "maison-tienda",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tienda MAISON. 'npm run fotos' convierte las fotos de /fotos a WebP en varios tamaños (carpeta /img).",
+  "scripts": {
+    "fotos": "node tools/fotos.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}

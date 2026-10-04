@@ -14,10 +14,9 @@
 <meta property="og:description" content="Líneas, estilo, identidad. Elige tu estilo y pide por WhatsApp.">
 <meta property="og:image" content="https://maison-pe.pages.dev/img/og-maison.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/styles.css">
+<link rel="preload" href="assets/fonts/jost-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/cormorant-italic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css?v=007e8740">
 <link rel="prefetch" href="street.html">
 <link rel="prefetch" href="old-money.html">
 </head>
@@ -45,7 +44,7 @@
     </div>
     <div class="choose__panels">
       <a class="choice choice--street" href="street.html" data-estilo="street">
-        <img src="img/st-ciudad.jpg" alt="">
+        <img src="img/st-ciudad-800.7bca8c85.webp" srcset="img/st-ciudad-400.de5da623.webp 400w, img/st-ciudad-800.7bca8c85.webp 800w, img/st-ciudad-1200.ecfb1267.webp 1200w, img/st-ciudad-1400.34d0129a.webp 1400w" sizes="(max-width:860px) and (orientation:portrait) 100vw, 50vw" decoding="async" data-foto="st-ciudad.jpg" data-sizes="(max-width:860px) and (orientation:portrait) 100vw, 50vw" alt="" fetchpriority="high">
         <div class="choice__body">
           <span class="choice__kicker">Colección</span>
           <h2 class="choice__title">Street</h2>
@@ -54,7 +53,7 @@
         </div>
       </a>
       <a class="choice choice--old-money" href="old-money.html" data-estilo="old-money">
-        <img src="img/om-lino-arena.jpg" alt="">
+        <img src="img/om-lino-arena-800.07ddcdcf.webp" srcset="img/om-lino-arena-400.595d1cb2.webp 400w, img/om-lino-arena-800.07ddcdcf.webp 800w, img/om-lino-arena-1200.ba4c77b6.webp 1200w, img/om-lino-arena-1400.799edd5a.webp 1400w" sizes="(max-width:860px) and (orientation:portrait) 100vw, 50vw" decoding="async" data-foto="om-lino-arena.jpg" data-sizes="(max-width:860px) and (orientation:portrait) 100vw, 50vw" alt="" fetchpriority="high">
         <div class="choice__body">
           <span class="choice__kicker">Colección</span>
           <h2 class="choice__title">Old Money</h2>
@@ -69,8 +68,9 @@
   <button type="button" class="intro__skip" id="introSkip">Saltar intro</button>
 </main>
 
-<script src="assets/js/marca.js"></script>
-<script src="assets/js/datos.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="assets/js/marca.js?v=fe17ba58"></script>
+<script src="assets/js/datos.js?v=bb4b3e62"></script>
+<script src="assets/js/fotos.js?v=d6e50219"></script>
+<script src="assets/js/app.js?v=4c8d45cf"></script>
 </body>
 </html>

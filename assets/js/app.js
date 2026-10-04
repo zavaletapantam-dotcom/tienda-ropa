@@ -19,6 +19,44 @@ const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;
 const money = n => "S/" + Number(n).toFixed(2);
 const pct = p => (p.old ? Math.round((1 - p.price / p.old) * 100) : 0);
 const imgSrc = f => "img/" + f;
+
+/* ---------- Fotos: WebP en varios tamaños (lista generada por tools/fotos.js) ---------- */
+const FOTOS = window.FOTOS || {};
+const fotoKey = f => String(f).split("/").pop().replace(/-\d+\.[a-f0-9]{8}\.webp$/, "").replace(/\.[^.]+$/, "");
+const fotoColor = f => (FOTOS[fotoKey(f)] || {}).c || "";
+const fotoSrcset = f => { const m = FOTOS[fotoKey(f)]; return m ? Object.entries(m.s).map(([w, n]) => `img/${n} ${w}w`).join(", ") : ""; };
+const fotoUrl = (f, w = 800) => {
+  const m = FOTOS[fotoKey(f)]; if (!m) return imgSrc(f);
+  const ws = Object.keys(m.s).map(Number);
+  return "img/" + m.s[ws.find(x => x >= w) || ws[ws.length - 1]];
+};
+/* Medidas aproximadas que ocupa cada tipo de foto en pantalla (el navegador elige el archivo justo) */
+const SZ = {
+  card: "(max-width:640px) 46vw, (max-width:1024px) 31vw, (max-width:1440px) 24vw, 19vw",
+  cat: "(max-width:640px) 64vw, (max-width:1024px) 31vw, (max-width:1440px) 19vw, 16vw",
+  half: "(max-width:860px) 100vw, 55vw",
+  pick: "(max-width:640px) 42vw, (max-width:1440px) 22vw, 17vw",
+  full: "100vw",
+};
+/* <img> listo: src + srcset + sizes. lazy: carga al acercarse; high: prioridad; fade: aparece suave;
+   hold: no descarga hasta que se necesite (fotos de "pasar el mouse") */
+function pic(f, sizes = SZ.full, { lazy = true, high = false, cls = "", alt = "", fade = false, hold = false } = {}) {
+  const set = fotoSrcset(f), a = [];
+  const c = [cls, fade ? "fade" : ""].filter(Boolean).join(" ");
+  if (c) a.push(`class="${c}"`);
+  a.push(hold ? `data-src="${fotoUrl(f)}" data-srcset="${set}"` : `src="${fotoUrl(f)}"${set ? ` srcset="${set}"` : ""}`);
+  if (set) a.push(`sizes="${sizes}"`);
+  a.push(`alt="${esc(alt)}"`, `decoding="async"`);
+  if (lazy) a.push(`loading="lazy"`);
+  if (high) a.push(`fetchpriority="high"`);
+  return `<img ${a.join(" ")}>`;
+}
+function setPic(img, f, sizes = SZ.full) {
+  const set = fotoSrcset(f);
+  if (set) { img.sizes = sizes; img.srcset = set; } else img.removeAttribute("srcset");
+  img.src = fotoUrl(f);
+  img.dataset.foto = f;
+}
 const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const findProduct = slug => PRODUCTS.find(p => p.slug === slug);
 const catOf = slug => CATS.find(c => c.slug === slug);
@@ -92,18 +130,17 @@ function logoSVG(variant = "stacked", cls = "") {
   const parts = variant === "word" ? letterPaths() : variant === "mark" ? markPath() : markPath() + letterPaths();
   return `<svg class="logo-svg ${cls}" viewBox="${VB[variant].join(" ")}" role="img" aria-label="${esc(C.store)}">${parts}</svg>`;
 }
+/* La M se dibuja por piezas: cada pieza solo se revela cuando su propio pincel pasa por ella,
+   así ningún trazo deja ver bordes del siguiente. Al final se muestra la M original completa. */
 function logoAnimSVG() {
-  const [x, y, w, h] = VB.stacked, D = LOGO.draw;
+  const [x, y, w, h] = VB.stacked, segs = LOGO.draw2.segs;
   return `<svg class="logo-svg logo-anim" viewBox="${VB.stacked.join(" ")}" role="img" aria-label="${esc(C.store)}">
     <defs>
-      <mask id="mDraw" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}">
-        <path class="mk mk-1" d="${D.main}" stroke-width="${D.wMain}" pathLength="1"/>
-        <path class="mk mk-2" d="${D.swash}" stroke-width="${D.wSwash}" pathLength="1"/>
-        <rect class="mk-all" x="${x}" y="${y}" width="${w}" height="${h}" fill="#fff"/>
-      </mask>
+      ${segs.map((s, i) => `<mask id="mk${i}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><path class="mk" d="${s.m}" stroke-width="${s.w}" pathLength="1" style="--dl:${s.dl}s;--du:${s.du}s;--ez:${s.ez}"/></mask>`).join("")}
       <clipPath id="wClip"><rect x="${WX0 - 40}" y="${WY0 - 70}" width="${WX1 - WX0 + 80}" height="${WY1 - WY0 + 100}"/></clipPath>
     </defs>
-    ${markPath(' mask="url(#mDraw)"')}
+    <g class="logo-m-segs">${segs.map((s, i) => `<path class="logo-m" d="${s.r}" fill-rule="evenodd" mask="url(#mk${i})"/>`).join("")}</g>
+    <path class="logo-m logo-m--full" d="${LOGO.mark}" fill-rule="evenodd"/>
     <g clip-path="url(#wClip)">${letterPaths(true)}</g>
   </svg>`;
 }
@@ -157,8 +194,8 @@ function renderLayout() {
     <div class="drawer__panel" role="dialog" aria-label="Menú">
       <div class="drawer__top">${logoSVG("word", "logo-ink")}<button class="icon-btn" data-close aria-label="Cerrar menú">${I.close}</button></div>
       <div class="drawer__styles">
-        <a class="st" href="street.html"><img src="${imgSrc(STYLES.street.panel)}" alt=""><span>Street</span></a>
-        <a class="om" href="old-money.html"><img src="${imgSrc(STYLES["old-money"].panel)}" alt=""><span>Old Money</span></a>
+        <a class="st" href="street.html">${pic(STYLES.street.panel, "45vw")}<span>Street</span></a>
+        <a class="om" href="old-money.html">${pic(STYLES["old-money"].panel, "45vw")}<span>Old Money</span></a>
       </div>
       ${NAV.slice(2).map(([k, label, href]) => `<a href="${href}"${isActive(k) ? ' class="active"' : ""}>${label}<span aria-hidden="true">→</span></a>`).join("")}
       <p class="drawer__label">Categorías</p>
@@ -275,7 +312,7 @@ function initHeader() {
     if (q.length < 2) { sug.innerHTML = ""; return; }
     const res = searchProducts(q);
     sug.innerHTML = res.length
-      ? res.slice(0, 6).map(p => `<a href="${productUrl(p)}"><img src="${imgSrc(p.imgs[0])}" alt="" loading="lazy"><span><b>${esc(p.name)}</b><small>${esc(catOf(p.cat)?.name || "")} · ${esc(styleOf(p.estilo)?.name || "")}</small></span><span class="price-mini">${money(p.price)}</span></a>`).join("") +
+      ? res.slice(0, 6).map(p => `<a href="${productUrl(p)}">${pic(p.imgs[0], "44px")}<span><b>${esc(p.name)}</b><small>${esc(catOf(p.cat)?.name || "")} · ${esc(styleOf(p.estilo)?.name || "")}</small></span><span class="price-mini">${money(p.price)}</span></a>`).join("") +
         `<a class="suggest__all" href="tienda.html?q=${encodeURIComponent(q)}">Ver los ${res.length} resultados →</a>`
       : `<p style="padding:8px 8px 4px">No encontramos “${esc(q)}”. Prueba con lino, hoodie, jean o blazer.</p>`;
   });
@@ -298,10 +335,10 @@ function cardHTML(p, opts) {
   const tag = p.deal ? `<span class="tag">-${pct(p)}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : "";
   const url = productUrl(p);
   return `<article class="card">
-    <div class="card__img">
+    <div class="card__img" style="--ph:${fotoColor(p.imgs[0])}">
       <a class="card__link" href="${url}" aria-label="Ver ${esc(p.name)}">
-        <img class="img-main" src="${imgSrc(p.imgs[0])}" alt="${esc(p.name)}" loading="lazy">
-        <img class="img-hover" src="${imgSrc(p.imgs[1] || p.imgs[0])}" alt="" loading="lazy">
+        ${pic(p.imgs[0], SZ.card, { cls: "img-main", alt: p.name, fade: true })}
+        ${pic(p.imgs[1] || p.imgs[0], SZ.card, { cls: "img-hover", hold: true })}
       </a>
       ${tag}
       <div class="sizes">${p.sizes.map(s => `<button type="button" data-qv="${p.slug}" data-size="${s}" aria-label="Talla ${s} de ${esc(p.name)}">${s}</button>`).join("")}</div>
@@ -319,8 +356,8 @@ function cardHTML(p, opts) {
 function catCardHTML(c, estilo) {
   const list = PRODUCTS.filter(p => p.cat === c.slug && (!estilo || p.estilo === estilo));
   const n = list.length;
-  return `<a href="tienda.html?${estilo ? `estilo=${estilo}&` : ""}cat=${c.slug}" class="cat">
-    <img src="${imgSrc(list[0].imgs[0])}" alt="" loading="lazy">
+  return `<a href="tienda.html?${estilo ? `estilo=${estilo}&` : ""}cat=${c.slug}" class="cat" style="--ph:${fotoColor(list[0].imgs[0])}">
+    ${pic(list[0].imgs[0], SZ.cat, { fade: true })}
     <div class="cat__txt"><h3>${c.name}</h3><span>${n} ${n === 1 ? "prenda" : "prendas"}</span></div>
   </a>`;
 }
@@ -409,7 +446,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}"><img src="${imgSrc(h.img)}" alt=""${i ? ' loading="lazy"' : ' fetchpriority="high"'}><div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${esc(h.title)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${esc(h.title)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>
@@ -447,6 +484,26 @@ function initReveal() {
   });
 }
 
+/* ---------- Fotos: aparición suave y segunda foto solo con mouse ---------- */
+function initFotos() {
+  // Cada foto con clase "fade" aparece suave cuando termina de cargar (mientras tanto se ve su color)
+  const ok = img => img.classList.add("ok");
+  document.addEventListener("load", e => { if (e.target.classList && e.target.classList.contains("fade")) ok(e.target); }, true);
+  document.addEventListener("error", e => { if (e.target.tagName === "IMG") ok(e.target); }, true);
+  const sweep = () => $$("img.fade:not(.ok)").forEach(i => { if (i.complete && i.naturalWidth) ok(i); });
+  sweep();
+  new MutationObserver(sweep).observe(document.body, { childList: true, subtree: true });
+  // La segunda foto de cada producto (al pasar el mouse) se descarga solo en equipos con mouse y al acercarse
+  if (!matchMedia("(hover:hover)").matches) return;
+  document.addEventListener("pointerover", e => {
+    const h = e.target.closest && e.target.closest(".card")?.querySelector("img.img-hover[data-src]");
+    if (!h) return;
+    if (h.dataset.srcset) h.srcset = h.dataset.srcset;
+    h.src = h.dataset.src;
+    h.removeAttribute("data-src"); h.removeAttribute("data-srcset");
+  }, { passive: true });
+}
+
 /* ---------- Botón de WhatsApp que exige talla ---------- */
 function guardSize(link, getSize, sizesEl) {
   link.addEventListener("click", e => {
@@ -462,7 +519,7 @@ const qv = { p: null, size: null, color: null };
 function openQV(slug, size) {
   const p = findProduct(slug); if (!p || !$("#modal")) return;
   Object.assign(qv, { p, size: size || null, color: p.colors[0][0] });
-  $("#qvImg").src = imgSrc(p.imgs[0]); $("#qvImg").alt = p.name;
+  setPic($("#qvImg"), p.imgs[0], "(max-width:640px) 100vw, 480px"); $("#qvImg").alt = p.name;
   $("#qvCat").textContent = [catOf(p.cat)?.name, styleOf(p.estilo)?.name].filter(Boolean).join(" · ");
   $("#qvName").textContent = p.name;
   $("#qvPrice").innerHTML = priceHTML(p, false) + (p.old ? `<span class="tag">-${pct(p)}%</span>` : "");
@@ -507,14 +564,6 @@ function coverRect(box, nw, nh, posY = 0.3, s = 1) {
   const ox = (box.width - cw) / 2, oy = (box.height - ch) * posY;
   return { x: box.left + box.width / 2 + (ox - box.width / 2) * s, y: box.top + box.height / 2 + (oy - box.height / 2) * s, w: cw * s, h: ch * s };
 }
-/* Color promedio de la foto (relleno mientras se decodifica en la página nueva) */
-function avgColor(img) {
-  try {
-    const c = document.createElement("canvas"); c.width = c.height = 1;
-    const g = c.getContext("2d"); g.drawImage(img, 0, 0, 1, 1);
-    const [r, gg, b] = g.getImageData(0, 0, 1, 1).data; return `rgb(${r},${gg},${b})`;
-  } catch (_) { return ""; }
-}
 /* En la colección: la foto parte exactamente de donde estaba el panel y vuela hasta el banner */
 function flyIn() {
   const v = window.__VT, root = document.documentElement;
@@ -523,7 +572,7 @@ function flyIn() {
   const finish = () => root.classList.remove("vt-in", "vt-run");
   const hero = $("#hero"), slideImg = hero && $(".slide img", hero);
   if (!hero || !slideImg || !v.nw || !v.nh) { finish(); return; }
-  if (!slideImg.src.endsWith(v.src.split("/").pop())) slideImg.src = v.src;
+  if (v.k && fotoKey(slideImg.currentSrc || slideImg.src) !== v.k && FOTOS[v.k]) setPic(slideImg, v.k);
   hero.classList.add("vt-hold");
 
   const fly = document.createElement("div");
@@ -531,7 +580,8 @@ function flyIn() {
   fly.innerHTML = `<div class="vt-cover"></div><div class="vt-clip"><img class="vt-img" alt=""><i class="vt-shade vt-shade--from"></i><i class="vt-shade vt-shade--to"></i></div>`;
   document.body.appendChild(fly);
   const im = $(".vt-img", fly);
-  im.src = v.src;
+  if (slideImg.srcset) { im.sizes = slideImg.sizes; im.srcset = slideImg.srcset; }
+  im.src = slideImg.currentSrc || slideImg.src || v.src;
 
   let started = false;
   const start = () => {
@@ -579,7 +629,7 @@ function initIntro() {
   $$(".choice").forEach(a => {
     const st = styleOf(a.dataset.estilo), im = $("img", a); if (!st) return;
     a.href = st.page;
-    if (im && !im.src.endsWith("/" + st.panel)) im.src = imgSrc(st.panel);
+    if (im && im.dataset.foto !== st.panel) setPic(im, st.panel, im.sizes || "50vw");
   });
 
   let timer;
@@ -619,6 +669,8 @@ function initIntro() {
     $$(".choice").forEach(c => { c.style.flexGrow = getComputedStyle(c).flexGrow; c.style.transition = "opacity .28s"; });
     const img = $("img", a), zoom = getComputedStyle(img).transform;
     img.style.transform = zoom; img.style.transition = "none";
+    const st = styleOf(a.dataset.estilo), pre = new Image();
+    if (st) { pre.sizes = SZ.full; pre.srcset = fotoSrcset(st.heroes[0].img); pre.src = fotoUrl(st.heroes[0].img, 1200); }
     intro.classList.add("leaving");
     a.classList.add("chosen");
     $$(".choice").forEach(o => o !== a && o.classList.add("dim"));
@@ -629,7 +681,7 @@ function initIntro() {
       try {
         sessionStorage.setItem(VT_KEY, JSON.stringify({
           e: a.dataset.estilo, t: Date.now(), src: img.currentSrc || img.src, nw: img.naturalWidth, nh: img.naturalHeight,
-          box: [box.left, box.top, box.width, box.height], img: [r.x, r.y, r.w, r.h], bg: avgColor(img),
+          k: fotoKey(img.currentSrc || img.src), box: [box.left, box.top, box.width, box.height], img: [r.x, r.y, r.w, r.h], bg: fotoColor(img.currentSrc || img.src),
         }));
       } catch (_) {}
       location.href = a.href;
@@ -701,7 +753,7 @@ function initColeccion() {
 
   <section class="editorial editorial--${st.slug}">
     <div class="editorial__in">
-      <div class="editorial__img"><img src="${imgSrc(st.editorial.img)}" alt="" loading="lazy"></div>
+      <div class="editorial__img" style="background:${fotoColor(st.editorial.img)}">${pic(st.editorial.img, SZ.half, { fade: true })}</div>
       <div class="editorial__txt reveal">
         <div class="label">${esc(st.editorial.kicker)}<span class="line"></span></div>
         <h2>${esc(st.editorial.title)}</h2>
@@ -720,7 +772,7 @@ function initColeccion() {
 
   <section class="cross">
     <div class="wrap">
-      <a class="cross__card cross--${other.slug}" href="${other.page}"><img src="${imgSrc(other.panel)}" alt="" loading="lazy"><div class="cross__body"><small>¿Buscas otro estilo?</small><h2>${esc(other.name)}</h2><p>${esc(other.desc)}</p><b>Explorar ${esc(other.name)} →</b></div></a>
+      <a class="cross__card cross--${other.slug}" href="${other.page}" style="background:${fotoColor(other.panel)}">${pic(other.panel, SZ.full, { fade: true })}<div class="cross__body"><small>¿Buscas otro estilo?</small><h2>${esc(other.name)}</h2><p>${esc(other.desc)}</p><b>Explorar ${esc(other.name)} →</b></div></a>
     </div>
   </section>
 
@@ -836,7 +888,7 @@ function initTienda() {
     $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : st && !cat ? st.desc : cat ? `${cat.name} ${st ? `de la colección ${st.name}` : "de las colecciones Street y Old Money"}.` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Street y Old Money en un solo lugar. Consulta tallas y stock por WhatsApp.";
     $("#shopCrumb").textContent = title;
     const heroImg = cat ? (inStyle.find(p => p.cat === cat.slug) || PRODUCTS.find(p => p.cat === cat.slug)).imgs[0] : st ? st.panel : "camisas-dobladas.jpg";
-    $("#shopHeroImg").src = imgSrc(heroImg);
+    if ($("#shopHeroImg").dataset.foto !== heroImg) setPic($("#shopHeroImg"), heroImg);
     $(".page-hero").classList.toggle("page-hero--street", shop.estilo === "street");
     document.body.dataset.estilo = shop.estilo;
     document.title = `${shop.q ? "Búsqueda" : title} · ${C.store}`;
@@ -901,9 +953,9 @@ function initProducto() {
     <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><a href="${st.page}">${st.name}</a><span aria-hidden="true">/</span><a href="tienda.html?estilo=${p.estilo}&cat=${p.cat}">${cat?.name || ""}</a><span aria-hidden="true">/</span><span>${esc(p.name)}</span></nav>
     <div class="pdp__layout">
       <div class="gallery">
-        <div class="gallery__thumbs">${p.imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}"><img src="${imgSrc(f)}" alt=""></button>`).join("")}</div>
+        <div class="gallery__thumbs">${p.imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("")}</div>
         <div class="gallery__wrap">
-          <div class="gallery__main" id="gMain">${p.imgs.map((f, i) => `<figure><img src="${imgSrc(f)}" alt="${esc(p.name)}${i ? ` — foto ${i + 1}` : ""}"></figure>`).join("")}</div>
+          <div class="gallery__main" id="gMain">${p.imgs.map((f, i) => `<figure style="background:${fotoColor(f)}">${pic(f, SZ.half, { lazy: i > 0, high: i === 0, alt: p.name + (i ? ` — foto ${i + 1}` : "") })}</figure>`).join("")}</div>
           ${p.deal ? `<span class="tag">-${d}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : ""}
           <div class="gallery__dots" id="gDots">${p.imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>
         </div>
@@ -1026,7 +1078,7 @@ function initPack() {
         <div class="step__head"><span class="step__num">${i + 1}</span><h2 id="stepT${i}">${s.title}</h2><small id="stepS${i}">Sin elegir</small></div>
         <div class="picks" role="radiogroup" aria-labelledby="stepT${i}">${s.items.map(p => `
           <button type="button" class="pick" role="radio" aria-checked="false" data-step="${i}" data-slug="${p.slug}">
-            <img src="${imgSrc(p.imgs[0])}" alt="" loading="lazy"><div><b>${esc(p.name)}</b><span>${money(p.price)}</span></div><i aria-hidden="true">✓</i>
+            ${pic(p.imgs[0], SZ.pick, { fade: true })}<div><b>${esc(p.name)}</b><span>${money(p.price)}</span></div><i aria-hidden="true">✓</i>
           </button>`).join("")}</div>
         <div class="step__sizes" id="stepZ${i}" hidden></div>
       </section>`).join("");
@@ -1080,7 +1132,7 @@ function initPack() {
     $("#sumList").innerHTML = steps.map((s, i) => {
       const p = chosen[i];
       return p
-        ? `<div class="summary__item"><img src="${imgSrc(p.imgs[0])}" alt=""><span><b>${esc(p.name)}</b>${sel[i].size ? `Talla ${sel[i].size}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
+        ? `<div class="summary__item">${pic(p.imgs[0], "48px", { lazy: false })}<span><b>${esc(p.name)}</b>${sel[i].size ? `Talla ${sel[i].size}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
         : `<div class="summary__item"><span class="ph">${i + 1}</span><span>${s.title}</span><em>—</em></div>`;
     }).join("");
     $("#sumSub").textContent = money(sub);
@@ -1180,6 +1232,7 @@ initHeader();
 initQV();
 initCarousels();
 initReveal();
+initFotos();
 if (PAGE === "coleccion") flyIn();
 else document.documentElement.classList.remove("vt-in", "vt-run");
 })();

@@ -1,0 +1,9 @@
+# Reglas de caché para Cloudflare Pages
+# Fotos, letras, estilos y código se guardan 1 año en el navegador del visitante.
+# Es seguro porque cada archivo lleva su versión en el nombre (fotos) o en ?v= (CSS/JS):
+# cuando algo cambia, cambia su dirección y el navegador descarga la nueva.
+/img/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
