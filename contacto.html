@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contacto · Tu Marca</title>
+<meta name="description" content="Escríbenos por WhatsApp o correo. Te ayudamos con tallas, envíos, cambios y ventas por mayor.">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="contacto">
+
+<main>
+  <section class="page-hero">
+    <img src="img/camisas-dobladas.jpg" alt="">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html">Inicio</a><span aria-hidden="true">/</span><span>Contacto</span></nav>
+      <h1>Contacto</h1>
+      <p>Respondemos rápido por WhatsApp de lunes a sábado.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="contact__grid">
+        <div>
+          <p class="contact__hello">¡Hola!</p>
+          <p class="contact__intro">Sé parte de nuestra comunidad. Si tienes una pregunta sobre tallas, envíos o tu pedido, escríbenos por el medio que prefieras.</p>
+          <div class="cards" id="contactCards"></div>
+          <div class="socials-row" id="contactSocial"></div>
+        </div>
+
+        <form class="form" id="contactForm" novalidate>
+          <h2>Envíanos un mensaje</h2>
+          <p>Al enviar, se abrirá WhatsApp con tu mensaje listo para mandar.</p>
+          <div class="row2">
+            <div class="field"><label for="cName">Nombre</label><input id="cName" name="nombre" autocomplete="name" placeholder="Tu nombre"><span class="msg">Escribe tu nombre</span></div>
+            <div class="field"><label for="cPhone">Teléfono (opcional)</label><input id="cPhone" name="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="9XX XXX XXX"></div>
+          </div>
+          <div class="field">
+            <label for="cTopic">Motivo</label>
+            <select id="cTopic" name="motivo">
+              <option>Consulta sobre un producto</option>
+              <option>Ayuda con mi talla</option>
+              <option>Envíos y estado de mi pedido</option>
+              <option>Cambios y devoluciones</option>
+              <option>Ventas por mayor</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="field"><label for="cMsg">Mensaje</label><textarea id="cMsg" name="mensaje" placeholder="Cuéntanos en qué te ayudamos"></textarea><span class="msg">Escribe tu mensaje</span></div>
+          <button type="submit" class="btn-wa"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-wa"/></svg>Enviar por WhatsApp</button>
+          <p class="form__note">No guardamos tus datos: el mensaje se envía directamente desde tu WhatsApp.</p>
+        </form>
+      </div>
+
+      <div class="biz reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 9h16l-1-5H5L4 9Zm0 0v11h16V9M9 20v-6h6v6"/></svg>
+        <div><h2>¿Quieres emprender con nosotros?</h2><p>Vendemos por mayor a tiendas y emprendedores. Escríbenos y te enviamos el catálogo con precios especiales.</p></div>
+        <a class="btn-wa" href="#" target="_blank" rel="noopener" style="width:auto;padding:16px 26px"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-wa"/></svg>Quiero vender</a>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap faq">
+      <div class="label center"><span class="line"></span>Preguntas frecuentes<span class="line"></span></div>
+      <h2 class="h2" style="text-align:center">¿Tienes dudas?</h2>
+      <div class="acc" id="faqList"></div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

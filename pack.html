@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pack Deluxe · Tu Marca</title>
+<meta name="description" content="Arma tu Pack Deluxe: elige un polo, un pantalón y un abrigo y obtén un descuento especial.">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body data-page="pack">
+
+<main>
+  <section class="page-hero">
+    <img src="img/outfit-flatlay.jpg" alt="">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html">Inicio</a><span aria-hidden="true">/</span><span>Pack Deluxe</span></nav>
+      <h1>Arma tu Pack Deluxe</h1>
+      <p>Elige 3 prendas seleccionadas, una de cada paso, y llévate tu outfit completo con descuento.</p>
+    </div>
+  </section>
+
+  <section class="pack">
+    <div class="wrap">
+      <div class="pack__intro">
+        <strong>−<span data-c="packDiscount">20%</span></strong>
+        <p>Elige <b>un polo</b>, <b>un pantalón o jean</b> y <b>una casaca o polera</b>. Cuando completes las 3 prendas con su talla, el descuento se aplica solo y puedes pedir tu pack por WhatsApp.</p>
+      </div>
+      <div class="pack__layout">
+        <div id="packSteps"></div>
+        <aside class="summary" aria-label="Resumen del pack">
+          <h2>Tu pack</h2>
+          <div class="progress" aria-hidden="true"><i id="packProgress"></i></div>
+          <div class="summary__list" id="sumList"></div>
+          <div class="summary__rows">
+            <div><span>Precio normal</span><span id="sumSub">S/0.00</span></div>
+            <div class="disc"><span>Descuento pack</span><span id="sumDisc"></span></div>
+            <div class="total"><span>Total</span><span id="sumTotal">S/0.00</span></div>
+          </div>
+          <a class="btn-wa" id="sumWa" href="#" target="_blank" rel="noopener" aria-disabled="true"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-wa"/></svg>Pedir mi pack por WhatsApp</a>
+          <p class="summary__hint" id="sumHint"></p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <div class="packbar">
+    <div><small id="pbInfo">0 de 3 prendas</small><b id="pbTotal">S/0.00</b></div>
+    <a id="pbWa" href="#" target="_blank" rel="noopener" aria-disabled="true">Pedir pack</a>
+  </div>
+</main>
+
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
