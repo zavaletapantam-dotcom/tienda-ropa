@@ -11,7 +11,7 @@ window.CONFIG = {
   tagline: "Dos mundos · Una sola esencia",
   email: "contacto@maison.pe",
   city: "Lima, Perú",
-  hours: "Lun – Sáb · 9:00 a 20:00",
+  hours: "Atención 24 horas",
   envioLima: 10,
   envioProvincia: 15,
   diasCambio: 2,

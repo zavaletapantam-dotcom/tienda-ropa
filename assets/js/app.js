@@ -78,7 +78,7 @@ const stored = () => { try { return localStorage.getItem("maison_estilo") || "";
 const guideFor = p => (p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
 function productMsg(p, o = {}) {
-  const l = [`Hola ${C.store} 👋, me interesa este producto:`, "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
+  const l = ["Hola, estoy interesado en esta prenda:", "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
   if (o.color) l.push(`🎨 Color: ${o.color}`);
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
@@ -1348,7 +1348,7 @@ function initContacto() {
     <a class="c-card c-card--wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}<span><small>WhatsApp</small><b>${waPretty()}</b></span><span class="copy">Escribir</span></a>
     <div class="c-card">${I.mail}<span><small>Correo</small><b>${esc(C.email)}</b></span><button type="button" class="copy" data-copy="${esc(C.email)}">Copiar</button></div>
     <div class="c-card">${I.pin}<span><small>Ubicación</small><b>${esc(C.city)}</b></span></div>
-    <div class="c-card">${I.clock}<span><small>Horario de atención</small><b>${esc(C.hours)}</b></span></div>`;
+    <div class="c-card">${I.clock}<span><small>Horario</small><b>${esc(C.hours)}</b></span></div>`;
   $("#contactSocial").innerHTML = `<a href="${C.social.instagram}" aria-label="Instagram">${I.insta}</a><a href="${C.social.facebook}" aria-label="Facebook">${I.fb}</a><a href="${C.social.tiktok}" aria-label="TikTok">${I.tiktok}</a>`;
   $$("[data-copy]").forEach(b => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast("Copiado"); } catch (_) { toast(b.dataset.copy); }
