@@ -1,13 +1,13 @@
 /* =========================================================
    MAISON — app
-   Intro con logo animado, elección de estilo, colecciones Street / Old Money,
+   Intro con logo animado, elección de mundo, colecciones Badass (Bassic, Bleesst) / Martir Atelier (Maison × Uomo Cattivo),
    tienda, ficha de producto, pack y contacto. Los datos están en datos.js
    ========================================================= */
 (() => {
 "use strict";
 
 const C = window.CONFIG, PRODUCTS = window.PRODUCTS, CATS = window.CATEGORIES,
-      STYLES = window.STYLES, PACK = window.PACK, GUIDE = window.SIZE_GUIDE, LOGO = window.MAISON_LOGO;
+      STYLES = window.STYLES, LINES = window.LINES || {}, PACK = window.PACK, GUIDE = window.SIZE_GUIDE, LOGO = window.MAISON_LOGO;
 const PAGE = document.body.dataset.page || "";
 const ESTILO = document.body.dataset.estilo || "";
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -61,6 +61,13 @@ const norm = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "
 const findProduct = slug => PRODUCTS.find(p => p.slug === slug);
 const catOf = slug => CATS.find(c => c.slug === slug);
 const styleOf = slug => STYLES[slug];
+const lineOf = slug => LINES[slug];
+/* Nombre de la línea de un producto: "Bleesst", "Bassic" o "Maison × Uomo Cattivo" */
+const lineName = p => { const l = lineOf(p.linea); return l ? l.collab || l.name : styleOf(p.estilo)?.name || ""; };
+/* Título de marca: logo de Badass, o MARTIR / ATELIER en letra serif */
+const brandTitle = st => st.logo
+  ? `<img class="brand-logo" src="${st.logo}" alt="${esc(st.name)}" width="1137" height="194">`
+  : `<span class="martir-mark"><span>Martir</span><small>Atelier</small></span>`;
 const productUrl = p => "producto.html?p=" + encodeURIComponent(p.slug);
 const absUrl = rel => new URL(rel, location.href).href;
 const waLink = msg => "https://wa.me/" + C.whatsapp + "?text=" + encodeURIComponent(msg);
@@ -71,7 +78,7 @@ const stored = () => { try { return localStorage.getItem("maison_estilo") || "";
 const guideFor = p => (p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
 function productMsg(p, o = {}) {
-  const l = [`Hola ${C.store} 👋, me interesa este producto:`, "", `🛍️ *${p.name}*`, `✨ Colección: ${styleOf(p.estilo)?.name || ""}`];
+  const l = [`Hola ${C.store} 👋, me interesa este producto:`, "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
   if (o.color) l.push(`🎨 Color: ${o.color}`);
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
@@ -82,7 +89,7 @@ function productMsg(p, o = {}) {
 function searchProducts(q, list = PRODUCTS) {
   const terms = norm(q).split(/\s+/).filter(Boolean);
   return list.filter(p => {
-    const hay = norm([p.name, catOf(p.cat)?.name, styleOf(p.estilo)?.name, p.colors.map(c => c[0]).join(" ")].join(" "));
+    const hay = norm([p.name, catOf(p.cat)?.name, styleOf(p.estilo)?.name, lineName(p), p.colors.map(c => c[0]).join(" ")].join(" "));
     return terms.every(t => hay.includes(t));
   });
 }
@@ -154,8 +161,8 @@ function logoAnimSVG() {
    CABECERA, MENÚ, PIE Y ELEMENTOS FIJOS
    ========================================================= */
 const NAV = [
-  ["street", "Street", "street.html", true],
-  ["old-money", "Old Money", "old-money.html", true],
+  ["badass", "Badass", "badass.html", true],
+  ["martir", "Martir Atelier", "martir.html", true],
   ["tienda", "Tienda", "tienda.html"],
   ["pack", "Pack Deluxe", "pack.html"],
   ["nosotros", "Nosotros", "nosotros.html"],
@@ -173,7 +180,7 @@ function renderLayout() {
   const top = `
   ${SPRITE}
   <div class="topbar" aria-hidden="true"><div class="topbar__track">${[
-    "Envíos a todo el Perú", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Colecciones Street y Old Money",
+    "Envíos a todo el Perú", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Badass y Martir Atelier",
     "Atención personalizada por WhatsApp", `Cambios hasta ${C.diasCambio} días después`,
   ].map(t => `<span>${t}</span>`).join("").repeat(2)}</div></div>
   <header class="header" id="header">
@@ -199,8 +206,8 @@ function renderLayout() {
     <div class="drawer__panel" role="dialog" aria-label="Menú">
       <div class="drawer__top">${logoSVG("word", "logo-ink")}<button class="icon-btn" data-close aria-label="Cerrar menú">${I.close}</button></div>
       <div class="drawer__styles">
-        <a class="st" href="street.html">${pic(STYLES.street.panel, "45vw")}<span>Street</span></a>
-        <a class="om" href="old-money.html">${pic(STYLES["old-money"].panel, "45vw")}<span>Old Money</span></a>
+        <a class="st" href="badass.html">${pic(STYLES.badass.panel, "45vw")}<span>Badass</span></a>
+        <a class="om" href="martir.html">${pic(STYLES.martir.panel, "45vw")}<span>Martir Atelier</span></a>
       </div>
       ${NAV.slice(2).map(([k, label, href]) => `<a href="${href}"${isActive(k) ? ' class="active"' : ""}>${label}<span aria-hidden="true">→</span></a>`).join("")}
       <p class="drawer__label">Categorías</p>
@@ -216,7 +223,7 @@ function renderLayout() {
         <div class="footer__brand">
           ${logoSVG("stacked", "logo-light")}
           <p class="footer__tag">${esc(C.tagline)}</p>
-          <p>Dos estilos, una identidad. Escríbenos y un asesor te ayudará a elegir tu talla y tu prenda ideal.</p>
+          <p>Dos mundos de moda diferentes pero complementarios. Escríbenos y un asesor te ayudará a elegir tu talla y tu prenda ideal.</p>
           <div class="socials">
             <a href="${C.social.instagram}" aria-label="Instagram">${I.insta}</a>
             <a href="${C.social.facebook}" aria-label="Facebook">${I.fb}</a>
@@ -226,8 +233,11 @@ function renderLayout() {
         </div>
         <div>
           <h2>Colecciones</h2>
-          <a href="street.html">Street</a>
-          <a href="old-money.html">Old Money</a>
+          <a href="badass.html">Badass</a>
+          <a href="tienda.html?linea=bassic">Bassic</a>
+          <a href="tienda.html?linea=bleesst">Bleesst</a>
+          <a href="martir.html">Martir Atelier</a>
+          <a href="tienda.html?linea=uomo-cattivo">Maison × Uomo Cattivo</a>
           <a href="tienda.html?ofertas=1">Ofertas</a>
           <a href="pack.html">Pack Deluxe</a>
           <a href="tienda.html">Toda la tienda</a>
@@ -317,7 +327,7 @@ function initHeader() {
     if (q.length < 2) { sug.innerHTML = ""; return; }
     const res = searchProducts(q);
     sug.innerHTML = res.length
-      ? res.slice(0, 6).map(p => `<a href="${productUrl(p)}">${pic(p.imgs[0], "44px")}<span><b>${esc(p.name)}</b><small>${esc(catOf(p.cat)?.name || "")} · ${esc(styleOf(p.estilo)?.name || "")}</small></span><span class="price-mini">${money(p.price)}</span></a>`).join("") +
+      ? res.slice(0, 6).map(p => `<a href="${productUrl(p)}">${pic(p.imgs[0], "44px")}<span><b>${esc(p.name)}</b><small>${esc(catOf(p.cat)?.name || "")} · ${esc(lineName(p))}</small></span><span class="price-mini">${money(p.price)}</span></a>`).join("") +
         `<a class="suggest__all" href="tienda.html?q=${encodeURIComponent(q)}">Ver los ${res.length} resultados →</a>`
       : `<p style="padding:8px 8px 4px">No encontramos “${esc(q)}”. Prueba con lino, hoodie, jean o blazer.</p>`;
   });
@@ -350,7 +360,7 @@ function cardHTML(p, opts) {
     </div>
     <div class="card__info">
       <div>
-        ${showStyle ? `<span class="card__style">${esc(styleOf(p.estilo)?.name || "")}</span>` : ""}
+        ${showStyle ? `<span class="card__style">${esc(lineName(p))}</span>` : ""}
         <a class="card__name" href="${url}">${esc(p.name)}</a>
         <div class="price">${priceHTML(p)}</div>
       </div>
@@ -451,7 +461,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${esc(h.title)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>
@@ -525,7 +535,7 @@ function openQV(slug, size) {
   const p = findProduct(slug); if (!p || !$("#modal")) return;
   Object.assign(qv, { p, size: size || null, color: p.colors[0][0] });
   setPic($("#qvImg"), p.imgs[0], "(max-width:640px) 100vw, 480px"); $("#qvImg").alt = p.name;
-  $("#qvCat").textContent = [catOf(p.cat)?.name, styleOf(p.estilo)?.name].filter(Boolean).join(" · ");
+  $("#qvCat").textContent = [catOf(p.cat)?.name, lineName(p)].filter(Boolean).join(" · ");
   $("#qvName").textContent = p.name;
   $("#qvPrice").innerHTML = priceHTML(p, false) + (p.old ? `<span class="tag">-${pct(p)}%</span>` : "");
   $("#qvColorName").textContent = qv.color;
@@ -706,7 +716,7 @@ function initIntro() {
 }
 
 /* =========================================================
-   PÁGINA: COLECCIÓN (street.html / old-money.html)
+   PÁGINA: COLECCIÓN (badass.html / martir.html)
    ========================================================= */
 function initColeccion() {
   const st = styleOf(ESTILO), root = $("#coleccion");
@@ -721,6 +731,7 @@ function initColeccion() {
   root.innerHTML = `
   ${heroHTML(st)}
   ${st.marquee ? `<div class="mq" aria-hidden="true"><div class="mq__track">${st.marquee.map(w => `<span>${esc(w)}</span>`).join("").repeat(2)}</div></div>` : ""}
+  ${linesHTML(st, items)}
   ${st.quote ? `<div class="quote"><div class="wrap"><p>“${esc(st.quote)}”</p><span>${esc(C.store)} · ${esc(st.name)}</span></div></div>` : ""}
 
   <section id="ofertas">
@@ -728,7 +739,7 @@ function initColeccion() {
       <div class="deals__head reveal">
         <div class="label center"><span class="line"></span>Solo por hoy<span class="line"></span></div>
         <h2 class="h2">Ofertas del día</h2>
-        <p class="deals__sub">Precios especiales de la colección ${esc(st.name)} que cambian cada mañana</p>
+        <p class="deals__sub">Precios especiales de ${esc(st.name)} que cambian cada mañana</p>
       </div>
       <div class="countdown" role="timer" aria-label="Tiempo restante de las ofertas">
         <div class="cd-unit"><b id="tH">00</b><span>Horas</span></div><i class="cd-sep" aria-hidden="true"></i>
@@ -753,6 +764,7 @@ function initColeccion() {
       <div class="sec-head reveal"><div><div class="label">La colección<span class="line"></span></div><h2 class="h2">Todo ${esc(st.name)}</h2></div><a href="tienda.html?estilo=${st.slug}" class="see-all">Filtrar en la tienda <span>→</span></a></div>
       <div class="chipbar" id="collChips" role="group" aria-label="Filtrar por categoría">
         <button type="button" class="on" data-c="" aria-pressed="true">Todo <small>${items.length}</small></button>
+        ${st.lines.length > 1 ? st.lines.map(l => `<button type="button" data-l="${l}" aria-pressed="false">${esc(lineOf(l).name)} <small>${items.filter(p => p.linea === l).length}</small></button>`).join("") : ""}
         ${cats.map(c => `<button type="button" data-c="${c.slug}" aria-pressed="false">${c.name} <small>${items.filter(p => p.cat === c.slug).length}</small></button>`).join("")}
       </div>
       <div class="grid grid--wide" id="collGrid">${items.map(p => cardHTML(p)).join("")}</div>
@@ -766,7 +778,7 @@ function initColeccion() {
         <div class="label">${esc(st.editorial.kicker)}<span class="line"></span></div>
         <h2>${esc(st.editorial.title)}</h2>
         <p>${esc(st.editorial.text)}</p>
-        <a href="tienda.html?estilo=${st.slug}" class="btn ${st.slug === "street" ? "btn--light" : "btn--teal"}">Comprar ${esc(st.name)} <span>→</span></a>
+        <a href="tienda.html?estilo=${st.slug}" class="btn ${st.slug === "badass" ? "btn--light" : "btn--teal"}">Comprar ${esc(st.name)} <span>→</span></a>
       </div>
     </div>
   </section>
@@ -780,7 +792,7 @@ function initColeccion() {
 
   <section class="cross">
     <div class="wrap">
-      <a class="cross__card cross--${other.slug}" href="${other.page}" style="background:${fotoColor(other.panel)}">${pic(other.panel, SZ.full, { fade: true })}<div class="cross__body"><small>¿Buscas otro estilo?</small><h2>${esc(other.name)}</h2><p>${esc(other.desc)}</p><b>Explorar ${esc(other.name)} →</b></div></a>
+      <a class="cross__card cross--${other.slug}" href="${other.page}" style="background:${fotoColor(other.panel)}">${pic(other.panel, SZ.full, { fade: true })}<div class="cross__body"><small>El otro mundo de MAISON</small><h2>${brandTitle(other)}</h2><p>${esc(other.desc)}</p><b>Explorar ${esc(other.name)} →</b></div></a>
     </div>
   </section>
 
@@ -790,11 +802,38 @@ function initColeccion() {
   $("#collChips").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     $$("#collChips button").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); });
-    const list = b.dataset.c ? items.filter(p => p.cat === b.dataset.c) : items;
+    const list = b.dataset.l ? items.filter(p => p.linea === b.dataset.l) : b.dataset.c ? items.filter(p => p.cat === b.dataset.c) : items;
     $("#collGrid").innerHTML = list.map(p => cardHTML(p)).join("");
   });
   initHero();
   initCountdown();
+}
+
+/* Bloques de cada línea dentro del mundo: Bassic y Bleesst (Badass) o Maison × Uomo Cattivo (Martir) */
+function linesHTML(st, items) {
+  return `<section class="lines lines--${st.slug}" id="lineas">${st.lines.map((slug, i) => {
+    const l = lineOf(slug), list = items.filter(p => p.linea === slug), id = "trackLine" + i;
+    const name = l.slug === "bleesst" ? `<img class="ln__logo" src="${l.logo}" alt="Bleesst" width="956" height="298" loading="lazy">`
+      : l.slug === "uomo-cattivo" ? `<span class="ln__collab"><img class="ln__mono" src="${l.logo}" alt="" width="219" height="216" loading="lazy"><span>Uomo Cattivo</span></span>`
+      : `<span class="ln__word">${esc(l.name)}</span>`;
+    return `<div class="ln ln--${l.slug}">
+      <div class="wrap">
+        <div class="ln__head reveal">
+          <div class="ln__brand">
+            ${l.collab ? `<span class="ln__kicker">Maison <i>×</i> Uomo Cattivo</span>` : `<span class="ln__kicker">${esc(st.name)} · Línea ${i + 1}</span>`}
+            <h2 class="ln__name">${name}</h2>
+            <p class="ln__tag">${esc(l.tagline)}</p>
+          </div>
+          <div class="ln__about">
+            <p>${esc(l.desc)}</p>
+            <ul>${l.points.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+          </div>
+        </div>
+        <div class="deals-bar"><p>${list.length} prendas</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo ${esc(l.collab || l.name)} <span>→</span></a>${arrowsHTML(id)}</div></div>
+        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>
+      </div>
+    </div>`;
+  }).join("")}</section>`;
 }
 
 /* =========================================================
@@ -809,14 +848,15 @@ let shop = {};
 function readShop() {
   const u = new URLSearchParams(location.search);
   shop = {
-    estilo: STYLES[u.get("estilo")] ? u.get("estilo") : "", cat: u.get("cat") || "", q: u.get("q") || "", talla: u.get("talla") || "",
+    linea: LINES[u.get("linea")] ? u.get("linea") : "",
+    estilo: LINES[u.get("linea")] ? LINES[u.get("linea")].estilo : STYLES[u.get("estilo")] ? u.get("estilo") : "", cat: u.get("cat") || "", q: u.get("q") || "", talla: u.get("talla") || "",
     min: u.get("min") || "", max: u.get("max") || "", ofertas: u.get("ofertas") === "1",
     orden: u.get("orden") || "recomendado", page: Math.max(1, parseInt(u.get("page") || "1", 10) || 1),
   };
 }
 function writeShop() {
   const u = new URLSearchParams();
-  ["estilo", "cat", "q", "talla", "min", "max"].forEach(k => shop[k] && u.set(k, shop[k]));
+  (shop.linea ? ["linea"] : ["estilo"]).concat(["cat", "q", "talla", "min", "max"]).forEach(k => shop[k] && u.set(k, shop[k]));
   if (shop.ofertas) u.set("ofertas", "1");
   if (shop.orden !== "recomendado") u.set("orden", shop.orden);
   if (shop.page > 1) u.set("page", shop.page);
@@ -827,6 +867,7 @@ function filtered() {
   let list = PRODUCTS.slice();
   if (shop.q) list = searchProducts(shop.q, list);
   if (shop.estilo) list = list.filter(p => p.estilo === shop.estilo);
+  if (shop.linea) list = list.filter(p => p.linea === shop.linea);
   if (shop.cat) list = list.filter(p => p.cat === shop.cat);
   if (shop.talla) list = list.filter(p => p.sizes.includes(shop.talla));
   if (shop.min !== "") list = list.filter(p => p.price >= +shop.min);
@@ -855,8 +896,9 @@ function initTienda() {
 
   $("#fStyles").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    const v = b.dataset.v, keepCat = !shop.cat || PRODUCTS.some(p => p.cat === shop.cat && (!v || p.estilo === v));
-    set({ estilo: v, cat: keepCat ? shop.cat : "" });
+    const l = b.dataset.l || "", v = l ? lineOf(l).estilo : b.dataset.v;
+    const keepCat = !shop.cat || PRODUCTS.some(p => p.cat === shop.cat && (!v || p.estilo === v) && (!l || p.linea === l));
+    set({ estilo: v, linea: l, cat: keepCat ? shop.cat : "" });
   });
   $("#fCats").addEventListener("click", e => { const b = e.target.closest("button"); if (b) set({ cat: b.dataset.v }); });
   $("#shopCats").addEventListener("click", e => { const b = e.target.closest("button"); if (b) set({ cat: b.dataset.v }); });
@@ -864,8 +906,8 @@ function initTienda() {
   $("#fPrice").addEventListener("submit", e => { e.preventDefault(); set({ min: $("#fMin").value.trim(), max: $("#fMax").value.trim() }); closeFilters(); });
   $("#fDeals").addEventListener("change", e => set({ ofertas: e.target.checked }));
   $("#fSort").addEventListener("change", e => set({ orden: e.target.value }));
-  $("#fClear").addEventListener("click", () => { shop = { estilo: "", cat: "", q: "", talla: "", min: "", max: "", ofertas: false, orden: shop.orden, page: 1 }; writeShop(); render(); closeFilters(); });
-  $("#chips").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (b) set({ [b.dataset.rm]: b.dataset.rm === "ofertas" ? false : "" }); });
+  $("#fClear").addEventListener("click", () => { shop = { estilo: "", linea: "", cat: "", q: "", talla: "", min: "", max: "", ofertas: false, orden: shop.orden, page: 1 }; writeShop(); render(); closeFilters(); });
+  $("#chips").addEventListener("click", e => { const b = e.target.closest("[data-rm]"); if (b) set(b.dataset.rm === "estilo" ? { estilo: "", linea: "" } : { [b.dataset.rm]: b.dataset.rm === "ofertas" ? false : "" }); });
   $("#pager").addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     set({ page: +b.dataset.p });
@@ -875,10 +917,12 @@ function initTienda() {
   $$("[data-close-filters]").forEach(el => el.addEventListener("click", closeFilters));
 
   function render() {
-    const inStyle = PRODUCTS.filter(p => !shop.estilo || p.estilo === shop.estilo);
-    // Estilos
-    $("#fStyles").innerHTML = [["", "Todos", PRODUCTS.length], ...Object.values(STYLES).map(s => [s.slug, s.name, PRODUCTS.filter(p => p.estilo === s.slug).length])]
-      .map(([v, l, n]) => `<button type="button" data-v="${v}" class="${shop.estilo === v ? "on" : ""}" aria-pressed="${shop.estilo === v}">${l} · ${n}</button>`).join("");
+    const inStyle = PRODUCTS.filter(p => (!shop.estilo || p.estilo === shop.estilo) && (!shop.linea || p.linea === shop.linea));
+    // Mundos y sus líneas
+    const on = (v, l) => (l ? shop.linea === l : shop.estilo === v && !shop.linea);
+    $("#fStyles").innerHTML = `<button type="button" data-v="" class="${on("") ? "on" : ""}" aria-pressed="${on("")}">Todos · ${PRODUCTS.length}</button>` +
+      Object.values(STYLES).map(s => `<button type="button" data-v="${s.slug}" class="${on(s.slug) ? "on" : ""}" aria-pressed="${on(s.slug)}">${esc(s.name)} · ${PRODUCTS.filter(p => p.estilo === s.slug).length}</button>` +
+        s.lines.map(l => `<button type="button" class="sub${on(s.slug, l) ? " on" : ""}" data-l="${l}" aria-pressed="${on(s.slug, l)}">${esc(lineOf(l).collab || lineOf(l).name)} · ${PRODUCTS.filter(p => p.linea === l).length}</button>`).join("")).join("");
     // Categorías (cantidades dentro del estilo elegido)
     const catBtns = [{ slug: "", name: "Todas" }, ...CATS].map(c => [c, c.slug ? inStyle.filter(p => p.cat === c.slug).length : inStyle.length]).filter(([c, n]) => !c.slug || n || shop.cat === c.slug);
     $("#fCats").innerHTML = catBtns.map(([c, n]) => `<button type="button" data-v="${c.slug}" class="${shop.cat === c.slug ? "on" : ""}">${c.name}<small>${n}</small></button>`).join("");
@@ -889,22 +933,23 @@ function initTienda() {
     $("#fSort").value = shop.orden;
 
     // Encabezado según filtro
-    const cat = catOf(shop.cat), st = styleOf(shop.estilo);
-    const base = shop.q ? `“${shop.q}”` : cat ? cat.name : shop.ofertas ? "Ofertas" : st ? st.name : "Tienda";
-    const title = st && (cat || shop.ofertas) && !shop.q ? `${base} ${st.name}` : base;
+    const cat = catOf(shop.cat), st = styleOf(shop.estilo), ln = lineOf(shop.linea);
+    const who = ln ? ln.collab || ln.name : st ? st.name : "";
+    const base = shop.q ? `“${shop.q}”` : cat ? cat.name : shop.ofertas ? "Ofertas" : who || "Tienda";
+    const title = who && (cat || shop.ofertas) && !shop.q ? `${base} ${who}` : base;
     $("#shopTitle").textContent = title;
-    $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : st && !cat ? st.desc : cat ? `${cat.name} ${st ? `de la colección ${st.name}` : "de las colecciones Street y Old Money"}.` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Street y Old Money en un solo lugar. Consulta tallas y stock por WhatsApp.";
+    $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : who && !cat ? (ln ? `${ln.tagline} ${ln.desc}` : st.desc) : cat ? `${cat.name} ${who ? `de ${who}` : "de Badass y Martir Atelier"}.` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Badass y Martir Atelier en un solo lugar. Consulta tallas y stock por WhatsApp.";
     $("#shopCrumb").textContent = title;
     const heroImg = cat ? (inStyle.find(p => p.cat === cat.slug) || PRODUCTS.find(p => p.cat === cat.slug)).imgs[0] : st ? st.panel : "camisas-dobladas.jpg";
     if ($("#shopHeroImg").dataset.foto !== heroImg) setPic($("#shopHeroImg"), heroImg);
-    $(".page-hero").classList.toggle("page-hero--street", shop.estilo === "street");
+    $(".page-hero").classList.toggle("page-hero--badass", shop.estilo === "badass");
     document.body.dataset.estilo = shop.estilo;
     document.title = `${shop.q ? "Búsqueda" : title} · ${C.store}`;
 
     // Filtros activos
     const chips = [];
     if (shop.q) chips.push(["q", `Búsqueda: ${shop.q}`]);
-    if (st) chips.push(["estilo", st.name]);
+    if (who) chips.push(["estilo", who]);
     if (cat) chips.push(["cat", cat.name]);
     if (shop.talla) chips.push(["talla", `Talla ${shop.talla}`]);
     if (shop.min) chips.push(["min", `Desde ${money(+shop.min)}`]);
@@ -927,7 +972,7 @@ function initTienda() {
       ? pageItems.map(p => cardHTML(p, { style: !shop.estilo })).join("")
       : `<div class="empty" style="grid-column:1/-1"><h2>No encontramos prendas con esos filtros</h2><p>Prueba quitando algún filtro o escríbenos: te ayudamos a encontrar lo que buscas.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`;
     const ask = $(".js-wa-search", $("#grid"));
-    if (ask) ask.href = waLink(`Hola ${C.store} 👋, estoy buscando ${shop.q || (cat ? cat.name.toLowerCase() : "una prenda")}${st ? ` del estilo ${st.name}` : ""}${shop.talla ? ` en talla ${shop.talla}` : ""}. ¿Me pueden ayudar?`);
+    if (ask) ask.href = waLink(`Hola ${C.store} 👋, estoy buscando ${shop.q || (cat ? cat.name.toLowerCase() : "una prenda")}${who ? ` de ${who}` : ""}${shop.talla ? ` en talla ${shop.talla}` : ""}. ¿Me pueden ayudar?`);
 
     // Paginación
     if (pages > 1) {
@@ -958,7 +1003,7 @@ function initProducto() {
 
   root.innerHTML = `
   <div class="wrap">
-    <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><a href="${st.page}">${st.name}</a><span aria-hidden="true">/</span><a href="tienda.html?estilo=${p.estilo}&cat=${p.cat}">${cat?.name || ""}</a><span aria-hidden="true">/</span><span>${esc(p.name)}</span></nav>
+    <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><a href="${st.page}">${st.name}</a><span aria-hidden="true">/</span><a href="tienda.html?linea=${p.linea}">${esc(lineName(p))}</a><span aria-hidden="true">/</span><span>${esc(p.name)}</span></nav>
     <div class="pdp__layout">
       <div class="gallery">
         <div class="gallery__thumbs">${p.imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("")}</div>
@@ -969,7 +1014,7 @@ function initProducto() {
         </div>
       </div>
       <div class="pdp__info">
-        <span class="pdp__cat"><a href="tienda.html?estilo=${p.estilo}&cat=${p.cat}">${cat?.name || ""}</a> · <a href="${st.page}">${st.name}</a></span>
+        <span class="pdp__cat"><a href="tienda.html?linea=${p.linea}&cat=${p.cat}">${cat?.name || ""}</a> · <a href="tienda.html?linea=${p.linea}">${esc(lineName(p))}</a></span>
         <h1 class="pdp__name">${esc(p.name)}</h1>
         <div class="pdp__price">${priceHTML(p, false)}${p.old ? `<span class="tag">-${d}%</span>` : ""}</div>
         ${p.old ? `<p class="pdp__save">Ahorras ${money(p.old - p.price)}</p>` : ""}
@@ -1001,7 +1046,7 @@ function initProducto() {
           <div>${I.card}<span><b>Paga como prefieras:</b> Yape, Plin, tarjeta o transferencia</span></div>
         </div>
         <div class="acc">
-          <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Colección</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd><dt>Material</dt><dd>${esc(p.material)}</dd><dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
+          <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd><dt>Material</dt><dd>${esc(p.material)}</dd><dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
           <details><summary>Envíos y cambios</summary><div class="acc__body">Lima: ${money(C.envioLima)} · Provincia: ${money(C.envioProvincia)}. Envío gratis en compras desde ${money(C.envioGratisDesde)}. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
@@ -1071,7 +1116,7 @@ function initProducto() {
 function initPack() {
   const off = Math.round(PACK.discount * 100);
   const param = new URLSearchParams(location.search).get("estilo");
-  let estilo = STYLES[param] ? param : STYLES[stored()] ? stored() : "street";
+  let estilo = STYLES[param] ? param : STYLES[stored()] ? stored() : "badass";
   let steps = [], sel = [];
 
   function build() {
@@ -1208,7 +1253,7 @@ function initContacto() {
   const faqs = [
     ["¿Cuánto cuesta el envío?", `El envío en Lima cuesta ${money(C.envioLima)} y a provincia ${money(C.envioProvincia)}. Es gratis en compras desde ${money(C.envioGratisDesde)}.`],
     ["¿Cuánto demora mi pedido?", "En Lima entregamos de 1 a 2 días hábiles. A provincia, de 2 a 5 días hábiles según el destino."],
-    ["¿Qué diferencia hay entre Street y Old Money?", "Street es nuestra línea urbana: oversize, hoodies, gráficos y denim. Old Money es la línea clásica: lino, tweed, camisas, blazers y tonos neutros. Puedes combinar prendas de ambas."],
+    ["¿Qué diferencia hay entre Badass y Martir Atelier?", "Badass es el lado urbano, cómodo y expresivo: Bassic (lo básico, siempre) y Bleesst (el lado más atrevido). Martir Atelier es el lado refinado y estructurado, con la colección Maison × Uomo Cattivo. Una misma persona puede ser ambos: combina prendas de los dos mundos."],
     ["¿Cómo sé cuál es mi talla?", "Cada producto tiene su guía de tallas con medidas en centímetros. Si tienes dudas, escríbenos por WhatsApp con tu altura y peso y te recomendamos la mejor talla."],
     ["¿Puedo cambiar una prenda?", `Sí. Tienes hasta ${C.diasCambio} días después de recibir tu pedido para cambiarla por otra talla o modelo, siempre que esté sin uso y con etiqueta.`],
     ["¿Qué medios de pago aceptan?", "Yape, Plin, transferencia bancaria y tarjeta de crédito o débito. El asesor te envía los datos al confirmar tu pedido."],
