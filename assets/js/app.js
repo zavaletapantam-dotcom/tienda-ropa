@@ -113,6 +113,8 @@ const I = {
   clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
   share: svg('<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4"/>'),
   filter: svg('<path d="M4 6h16M7 12h10M10 18h4"/>', 1.8),
+  bag: svg('<path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'),
+  trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
   home: svg('<path d="M3 11 12 4l9 7v9h-6v-6H9v6H3z"/>'),
   shirt: svg('<path d="M8 3 3 6l2 4 2-1v12h10V9l2 1 2-4-5-3c0 2-2 3.5-4 3.5S8 5 8 3Z"/>'),
   gift: svg('<rect x="3" y="8" width="18" height="13"/><path d="M3 12h18M12 8v13M12 8C10 4 6 4 6 6.5S9 8 12 8Zm0 0c2-4 6-4 6-1.5S15 8 12 8Z"/>'),
@@ -189,6 +191,7 @@ function renderLayout() {
       <nav class="nav" aria-label="Principal">${nav}</nav>
       <div class="header__icons">
         <button class="icon-btn" id="openSearch" aria-label="Buscar" aria-expanded="false" aria-controls="search">${I.search}</button>
+        <button class="icon-btn cart-btn" type="button" data-open-cart aria-label="Abrir carrito">${I.bag}<span class="cart-count" hidden>0</span></button>
         <a class="header__wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}<span>Asesor</span></a>
         <button class="icon-btn burger" id="openMenu" aria-label="Abrir menú">${I.menu}</button>
       </div>
@@ -265,6 +268,7 @@ function renderLayout() {
   <nav class="tabbar" aria-label="Navegación móvil">
     <a href="index.html#elegir"${PAGE === "coleccion" ? ' class="on"' : ""}>${I.home}Inicio</a>
     <a href="tienda.html"${PAGE === "tienda" || PAGE === "producto" ? ' class="on"' : ""}>${I.shirt}Tienda</a>
+    <button type="button" data-open-cart>${I.bag}<span class="cart-count" hidden>0</span>Carrito</button>
     <a href="pack.html"${PAGE === "pack" ? ' class="on"' : ""}>${I.gift}Pack</a>
     <a href="#" class="is-wa js-wa" target="_blank" rel="noopener">${I.wa}WhatsApp</a>
   </nav>
@@ -279,10 +283,26 @@ function renderLayout() {
         <div class="pdp__price" id="qvPrice"></div>
         <div class="opt" id="qvColorsWrap"><div class="opt-label">Color <em id="qvColorName"></em></div><div class="swatches" id="qvColors"></div></div>
         <div class="opt"><div class="opt-label">Talla</div><div class="size-btns" id="qvSizes"></div></div>
-        <a class="btn-wa" id="qvWa" href="#" target="_blank" rel="noopener">${I.wa}Pedir por WhatsApp</a>
+        <button type="button" class="btn-cart" id="qvAdd">${I.bag}Agregar al carrito</button>
+        <a class="pdp__direct" id="qvWa" href="#" target="_blank" rel="noopener">${I.wa}O pídelo directo por WhatsApp</a>
         <a class="qv__more" id="qvMore" href="#">Ver detalles del producto</a>
       </div>
     </div>
+  </div>
+  <div class="cart" id="cart" aria-hidden="true">
+    <div class="cart__bg" data-cart-close></div>
+    <aside class="cart__panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+      <div class="cart__head"><h2 id="cartTitle">Tu carrito <small id="cartN"></small></h2><button class="icon-btn" type="button" data-cart-close aria-label="Cerrar carrito">${I.close}</button></div>
+      <div class="cart__ship" id="cartShip"></div>
+      <div class="cart__list" id="cartList"></div>
+      <div class="cart__foot" id="cartFoot">
+        <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
+        <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
+        <p class="cart__note">El envío se coordina con el asesor. Él confirmará <b>stock, tallas y costo de envío</b> antes de que pagues.</p>
+        <a class="btn-wa" id="cartWa" href="#" target="_blank" rel="noopener">${I.wa}Consultar con un asesor</a>
+        <div class="cart__links"><button type="button" data-cart-close>Seguir comprando</button><button type="button" id="cartClear">${I.trash}Vaciar carrito</button></div>
+      </div>
+    </aside>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
 
@@ -520,13 +540,118 @@ function initFotos() {
 }
 
 /* ---------- Botón de WhatsApp que exige talla ---------- */
+function needSize(size, sizesEl) {
+  if (size) return true;
+  toast("Elige tu talla primero");
+  sizesEl.classList.remove("shake"); void sizesEl.offsetWidth; sizesEl.classList.add("shake");
+  return false;
+}
 function guardSize(link, getSize, sizesEl) {
-  link.addEventListener("click", e => {
-    if (getSize()) return;
-    e.preventDefault();
-    toast("Elige tu talla primero");
-    sizesEl.classList.remove("shake"); void sizesEl.offsetWidth; sizesEl.classList.add("shake");
+  link.addEventListener("click", e => { if (!needSize(getSize(), sizesEl)) e.preventDefault(); });
+}
+
+/* =========================================================
+   CARRITO: se guarda en este navegador y se envía completo por WhatsApp
+   ========================================================= */
+const CART_KEY = "maison_cart";
+let cart = [];
+function loadCart() {
+  try { const v = JSON.parse(localStorage.getItem(CART_KEY) || "[]"); cart = Array.isArray(v) ? v.filter(x => x && findProduct(x.slug) && x.qty > 0) : []; }
+  catch (_) { cart = []; }
+}
+function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (_) {} renderCart(); }
+const cartQty = () => cart.reduce((n, x) => n + x.qty, 0);
+const cartSub = () => cart.reduce((t, x) => t + findProduct(x.slug).price * x.qty, 0);
+const cartSave = () => cart.reduce((t, x) => { const p = findProduct(x.slug); return t + (p.old ? (p.old - p.price) * x.qty : 0); }, 0);
+function addToCart(p, { size, color, qty = 1 }) {
+  const it = cart.find(x => x.slug === p.slug && x.size === size && x.color === color);
+  if (it) it.qty = Math.min(20, it.qty + qty); else cart.push({ slug: p.slug, size, color, qty });
+  saveCart();
+  toast("Agregado al carrito");
+  $$(".cart-count").forEach(b => { b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); });
+  openCart(cart.indexOf(it || cart[cart.length - 1]));
+}
+/* Mensaje con todo el pedido para el asesor */
+function cartMsg() {
+  const l = [`Hola ${C.store} 👋, quiero comprar estas prendas:`, ""];
+  cart.forEach((x, i) => {
+    const p = findProduct(x.slug);
+    l.push(`${i + 1}. *${p.name}* (${lineName(p)})`);
+    l.push(`   Color: ${x.color} · Talla: ${x.size} · Cantidad: ${x.qty}`);
+    l.push(`   ${money(p.price)}${x.qty > 1 ? ` c/u = ${money(p.price * x.qty)}` : ""}`);
   });
+  const n = cartQty();
+  l.push("", `🧾 *Total: ${money(cartSub())}* (${n} ${n === 1 ? "prenda" : "prendas"})`);
+  l.push(cartSub() >= C.envioGratisDesde ? "🚚 Mi pedido tiene envío gratis" : "🚚 Envío: por coordinar");
+  l.push("", "¿Me confirman disponibilidad y el siguiente paso para pagar?");
+  return l.join("\n");
+}
+function renderCart() {
+  const n = cartQty();
+  $$(".cart-count").forEach(b => { b.textContent = n; b.hidden = !n; });
+  $$("[data-open-cart]").forEach(b => b.setAttribute("aria-label", n ? `Abrir carrito (${n} ${n === 1 ? "prenda" : "prendas"})` : "Abrir carrito"));
+  const list = $("#cartList"); if (!list) return;
+  $("#cartN").textContent = n ? `(${n})` : "";
+  if (!cart.length) {
+    list.innerHTML = `<div class="cart__empty">${I.bag}<h3>Tu carrito está vacío</h3><p>Agrega las prendas que te gusten y envíalas juntas a un asesor por WhatsApp.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`;
+    $("#cartFoot").hidden = true; $("#cartShip").hidden = true; return;
+  }
+  $("#cartFoot").hidden = false; $("#cartShip").hidden = false;
+  list.innerHTML = cart.map((x, i) => {
+    const p = findProduct(x.slug);
+    return `<div class="ci" data-i="${i}">
+      <a class="ci__img" href="${productUrl(p)}" style="background:${fotoColor(p.imgs[0])}">${pic(p.imgs[0], "84px", { lazy: false, alt: p.name })}</a>
+      <div class="ci__info">
+        <small>${esc(lineName(p))}</small>
+        <a class="ci__name" href="${productUrl(p)}">${esc(p.name)}</a>
+        <span class="ci__opts">${esc(x.color)} · Talla ${esc(x.size)}</span>
+        <div class="ci__row">
+          <div class="qty qty--sm"><button type="button" data-cq="-1" aria-label="Quitar uno de ${esc(p.name)}">−</button><output>${x.qty}</output><button type="button" data-cq="1" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>
+          <span class="ci__price">${x.qty > 1 ? `<small>${money(p.price)} c/u</small>` : ""}<b>${money(p.price * x.qty)}</b></span>
+        </div>
+      </div>
+      <button type="button" class="ci__rm" data-cart-rm aria-label="Quitar ${esc(p.name)} del carrito">${I.close}</button>
+    </div>`;
+  }).join("");
+  const sub = cartSub(), save = cartSave(), left = C.envioGratisDesde - sub;
+  $("#cartShip").innerHTML = left > 0
+    ? `<p>Te faltan <b>${money(left)}</b> para el <b>envío gratis</b></p><i style="--p:${Math.min(100, (sub / C.envioGratisDesde) * 100)}%"></i>`
+    : `<p>¡Listo! Tu pedido tiene <b>envío gratis</b></p><i style="--p:100%"></i>`;
+  $("#cartSub").textContent = money(sub);
+  $("#cartSave").textContent = "−" + money(save);
+  $("#cartSaveRow").hidden = !save;
+  $("#cartWa").href = waLink(cartMsg());
+}
+let cartFrom = null;
+function openCart(flash) {
+  const c = $("#cart"); if (!c) return;
+  closeQV(); $("#drawer")?.classList.remove("open");
+  cartFrom = document.activeElement;
+  c.classList.add("open"); c.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden";
+  if (flash != null) { const el = $(`.ci[data-i="${flash}"]`); if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "nearest" }); } }
+  setTimeout(() => $(".cart__head .icon-btn")?.focus(), 50);
+}
+function closeCart() {
+  const c = $("#cart"); if (!c || !c.classList.contains("open")) return;
+  c.classList.remove("open"); c.setAttribute("aria-hidden", "true"); document.body.style.overflow = "";
+  cartFrom?.focus?.();
+}
+function initCart() {
+  loadCart(); renderCart();
+  const c = $("#cart"); if (!c) return;
+  $$("[data-open-cart]").forEach(b => b.addEventListener("click", () => openCart()));
+  $$("[data-cart-close]", c).forEach(b => b.addEventListener("click", closeCart));
+  $("#cartList").addEventListener("click", e => {
+    const row = e.target.closest(".ci"); if (!row) return;
+    const i = +row.dataset.i, q = e.target.closest("[data-cq]");
+    if (q) { cart[i].qty = Math.min(20, cart[i].qty + +q.dataset.cq); if (cart[i].qty < 1) cart.splice(i, 1); saveCart(); }
+    else if (e.target.closest("[data-cart-rm]")) { cart.splice(i, 1); saveCart(); toast("Prenda quitada del carrito"); }
+  });
+  $("#cartClear").addEventListener("click", () => { if (confirm("¿Vaciar el carrito?")) { cart = []; saveCart(); } });
+  $("#cartWa").addEventListener("click", () => toast("Abriendo WhatsApp con tu pedido…"));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
+  // Si el cliente tiene la tienda abierta en otra pestaña, el carrito se mantiene igual
+  addEventListener("storage", e => { if (e.key === CART_KEY) { loadCart(); renderCart(); } });
 }
 
 /* ---------- Vista rápida ---------- */
@@ -563,6 +688,11 @@ function initQV() {
   const m = $("#modal"); if (!m) return;
   $$("[data-close]", m).forEach(el => el.addEventListener("click", closeQV));
   guardSize($("#qvWa"), () => qv.size, $("#qvSizes"));
+  $("#qvAdd").addEventListener("click", () => {
+    if (!needSize(qv.size, $("#qvSizes"))) return;
+    closeQV();
+    addToCart(qv.p, { size: qv.size, color: qv.color, qty: 1 });
+  });
   document.addEventListener("click", e => {
     const b = e.target.closest("[data-qv]");
     if (b) { e.preventDefault(); openQV(b.dataset.qv, b.dataset.size); }
@@ -1035,8 +1165,9 @@ function initProducto() {
           <div class="opt-label">Cantidad</div>
           <div class="pdp__actions">
             <div class="qty"><button type="button" data-q="-1" aria-label="Quitar uno">−</button><output id="pQty" aria-live="polite">1</output><button type="button" data-q="1" aria-label="Agregar uno">+</button></div>
-            <a class="btn-wa" id="pWa" href="#" target="_blank" rel="noopener">${I.wa}Pedir por WhatsApp</a>
+            <button type="button" class="btn-cart" id="pAdd">${I.bag}Agregar al carrito</button>
           </div>
+          <a class="pdp__direct" id="pWa" href="#" target="_blank" rel="noopener">${I.wa}O pídelo directo por WhatsApp</a>
           <p class="pdp__note">Un asesor confirmará <b>stock, talla y costo de envío</b> contigo antes de pagar.</p>
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
@@ -1059,7 +1190,7 @@ function initProducto() {
       <div class="track" id="trackRel"></div>
     </div>
   </section>
-  <div class="buybar"><div><small>${p.old ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><a class="btn-wa" id="pWa2" href="#" target="_blank" rel="noopener">${I.wa}Pedir por WhatsApp</a></div>`;
+  <div class="buybar"><div><small>${p.old ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><button type="button" class="btn-cart" id="pAdd2">${I.bag}Agregar al carrito</button></div>`;
 
   // Relacionados: mismo estilo (primero otras categorías para completar el look)
   const sameStyle = PRODUCTS.filter(x => x.estilo === p.estilo && x !== p);
@@ -1084,7 +1215,7 @@ function initProducto() {
   }
 
   // Opciones
-  const update = () => { const href = waLink(productMsg(p, state)); $("#pWa").href = href; $("#pWa2").href = href; };
+  const update = () => { $("#pWa").href = waLink(productMsg(p, state)); };
   $$("#pColors button").forEach(b => b.addEventListener("click", () => {
     $$("#pColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
     state.color = b.dataset.c; $("#pColorName").textContent = state.color; update();
@@ -1099,8 +1230,11 @@ function initProducto() {
   $("#guideBtn").addEventListener("click", e => {
     const open = $("#guide").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", open);
   });
-  [$("#pWa"), $("#pWa2")].forEach(a => guardSize(a, () => state.size, $("#pSizes")));
-  $("#pWa2").addEventListener("click", () => { if (!state.size) $("#pSizes").scrollIntoView({ behavior: "smooth", block: "center" }); });
+  guardSize($("#pWa"), () => state.size, $("#pSizes"));
+  [$("#pAdd"), $("#pAdd2")].forEach(b => b.addEventListener("click", () => {
+    if (!needSize(state.size, $("#pSizes"))) { $("#pSizes").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    addToCart(p, { size: state.size, color: state.color, qty: state.qty });
+  }));
   $("#pShare").addEventListener("click", async () => {
     const data = { title: `${p.name} · ${C.store}`, text: `${p.name} — ${money(p.price)}`, url: location.href };
     if (navigator.share) { try { await navigator.share(data); } catch (_) {} return; }
@@ -1283,6 +1417,7 @@ $$("[data-perks]").forEach(el => (el.innerHTML = perksHTML()));
 fillConfig();
 initHeader();
 initQV();
+initCart();
 initCarousels();
 initReveal();
 initFotos();
