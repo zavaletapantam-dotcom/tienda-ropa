@@ -6,7 +6,7 @@
 
 window.CONFIG = {
   // Código de país + número, sin "+", espacios ni guiones. Ej. Perú: "51987654321"
-  whatsapp: "51900000000",
+  whatsapp: "51936659911",
   store: "MAISON",
   tagline: "Dos mundos · Una sola esencia",
   email: "contacto@maison.pe",

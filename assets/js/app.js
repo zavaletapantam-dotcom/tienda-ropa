@@ -83,7 +83,7 @@ function productMsg(p, o = {}) {
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
   l.push(`💰 Precio: ${money(p.price)}${o.qty > 1 ? " c/u" : ""}`);
-  l.push("", `🔗 ${absUrl(productUrl(p))}`, "", "¿Está disponible?");
+  l.push("", `🔗 ${absUrl(productUrl(p))}`);
   return l.join("\n");
 }
 function searchProducts(q, list = PRODUCTS) {
@@ -1326,7 +1326,7 @@ function initPack() {
 
     const msg = [`Hola ${C.store} 👋, quiero armar mi *${PACK.name} ${st.name}*:`, "",
       ...chosen.map((p, i) => (p ? `${i + 1}. ${p.name} — Talla ${sel[i].size || "?"} — ${money(p.price)}` : "")),
-      "", `Precio normal: ${money(sub)}`, `Precio pack (−${off}%): ${money(total)}`, "", "¿Está disponible?"].join("\n");
+      "", `Precio normal: ${money(sub)}`, `Precio pack (−${off}%): ${money(total)}`].join("\n");
     [$("#sumWa"), $("#pbWa")].forEach(a => { a.href = complete ? waLink(msg) : "#"; a.setAttribute("aria-disabled", !complete); });
   }
   [$("#sumWa"), $("#pbWa")].forEach(a => a.addEventListener("click", e => {
