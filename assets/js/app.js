@@ -132,14 +132,16 @@ function logoSVG(variant = "stacked", cls = "") {
 }
 /* La M se dibuja por piezas: cada pieza solo se revela cuando su propio pincel pasa por ella,
    así ningún trazo deja ver bordes del siguiente. Al final se muestra la M original completa. */
+const SPEED = 0.55; // ritmo de la intro: 1 = original; menos = más rápida
 function logoAnimSVG() {
   const [x, y, w, h] = VB.stacked, segs = LOGO.draw2.segs;
+  const t = v => +(v * SPEED).toFixed(3);
   // Cada pieza sigue el avance exacto del pincel (fotogramas clave calculados con la curva de aceleración)
   const kfs = segs.map((s, i) => s.kf ? `@keyframes mkf${i}{${s.kf.map(([pc, p]) => `${pc}%{stroke-dashoffset:${p > 0 ? +(1 - p).toFixed(4) : 1.01}}`).join("")}}` : "").join("");
   return `<svg class="logo-svg logo-anim" viewBox="${VB.stacked.join(" ")}" role="img" aria-label="${esc(C.store)}">
     <style>${kfs}</style>
     <defs>
-      ${segs.map((s, i) => `<mask id="mk${i}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><path class="mk" d="${s.m}" stroke-width="${s.w}" pathLength="1" style="--dl:${s.dl}s;--du:${s.du}s;--ez:${s.ez}${s.kf ? `;--an:mkf${i}` : ""}"/></mask>`).join("")}
+      ${segs.map((s, i) => `<mask id="mk${i}" maskUnits="userSpaceOnUse" x="${x}" y="${y}" width="${w}" height="${h}"><path class="mk" d="${s.m}" stroke-width="${s.w}" pathLength="1" style="--dl:${t(s.dl)}s;--du:${t(s.du)}s;--ez:${s.ez}${s.kf ? `;--an:mkf${i}` : ""}"/></mask>`).join("")}
       <clipPath id="wClip"><rect x="${WX0 - 40}" y="${WY0 - 70}" width="${WX1 - WX0 + 80}" height="${WY1 - WY0 + 100}"/></clipPath>
     </defs>
     <g class="logo-m-segs">${segs.map((s, i) => `<path class="logo-m" d="${s.r}" fill-rule="evenodd" mask="url(#mk${i})"/>`).join("")}</g>
@@ -647,15 +649,18 @@ function initIntro() {
     mark.style.transform = `translate(${dx}px, ${dy}px) scale(${s})`;
     intro.classList.remove("lock");
     intro.classList.add("to-choose");
-    setTimeout(() => intro.classList.add("placed"), 1000);
+    setTimeout(() => intro.classList.add("placed"), 700);
   };
 
-  if (REDUCE || location.hash === "#elegir") {
+  // Quien ya vio la intro en esta visita va directo a elegir
+  let seen = false;
+  try { seen = sessionStorage.getItem("maison_intro") === "1"; sessionStorage.setItem("maison_intro", "1"); } catch (e) {}
+  if (REDUCE || seen || location.hash === "#elegir") {
     intro.classList.add("no-anim", "drawn", "to-choose", "placed");
   } else {
     intro.classList.add("lock");
     requestAnimationFrame(() => requestAnimationFrame(() => intro.classList.add("play")));
-    timer = setTimeout(goChoose, 3500);
+    timer = setTimeout(goChoose, 1900);
     $("#introSkip").addEventListener("click", goChoose);
     $(".intro__stage").addEventListener("click", goChoose);
     document.addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") goChoose(); }, { once: true });
