@@ -182,7 +182,7 @@ function renderLayout() {
   const top = `
   ${SPRITE}
   <div class="topbar" aria-hidden="true"><div class="topbar__track">${[
-    "Envíos a todo el Perú", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Badass y Martir Atelier",
+    "Envíos a todo el Perú", "Badass y Martir Atelier",
     "Atención personalizada por WhatsApp", `Cambios hasta ${C.diasCambio} días después`,
   ].map(t => `<span>${t}</span>`).join("").repeat(2)}</div></div>
   <header class="header" id="header">
@@ -293,7 +293,6 @@ function renderLayout() {
     <div class="cart__bg" data-cart-close></div>
     <aside class="cart__panel" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
       <div class="cart__head"><h2 id="cartTitle">Tu carrito <small id="cartN"></small></h2><button class="icon-btn" type="button" data-cart-close aria-label="Cerrar carrito">${I.close}</button></div>
-      <div class="cart__ship" id="cartShip"></div>
       <div class="cart__list" id="cartList"></div>
       <div class="cart__foot" id="cartFoot">
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
@@ -315,7 +314,7 @@ function fillConfig() {
   const v = {
     store: C.store, email: C.email, city: C.city, hours: C.hours, whatsapp: waPretty(), tagline: C.tagline,
     envioLima: money(C.envioLima), envioProvincia: money(C.envioProvincia),
-    envioGratisDesde: money(C.envioGratisDesde), diasCambio: C.diasCambio,
+    diasCambio: C.diasCambio,
     packDiscount: Math.round(PACK.discount * 100) + "%",
   };
   $$("[data-c]").forEach(el => { if (el.dataset.c in v) el.textContent = v[el.dataset.c]; });
@@ -401,12 +400,12 @@ function arrowsHTML(forId) {
 }
 function perksHTML() {
   const items = [
-    [I.truck, "Envío gratis", `En compras desde ${money(C.envioGratisDesde)}`],
     [I.pin, "Envíos a todo el Perú", `Lima ${money(C.envioLima)} · Provincia ${money(C.envioProvincia)}`],
     [I.swap, "Cambios", `Hasta ${C.diasCambio} días después de tu compra`],
     [I.card, "Pago seguro", "Yape, Plin, tarjeta y transferencia"],
     [I.shield, "Calidad garantizada", "Telas premium en cada prenda"],
     [I.chat, "Asesoría", "Te atendemos por WhatsApp"],
+    [I.shirt, "Hecho en Perú", "Prendas con calidad peruana"],
   ];
   return `<div class="wrap">
     <div class="label center" style="margin-bottom:28px"><span class="line"></span>Garantías<span class="line"></span></div>
@@ -567,13 +566,12 @@ function addToCart(p, { size, color, qty = 1 }) {
   const it = cart.find(x => x.slug === p.slug && x.size === size && x.color === color);
   if (it) it.qty = Math.min(20, it.qty + qty); else cart.push({ slug: p.slug, size, color, qty });
   saveCart();
-  toast("Agregado al carrito");
   $$(".cart-count").forEach(b => { b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); });
   openCart(cart.indexOf(it || cart[cart.length - 1]));
 }
 /* Mensaje con todo el pedido para el asesor */
 function cartMsg() {
-  const l = [`Hola ${C.store} 👋, quiero comprar estas prendas:`, ""];
+  const l = ["Hola, estoy interesado en estas prendas:", ""];
   cart.forEach((x, i) => {
     const p = findProduct(x.slug);
     l.push(`${i + 1}. *${p.name}* (${lineName(p)})`);
@@ -582,8 +580,6 @@ function cartMsg() {
   });
   const n = cartQty();
   l.push("", `🧾 *Total: ${money(cartSub())}* (${n} ${n === 1 ? "prenda" : "prendas"})`);
-  l.push(cartSub() >= C.envioGratisDesde ? "🚚 Mi pedido tiene envío gratis" : "🚚 Envío: por coordinar");
-  l.push("", "¿Me confirman disponibilidad y el siguiente paso para pagar?");
   return l.join("\n");
 }
 function renderCart() {
@@ -594,9 +590,9 @@ function renderCart() {
   $("#cartN").textContent = n ? `(${n})` : "";
   if (!cart.length) {
     list.innerHTML = `<div class="cart__empty">${I.bag}<h3>Tu carrito está vacío</h3><p>Agrega las prendas que te gusten y envíalas juntas a un asesor por WhatsApp.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`;
-    $("#cartFoot").hidden = true; $("#cartShip").hidden = true; return;
+    $("#cartFoot").hidden = true; return;
   }
-  $("#cartFoot").hidden = false; $("#cartShip").hidden = false;
+  $("#cartFoot").hidden = false;
   list.innerHTML = cart.map((x, i) => {
     const p = findProduct(x.slug);
     return `<div class="ci" data-i="${i}">
@@ -613,10 +609,7 @@ function renderCart() {
       <button type="button" class="ci__rm" data-cart-rm aria-label="Quitar ${esc(p.name)} del carrito">${I.close}</button>
     </div>`;
   }).join("");
-  const sub = cartSub(), save = cartSave(), left = C.envioGratisDesde - sub;
-  $("#cartShip").innerHTML = left > 0
-    ? `<p>Te faltan <b>${money(left)}</b> para el <b>envío gratis</b></p><i style="--p:${Math.min(100, (sub / C.envioGratisDesde) * 100)}%"></i>`
-    : `<p>¡Listo! Tu pedido tiene <b>envío gratis</b></p><i style="--p:100%"></i>`;
+  const sub = cartSub(), save = cartSave();
   $("#cartSub").textContent = money(sub);
   $("#cartSave").textContent = "−" + money(save);
   $("#cartSaveRow").hidden = !save;
@@ -1172,14 +1165,14 @@ function initProducto() {
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
         <div class="pdp__trust">
-          <div>${I.truck}<span><b>Envío a todo el Perú.</b> Gratis desde ${money(C.envioGratisDesde)}</span></div>
+          <div>${I.truck}<span><b>Envío a todo el Perú.</b> Lima ${money(C.envioLima)} · Provincia ${money(C.envioProvincia)}</span></div>
           <div>${I.swap}<span><b>Cambios</b> hasta ${C.diasCambio} días después de recibir tu pedido</span></div>
           <div>${I.card}<span><b>Paga como prefieras:</b> Yape, Plin, tarjeta o transferencia</span></div>
         </div>
         <div class="acc">
           <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd><dt>Material</dt><dd>${esc(p.material)}</dd><dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
-          <details><summary>Envíos y cambios</summary><div class="acc__body">Lima: ${money(C.envioLima)} · Provincia: ${money(C.envioProvincia)}. Envío gratis en compras desde ${money(C.envioGratisDesde)}. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
+          <details><summary>Envíos y cambios</summary><div class="acc__body">Lima: ${money(C.envioLima)} · Provincia: ${money(C.envioProvincia)}. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
       </div>
     </div>
@@ -1385,7 +1378,7 @@ function initContacto() {
   $$("#contactForm input, #contactForm textarea").forEach(f => f.addEventListener("input", () => f.closest(".field").classList.remove("err")));
 
   const faqs = [
-    ["¿Cuánto cuesta el envío?", `El envío en Lima cuesta ${money(C.envioLima)} y a provincia ${money(C.envioProvincia)}. Es gratis en compras desde ${money(C.envioGratisDesde)}.`],
+    ["¿Cuánto cuesta el envío?", `El envío en Lima cuesta ${money(C.envioLima)} y a provincia ${money(C.envioProvincia)}.`],
     ["¿Cuánto demora mi pedido?", "En Lima entregamos de 1 a 2 días hábiles. A provincia, de 2 a 5 días hábiles según el destino."],
     ["¿Qué diferencia hay entre Badass y Martir Atelier?", "Badass es el lado urbano, cómodo y expresivo: Bassic (lo básico, siempre) y Bleesst (el lado más atrevido). Martir Atelier es el lado refinado y estructurado, con la colección Maison × Uomo Cattivo. Una misma persona puede ser ambos: combina prendas de los dos mundos."],
     ["¿Cómo sé cuál es mi talla?", "Cada producto tiene su guía de tallas con medidas en centímetros. Si tienes dudas, escríbenos por WhatsApp con tu altura y peso y te recomendamos la mejor talla."],

@@ -14,7 +14,6 @@ window.CONFIG = {
   hours: "Lun – Sáb · 9:00 a 20:00",
   envioLima: 10,
   envioProvincia: 15,
-  envioGratisDesde: 200,
   diasCambio: 2,
   social: { instagram: "#", facebook: "#", tiktok: "#" },
 };
