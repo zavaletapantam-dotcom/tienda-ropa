@@ -480,7 +480,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light${i ? "" : " kicker-strong"}">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>

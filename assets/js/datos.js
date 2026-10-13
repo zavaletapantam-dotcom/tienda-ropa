@@ -29,7 +29,7 @@ window.STYLES = {
     lines: ["bassic", "bleesst"],
     panel: "st-ciudad.jpg",
     heroes: [
-      { img: "st-ciudad.jpg", kicker: "Urbano · Oversize · Boxy fit", title: "Badass", sub: "El lado urbano, cómodo y expresivo de MAISON." },
+      { img: "st-ciudad.jpg", kicker: "Colección", title: "Badass", sub: "El lado urbano, cómodo y expresivo de MAISON." },
       { img: "st-franela-roja.jpg", kicker: "Bleesst", title: "El lado más atrevido", sub: "Estampados, bordados y cortes con actitud." },
       { img: "st-hoodie-arena.jpg", kicker: "Bassic", title: "Lo básico, siempre", sub: "Colores enteros, 100% algodón y comodidad para todos los días." },
     ],
@@ -47,7 +47,7 @@ window.STYLES = {
     lines: ["uomo-cattivo"],
     panel: "om-lino-arena.jpg",
     heroes: [
-      { img: "om-lino-arena.jpg", kicker: "Maison Martir", title: "Martir Atelier", sub: "Prendas de mayor calidad, con cortes precisos y una construcción impecable." },
+      { img: "om-lino-arena.jpg", kicker: "Colección", title: "Martir Atelier", sub: "Prendas de mayor calidad, con cortes precisos y una construcción impecable." },
       { img: "om-blazer-tweed.jpg", kicker: "Maison × Uomo Cattivo", title: "Alta calidad", sub: "La colección creada junto a Uomo Cattivo." },
       { img: "om-abrigo-camel.jpg", kicker: "Atelier", title: "Cortes precisos", sub: "Abrigos, casacas y pantalones hechos para durar." },
     ],
