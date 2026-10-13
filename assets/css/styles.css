@@ -1149,3 +1149,5 @@ img.fade.ok{opacity:1}
 .ln--bleesst .soon b{color:#fff}
 .ln--bleesst .soon .btn-outline{color:#fff;border-color:#fff}
 .ln--bleesst .soon .btn-outline:hover{background:#fff;color:var(--ink)}
+.price-ask{font-size:.92em;font-weight:600;color:var(--teal)!important;letter-spacing:.2px}
+.ln--bleesst .price-ask{color:var(--sage-light)!important}

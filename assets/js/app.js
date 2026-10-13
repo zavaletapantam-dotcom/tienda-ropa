@@ -18,8 +18,9 @@ const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const $ = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => [...c.querySelectorAll(s)];
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-const money = n => "S/" + Number(n).toFixed(2);
-const pct = p => (p.old ? Math.round((1 - p.price / p.old) * 100) : 0);
+const money = n => (n == null ? "A consultar" : "S/" + Number(n).toFixed(2));
+const hasPrice = p => p.price != null;
+const pct = p => (p.old && hasPrice(p) ? Math.round((1 - p.price / p.old) * 100) : 0);
 const imgSrc = f => "img/" + f;
 
 /* ---------- Fotos: WebP en varios tamaños (lista generada por tools/fotos.js) ---------- */
@@ -77,14 +78,17 @@ const waPretty = () => "+" + C.whatsapp.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, 
 const generalMsg = () => `Hola ${C.store} 👋, quisiera más información sobre sus productos.`;
 const remember = slug => { try { localStorage.setItem("maison_estilo", slug); } catch (_) {} };
 const stored = () => { try { return localStorage.getItem("maison_estilo") || ""; } catch (_) { return ""; } };
-const guideFor = p => (p.guide && GUIDE[p.guide] ? GUIDE[p.guide] : p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
+const colorOpt = (p, color) => ((p.colors.find(c => c[0] === color) || [])[3]) || {};
+const guideFor = (p, color) => { const g = colorOpt(p, color).guide || p.guide; return g && GUIDE[g] ? GUIDE[g] : guideBase(p); };
+const guideImgFor = (p, color) => colorOpt(p, color).guideImg || p.guideImg;
+const guideBase = p => ( p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
 function productMsg(p, o = {}) {
   const l = ["Hola, estoy interesado en esta prenda:", "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
   if (o.color) l.push(`🎨 Color: ${o.color}`);
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
-  l.push(`💰 Precio: ${money(p.price)}${o.qty > 1 ? " c/u" : ""}`);
+  l.push(hasPrice(p) ? `💰 Precio: ${money(p.price)}${o.qty > 1 ? " c/u" : ""}` : "💰 Precio: a consultar");
   l.push("", `🔗 ${absUrl(productUrl(p))}`);
   return l.join("\n");
 }
@@ -364,6 +368,7 @@ function initHeader() {
    COMPONENTES
    ========================================================= */
 function priceHTML(p, withOff = true) {
+  if (!hasPrice(p)) return `<b class="price-ask">Precio a consultar</b>`;
   return `<b>${money(p.price)}</b>${p.old ? `<s>${money(p.old)}</s>` : ""}${withOff && p.old && !p.deal ? `<span class="off">-${pct(p)}%</span>` : ""}`;
 }
 function cardHTML(p, opts) {
@@ -562,8 +567,9 @@ function loadCart() {
 }
 function saveCart() { try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (_) {} renderCart(); }
 const cartQty = () => cart.reduce((n, x) => n + x.qty, 0);
-const cartSub = () => cart.reduce((t, x) => t + findProduct(x.slug).price * x.qty, 0);
-const cartSave = () => cart.reduce((t, x) => { const p = findProduct(x.slug); return t + (p.old ? (p.old - p.price) * x.qty : 0); }, 0);
+const cartSub = () => cart.reduce((t, x) => t + (findProduct(x.slug).price || 0) * x.qty, 0);
+const cartAsk = () => cart.some(x => !hasPrice(findProduct(x.slug)));
+const cartSave = () => cart.reduce((t, x) => { const p = findProduct(x.slug); return t + (p.old && hasPrice(p) ? (p.old - p.price) * x.qty : 0); }, 0);
 function addToCart(p, { size, color, qty = 1 }) {
   const it = cart.find(x => x.slug === p.slug && x.size === size && x.color === color);
   if (it) it.qty = Math.min(20, it.qty + qty); else cart.push({ slug: p.slug, size, color, qty });
@@ -578,10 +584,10 @@ function cartMsg() {
     const p = findProduct(x.slug);
     l.push(`${i + 1}. *${p.name}* (${lineName(p)})`);
     l.push(`   Color: ${x.color} · Talla: ${x.size} · Cantidad: ${x.qty}`);
-    l.push(`   ${money(p.price)}${x.qty > 1 ? ` c/u = ${money(p.price * x.qty)}` : ""}`);
+    l.push(hasPrice(p) ? `   ${money(p.price)}${x.qty > 1 ? ` c/u = ${money(p.price * x.qty)}` : ""}` : "   Precio: a consultar");
   });
   const n = cartQty();
-  l.push("", `🧾 *Total: ${money(cartSub())}* (${n} ${n === 1 ? "prenda" : "prendas"})`);
+  l.push("", `🧾 *Total: ${money(cartSub())}*${cartAsk() ? " + prendas con precio a consultar" : ""} (${n} ${n === 1 ? "prenda" : "prendas"})`);
   return l.join("\n");
 }
 function renderCart() {
@@ -605,14 +611,14 @@ function renderCart() {
         <span class="ci__opts">${esc(x.color)} · Talla ${esc(x.size)}</span>
         <div class="ci__row">
           <div class="qty qty--sm"><button type="button" data-cq="-1" aria-label="Quitar uno de ${esc(p.name)}">−</button><output>${x.qty}</output><button type="button" data-cq="1" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>
-          <span class="ci__price">${x.qty > 1 ? `<small>${money(p.price)} c/u</small>` : ""}<b>${money(p.price * x.qty)}</b></span>
+          <span class="ci__price">${!hasPrice(p) ? `<small>Precio</small><b class="price-ask">A consultar</b>` : `${x.qty > 1 ? `<small>${money(p.price)} c/u</small>` : ""}<b>${money(p.price * x.qty)}</b>`}</span>
         </div>
       </div>
       <button type="button" class="ci__rm" data-cart-rm aria-label="Quitar ${esc(p.name)} del carrito">${I.close}</button>
     </div>`;
   }).join("");
   const sub = cartSub(), save = cartSave();
-  $("#cartSub").textContent = money(sub);
+  $("#cartSub").textContent = money(sub) + (cartAsk() ? " + a consultar" : "");
   $("#cartSave").textContent = "−" + money(save);
   $("#cartSaveRow").hidden = !save;
   $("#cartWa").href = waLink(cartMsg());
@@ -998,12 +1004,12 @@ function filtered() {
   if (shop.linea) list = list.filter(p => p.linea === shop.linea);
   if (shop.cat) list = list.filter(p => p.cat === shop.cat);
   if (shop.talla) list = list.filter(p => p.sizes.includes(shop.talla));
-  if (shop.min !== "") list = list.filter(p => p.price >= +shop.min);
-  if (shop.max !== "") list = list.filter(p => p.price <= +shop.max);
+  if (shop.min !== "") list = list.filter(p => hasPrice(p) && p.price >= +shop.min);
+  if (shop.max !== "") list = list.filter(p => hasPrice(p) && p.price <= +shop.max);
   if (shop.ofertas) list = list.filter(p => p.deal);
   const by = {
-    "precio-asc": (a, b) => a.price - b.price,
-    "precio-desc": (a, b) => b.price - a.price,
+    "precio-asc": (a, b) => (a.price ?? 1e9) - (b.price ?? 1e9),
+    "precio-desc": (a, b) => (b.price ?? -1) - (a.price ?? -1),
     descuento: (a, b) => pct(b) - pct(a),
     nuevo: (a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0),
     nombre: (a, b) => a.name.localeCompare(b.name, "es"),
@@ -1125,7 +1131,7 @@ function initProducto() {
     root.innerHTML = `<div class="notfound wrap"><span class="label center">Error 404</span><h1>No encontramos esta prenda</h1><p>Puede que ya no esté disponible o que el enlace esté incompleto. Mira todo lo que tenemos en la tienda.</p><a class="btn btn--dark" href="tienda.html">Ir a la tienda <span>→</span></a></div>`;
     return;
   }
-  const cat = catOf(p.cat), st = styleOf(p.estilo), d = pct(p), guide = guideFor(p);
+  const cat = catOf(p.cat), st = styleOf(p.estilo), d = pct(p);
   const cParam = new URLSearchParams(location.search).get("c");
   const state = { size: null, color: (p.colors.find(c => c[0] === cParam) || p.colors[0])[0], qty: 1 };
   let imgs = colorImgs(p, state.color);
@@ -1149,7 +1155,7 @@ function initProducto() {
         <span class="pdp__cat"><a href="tienda.html?linea=${p.linea}&cat=${p.cat}">${cat?.name || ""}</a> · <a href="tienda.html?linea=${p.linea}">${esc(lineName(p))}</a></span>
         <h1 class="pdp__name">${esc(p.name)}</h1>
         <div class="pdp__price">${priceHTML(p, false)}${p.old ? `<span class="tag">-${d}%</span>` : ""}</div>
-        ${p.old ? `<p class="pdp__save">Ahorras ${money(p.old - p.price)}</p>` : ""}
+        ${p.old && hasPrice(p) ? `<p class="pdp__save">Ahorras ${money(p.old - p.price)}</p>` : !hasPrice(p) ? `<p class="pdp__save">Escríbenos y un asesor te da el precio al momento.</p>` : ""}
         <p class="pdp__desc">${esc(p.desc)}</p>
         <div class="opt">
           <div class="opt-label">Color <em id="pColorName">${esc(state.color)}</em></div>
@@ -1158,11 +1164,7 @@ function initProducto() {
         <div class="opt">
           <div class="opt-label">Talla <button type="button" class="link-btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía de tallas</button></div>
           <div class="size-btns" id="pSizes">${p.sizes.map(s => `<button type="button" data-s="${s}">${s}</button>`).join("")}</div>
-          <div class="guide" id="guide">
-            <div class="guide__scroll"><table><thead><tr>${guide.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${guide.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
-            <p>Medidas en centímetros. ¿Dudas? Escríbenos y te ayudamos a elegir.</p>
-            ${p.guideImg ? `<img class="guide__img" src="${fotoUrl(p.guideImg, 800)}" alt="Cómo medir: ${esc(p.name)}" loading="lazy">` : ""}
-          </div>
+          <div class="guide" id="guide">${guideHTML(p, state.color)}</div>
         </div>
         <div class="opt">
           <div class="opt-label">Cantidad</div>
@@ -1193,7 +1195,7 @@ function initProducto() {
       <div class="track" id="trackRel"></div>
     </div>
   </section>
-  <div class="buybar"><div><small>${p.old ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><button type="button" class="btn-cart" id="pAdd2">${I.bag}Agregar al carrito</button></div>`;
+  <div class="buybar"><div><small>${p.old && hasPrice(p) ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><button type="button" class="btn-cart" id="pAdd2">${I.bag}Agregar al carrito</button></div>`;
 
   // Relacionados: mismo estilo (primero otras categorías para completar el look)
   const sameStyle = PRODUCTS.filter(x => x.estilo === p.estilo && x !== p);
@@ -1223,12 +1225,13 @@ function initProducto() {
     main.scrollTo({ left: 0 });
     try { history.replaceState(null, "", `${location.pathname}?p=${encodeURIComponent(p.slug)}&c=${encodeURIComponent(state.color)}`); } catch (_) {}
   };
+  const showGuide = () => { $("#guide").innerHTML = guideHTML(p, state.color); };
 
   // Opciones
   const update = () => { $("#pWa").href = waLink(productMsg(p, state)); };
   $$("#pColors button").forEach(b => b.addEventListener("click", () => {
     $$("#pColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    state.color = b.dataset.c; $("#pColorName").textContent = state.color; showColor(); update();
+    state.color = b.dataset.c; $("#pColorName").textContent = state.color; showColor(); showGuide(); update();
   }));
   $$("#pSizes button").forEach(b => b.addEventListener("click", () => {
     $$("#pSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");
@@ -1252,6 +1255,14 @@ function initProducto() {
     catch (_) { toast("Copia el enlace desde la barra del navegador"); }
   });
   update();
+}
+
+/* Guía de tallas: tabla de medidas y la imagen de cómo medir (puede cambiar según el color) */
+function guideHTML(p, color) {
+  const g = guideFor(p, color), img = guideImgFor(p, color);
+  return `<div class="guide__scroll"><table><thead><tr>${g.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${g.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+    <p>Medidas en centímetros. ¿Dudas? Escríbenos y te ayudamos a elegir.</p>
+    ${img ? `<a href="${fotoUrl(img, 1600)}" target="_blank" rel="noopener"><img class="guide__img" src="${fotoUrl(img, 800)}" alt="Tabla de medidas: ${esc(p.name)}" loading="lazy"></a>` : ""}`;
 }
 
 /* =========================================================

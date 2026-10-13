@@ -34,8 +34,9 @@ const hex = n => n.toString(16).padStart(2, "0");
       sizes[w] = name;
       if (w === widths[widths.length - 1]) after += out.length;
     }
-    // Borra versiones antiguas de esta foto
-    for (const old of fs.readdirSync(OUT)) if (old.startsWith(base + "-") && old.endsWith(".webp") && !Object.values(sizes).includes(old)) fs.unlinkSync(path.join(OUT, old));
+    // Borra versiones antiguas de esta foto (solo base-ancho.hash.webp: así "medidas-baggy" no borra "medidas-baggy-rasgado-negro")
+    const mine = old => old.startsWith(base + "-") && /^\d+\.[a-f0-9]{8}\.webp$/.test(old.slice(base.length + 1));
+    for (const old of fs.readdirSync(OUT)) if (mine(old) && !Object.values(sizes).includes(old)) fs.unlinkSync(path.join(OUT, old));
     const { data } = await sharp(buf).resize(1, 1, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
     manifest[base] = { r: +(height / width).toFixed(4), c: "#" + hex(data[0]) + hex(data[1]) + hex(data[2]), s: sizes };
     before += buf.length;
