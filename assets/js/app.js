@@ -9,6 +9,8 @@
 const C = window.CONFIG, PRODUCTS = window.PRODUCTS, CATS = window.CATEGORIES,
       STYLES = window.STYLES, LINES = window.LINES || {}, PACK = window.PACK, GUIDE = window.SIZE_GUIDE, LOGO = window.MAISON_LOGO;
 const PAGE = document.body.dataset.page || "";
+PRODUCTS.forEach(p => { if (p.colors[0] && p.colors[0][2]) p.imgs = p.colors[0][2]; });
+const colorImgs = (p, color) => ((p.colors.find(c => c[0] === color) || [])[2]) || p.imgs;
 const ESTILO = document.body.dataset.estilo || "";
 const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -75,7 +77,7 @@ const waPretty = () => "+" + C.whatsapp.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, 
 const generalMsg = () => `Hola ${C.store} 👋, quisiera más información sobre sus productos.`;
 const remember = slug => { try { localStorage.setItem("maison_estilo", slug); } catch (_) {} };
 const stored = () => { try { return localStorage.getItem("maison_estilo") || ""; } catch (_) { return ""; } };
-const guideFor = p => (p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
+const guideFor = p => (p.guide && GUIDE[p.guide] ? GUIDE[p.guide] : p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
 function productMsg(p, o = {}) {
   const l = ["Hola, estoy interesado en esta prenda:", "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
@@ -381,6 +383,7 @@ function cardHTML(p, opts) {
       <div>
         ${showStyle ? `<span class="card__style">${esc(lineName(p))}</span>` : ""}
         <a class="card__name" href="${url}">${esc(p.name)}</a>
+        ${p.colors.length > 1 ? `<span class="card__dots" title="${p.colors.length} colores">${p.colors.slice(0, 6).map(c => `<i style="background:${c[1]}"></i>`).join("")}${p.colors.length > 6 ? `<small>+${p.colors.length - 6}</small>` : ""}</span>` : ""}
         <div class="price">${priceHTML(p)}</div>
       </div>
       <a class="wa-mini" href="${waLink(productMsg(p))}" target="_blank" rel="noopener" aria-label="Consultar ${esc(p.name)} por WhatsApp" title="Consultar por WhatsApp">${I.wa}</a>
@@ -595,7 +598,7 @@ function renderCart() {
   list.innerHTML = cart.map((x, i) => {
     const p = findProduct(x.slug);
     return `<div class="ci" data-i="${i}">
-      <a class="ci__img" href="${productUrl(p)}" style="background:${fotoColor(p.imgs[0])}">${pic(p.imgs[0], "84px", { lazy: false, alt: p.name })}</a>
+      <a class="ci__img" href="${productUrl(p)}&c=${encodeURIComponent(x.color)}" style="background:${fotoColor(colorImgs(p, x.color)[0])}">${pic(colorImgs(p, x.color)[0], "84px", { lazy: false, alt: p.name })}</a>
       <div class="ci__info">
         <small>${esc(lineName(p))}</small>
         <a class="ci__name" href="${productUrl(p)}">${esc(p.name)}</a>
@@ -659,7 +662,7 @@ function openQV(slug, size) {
   $("#qvColors").innerHTML = p.colors.map(([n, c], i) => `<button type="button" class="${i ? "" : "on"}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("");
   $$("#qvColors button").forEach(b => b.addEventListener("click", () => {
     $$("#qvColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    qv.color = b.dataset.c; $("#qvColorName").textContent = qv.color; updateQV();
+    qv.color = b.dataset.c; $("#qvColorName").textContent = qv.color; setPic($("#qvImg"), colorImgs(qv.p, qv.color)[0], "(max-width:640px) 100vw, 480px"); updateQV();
   }));
   $("#qvSizes").innerHTML = p.sizes.map(s => `<button type="button"${s === qv.size ? ' class="on"' : ""}>${s}</button>`).join("");
   $$("#qvSizes button").forEach(b => b.addEventListener("click", () => {
@@ -1121,7 +1124,9 @@ function initProducto() {
     return;
   }
   const cat = catOf(p.cat), st = styleOf(p.estilo), d = pct(p), guide = guideFor(p);
-  const state = { size: null, color: p.colors[0][0], qty: 1 };
+  const cParam = new URLSearchParams(location.search).get("c");
+  const state = { size: null, color: (p.colors.find(c => c[0] === cParam) || p.colors[0])[0], qty: 1 };
+  let imgs = colorImgs(p, state.color);
   document.body.dataset.estilo = p.estilo;
   document.title = `${p.name} · ${C.store}`;
   $('meta[name="description"]')?.setAttribute("content", `${p.name} a ${money(p.price)}. ${p.desc}`);
@@ -1131,11 +1136,11 @@ function initProducto() {
     <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><a href="${st.page}">${st.name}</a><span aria-hidden="true">/</span><a href="tienda.html?linea=${p.linea}">${esc(lineName(p))}</a><span aria-hidden="true">/</span><span>${esc(p.name)}</span></nav>
     <div class="pdp__layout">
       <div class="gallery">
-        <div class="gallery__thumbs">${p.imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("")}</div>
+        <div class="gallery__thumbs" id="gThumbs">${imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("")}</div>
         <div class="gallery__wrap">
-          <div class="gallery__main" id="gMain">${p.imgs.map((f, i) => `<figure style="background:${fotoColor(f)}">${pic(f, SZ.half, { lazy: i > 0, high: i === 0, alt: p.name + (i ? ` — foto ${i + 1}` : "") })}</figure>`).join("")}</div>
+          <div class="gallery__main" id="gMain">${imgs.map((f, i) => `<figure style="background:${fotoColor(f)}">${pic(f, SZ.half, { lazy: i > 0, high: i === 0, alt: p.name + (i ? ` — foto ${i + 1}` : "") })}</figure>`).join("")}</div>
           ${p.deal ? `<span class="tag">-${d}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : ""}
-          <div class="gallery__dots" id="gDots">${p.imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>
+          <div class="gallery__dots" id="gDots">${imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>
         </div>
       </div>
       <div class="pdp__info">
@@ -1146,7 +1151,7 @@ function initProducto() {
         <p class="pdp__desc">${esc(p.desc)}</p>
         <div class="opt">
           <div class="opt-label">Color <em id="pColorName">${esc(state.color)}</em></div>
-          <div class="swatches" id="pColors">${p.colors.map(([n, c], i) => `<button type="button" class="${i ? "" : "on"}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("")}</div>
+          <div class="swatches" id="pColors">${p.colors.map(([n, c]) => `<button type="button" class="${n === state.color ? "on" : ""}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("")}</div>
         </div>
         <div class="opt">
           <div class="opt-label">Talla <button type="button" class="link-btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía de tallas</button></div>
@@ -1154,6 +1159,7 @@ function initProducto() {
           <div class="guide" id="guide">
             <div class="guide__scroll"><table><thead><tr>${guide.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${guide.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
             <p>Medidas en centímetros. ¿Dudas? Escríbenos y te ayudamos a elegir.</p>
+            ${p.guideImg ? `<img class="guide__img" src="${fotoUrl(p.guideImg, 800)}" alt="Cómo medir: ${esc(p.name)}" loading="lazy">` : ""}
           </div>
         </div>
         <div class="opt">
@@ -1172,7 +1178,7 @@ function initProducto() {
           <div>${I.card}<span><b>Paga como prefieras:</b> Yape, Plin, tarjeta o transferencia</span></div>
         </div>
         <div class="acc">
-          <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd><dt>Material</dt><dd>${esc(p.material)}</dd><dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
+          <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd>${p.material ? `<dt>Material</dt><dd>${esc(p.material)}</dd>` : ""}<dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
           <details><summary>Envíos y cambios</summary><div class="acc__body">Lima: ${money(C.envioLima)} · Provincia: ${money(C.envioProvincia)}. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
@@ -1192,28 +1198,35 @@ function initProducto() {
   const rel = [...sameStyle.filter(x => x.cat !== p.cat), ...sameStyle.filter(x => x.cat === p.cat)].slice(0, 10);
   $("#trackRel").innerHTML = rel.map(x => cardHTML(x)).join("");
 
-  // Galería
-  const main = $("#gMain"), thumbs = $$(".gallery__thumbs button"), dots = $$("#gDots span");
-  const setActive = i => { thumbs.forEach((t, k) => t.classList.toggle("on", k === i)); dots.forEach((t, k) => t.classList.toggle("on", k === i)); };
-  thumbs.forEach(t => t.addEventListener("click", () => main.scrollTo({ left: main.clientWidth * +t.dataset.i, behavior: "smooth" })));
+  // Galería (se vuelve a armar al cambiar de color)
+  const main = $("#gMain");
+  const setActive = i => { $$("#gThumbs button").forEach((t, k) => t.classList.toggle("on", k === i)); $$("#gDots span").forEach((t, k) => t.classList.toggle("on", k === i)); };
+  $("#gThumbs").addEventListener("click", e => { const t = e.target.closest("button"); if (t) main.scrollTo({ left: main.clientWidth * +t.dataset.i, behavior: "smooth" }); });
   main.addEventListener("scroll", () => setActive(Math.round(main.scrollLeft / main.clientWidth)), { passive: true });
   if (matchMedia("(hover:hover)").matches) {
-    $$("figure", main).forEach(f => {
-      f.addEventListener("mouseenter", () => f.classList.add("zoom"));
-      f.addEventListener("mouseleave", () => f.classList.remove("zoom"));
-      f.addEventListener("mousemove", e => {
-        const r = f.getBoundingClientRect();
-        f.style.setProperty("--zx", ((e.clientX - r.left) / r.width) * 100 + "%");
-        f.style.setProperty("--zy", ((e.clientY - r.top) / r.height) * 100 + "%");
-      });
+    main.addEventListener("mouseover", e => { const f = e.target.closest("figure"); if (f) f.classList.add("zoom"); });
+    main.addEventListener("mouseout", e => { const f = e.target.closest("figure"); if (f && !f.contains(e.relatedTarget)) f.classList.remove("zoom"); });
+    main.addEventListener("mousemove", e => {
+      const f = e.target.closest("figure"); if (!f) return;
+      const r = f.getBoundingClientRect();
+      f.style.setProperty("--zx", ((e.clientX - r.left) / r.width) * 100 + "%");
+      f.style.setProperty("--zy", ((e.clientY - r.top) / r.height) * 100 + "%");
     });
   }
+  const showColor = () => {
+    const next = colorImgs(p, state.color); if (next === imgs) return; imgs = next;
+    $("#gThumbs").innerHTML = imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("");
+    main.innerHTML = imgs.map((f, i) => `<figure style="background:${fotoColor(f)}">${pic(f, SZ.half, { lazy: false, alt: `${p.name} ${state.color}` + (i ? ` — foto ${i + 1}` : "") })}</figure>`).join("");
+    $("#gDots").innerHTML = imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("");
+    main.scrollTo({ left: 0 });
+    try { history.replaceState(null, "", `${location.pathname}?p=${encodeURIComponent(p.slug)}&c=${encodeURIComponent(state.color)}`); } catch (_) {}
+  };
 
   // Opciones
   const update = () => { $("#pWa").href = waLink(productMsg(p, state)); };
   $$("#pColors button").forEach(b => b.addEventListener("click", () => {
     $$("#pColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    state.color = b.dataset.c; $("#pColorName").textContent = state.color; update();
+    state.color = b.dataset.c; $("#pColorName").textContent = state.color; showColor(); update();
   }));
   $$("#pSizes button").forEach(b => b.addEventListener("click", () => {
     $$("#pSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");

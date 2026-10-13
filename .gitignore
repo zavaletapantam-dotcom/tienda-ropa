@@ -2,3 +2,4 @@
 .wrangler/
 _hoja/
 node_modules/
+*.zip
