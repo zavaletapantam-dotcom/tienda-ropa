@@ -80,7 +80,7 @@ window.LINES = {
 };
 
 /* Categorías = las carpetas de prendas de la marca, cada una dentro de su línea.
-   tipo: "top" (polos y poleras), "abajo" (jeans, joggers, pantalones), "abrigo" (casacas, conjuntos) → lo usa el Pack.
+   tipo: "top" (polos y poleras), "abajo" (jeans, joggers, pantalones), "abrigo" (casacas) → lo usa el Pack.
    cover: foto de la tarjeta mientras la categoría no tenga productos cargados. */
 window.CATEGORIES = [
   /* BASSIC · lo básico, siempre */
@@ -105,9 +105,7 @@ window.CATEGORIES = [
   { slug: "polos-prime",           name: "Polos Prime",             linea: "uomo-cattivo", tipo: "top",    cover: "prime-arena-a.jpg" },
   { slug: "polos-monarca",         name: "Polos Monarca",           linea: "uomo-cattivo", tipo: "top",    cover: "monarca-negro-a.jpg" },
   { slug: "polos-perfect-business",name: "Polos Perfect Business",  linea: "uomo-cattivo", tipo: "top",    cover: "business-verde-a.jpg" },
-  { slug: "polos-supremos",        name: "Polos Supremos",          linea: "uomo-cattivo", tipo: "top",    cover: "polo-business-negro.jpg" },
   { slug: "casacas-cattivo",       name: "Casacas",                 linea: "uomo-cattivo", tipo: "abrigo", cover: "bolonia-marron-a.webp" },
-  { slug: "conjunto-smart",        name: "Conjunto Smart",          linea: "uomo-cattivo", tipo: "abrigo", cover: "blazer-camel.jpg" },
   { slug: "pantalon-clasico-cattivo", name: "Pantalón Clásico Cattivo", linea: "uomo-cattivo", tipo: "abajo", cover: "pclasico-beige-a.webp" },
   { slug: "pantalon-sastre",       name: "Pantalón Sastre",         linea: "uomo-cattivo", tipo: "abajo",  cover: "sastre-azul-a.webp" },
 ];
@@ -281,7 +279,7 @@ window.PACK = {
   steps: [
     { title: "Elige tu polo o polera", tipos: ["top"] },
     { title: "Elige tu pantalón",       tipos: ["abajo"] },
-    { title: "Elige tu casaca o conjunto", tipos: ["abrigo"] },
+    { title: "Elige tu casaca", tipos: ["abrigo"] },
   ],
 };
 
