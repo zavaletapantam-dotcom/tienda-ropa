@@ -482,7 +482,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light${i ? "" : " kicker-strong"}">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#coleccion-grid" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light${i ? "" : " kicker-strong"}">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#lineas" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>
@@ -843,6 +843,8 @@ function initIntro() {
 /* =========================================================
    PÁGINA: COLECCIÓN (badass.html / martir.html)
    ========================================================= */
+const packReady = estilo => PACK.steps.every(s => PRODUCTS.some(p => p.estilo === estilo && s.tipos.includes(catOf(p.cat)?.tipo)));
+const soonHTML = (what, msg) => `<div class="soon"><b>${esc(what)} llega muy pronto</b><p>${esc(msg)}</p><a class="btn-outline" href="${waLink(`Hola ${C.store} 👋, quiero saber cuándo llega ${what}.`)}" target="_blank" rel="noopener">${I.wa}Avísame por WhatsApp</a></div>`;
 function initColeccion() {
   const st = styleOf(ESTILO), root = $("#coleccion");
   if (!st || !root) return;
@@ -860,7 +862,7 @@ function initColeccion() {
   ${linesHTML(st, items)}
   ${st.quote ? `<div class="quote"><div class="wrap"><p>“${esc(st.quote)}”</p><span>${esc(C.store)} · ${esc(st.name)}</span></div></div>` : ""}
 
-  <section id="ofertas">
+  ${deals.length ? `<section id="ofertas">
     <div class="wrap">
       <div class="deals__head reveal">
         <div class="label center"><span class="line"></span>Solo por hoy<span class="line"></span></div>
@@ -876,7 +878,7 @@ function initColeccion() {
       <div class="track" id="trackDeals">${deals.map(p => cardHTML(p)).join("")}</div>
       <a href="tienda.html?estilo=${st.slug}&ofertas=1" class="btn-outline m-only">Ver todas las ofertas <span>→</span></a>
     </div>
-  </section>
+  </section>` : ""}
 
   <section class="cats">
     <div class="wrap">
@@ -885,7 +887,7 @@ function initColeccion() {
     </div>
   </section>
 
-  <section id="coleccion-grid">
+  ${items.length ? `<section id="coleccion-grid">
     <div class="wrap">
       <div class="sec-head reveal"><div><div class="label">La colección<span class="line"></span></div><h2 class="h2">Todo ${esc(st.name)}</h2></div><a href="tienda.html?estilo=${st.slug}" class="see-all">Filtrar en la tienda <span>→</span></a></div>
       <div class="chipbar" id="collChips" role="group" aria-label="Filtrar por categoría">
@@ -895,7 +897,7 @@ function initColeccion() {
       </div>
       <div class="grid grid--wide" id="collGrid">${items.map(p => cardHTML(p)).join("")}</div>
     </div>
-  </section>
+  </section>` : ""}
 
   <section class="editorial editorial--${st.slug}">
     <div class="editorial__in">
@@ -904,17 +906,17 @@ function initColeccion() {
         <div class="label">${esc(st.editorial.kicker)}<span class="line"></span></div>
         <h2>${esc(st.editorial.title)}</h2>
         <p>${esc(st.editorial.text)}</p>
-        <a href="tienda.html?estilo=${st.slug}" class="btn ${st.slug === "badass" ? "btn--light" : "btn--teal"}">Comprar ${esc(st.name)} <span>→</span></a>
+        <a href="${items.length ? `tienda.html?estilo=${st.slug}` : "#lineas"}" class="btn ${st.slug === "badass" ? "btn--light" : "btn--teal"}">${items.length ? `Comprar ${esc(st.name)}` : "Ver lo que viene"} <span>→</span></a>
       </div>
     </div>
   </section>
 
-  <div class="cta-band">
+  ${packReady(st.slug) ? `<div class="cta-band">
     <div class="wrap">
       <div><span class="kicker-light">Pack Deluxe · ${esc(st.name)}</span><h2 style="margin-top:10px">Arma tu outfit ${esc(st.name)} de 3 prendas y ahorra <em>${off}%</em></h2></div>
       <a href="pack.html?estilo=${st.slug}" class="btn btn--light">Armar mi pack <span>→</span></a>
     </div>
-  </div>
+  </div>` : ""}
 
   <section class="cross">
     <div class="wrap">
@@ -925,7 +927,7 @@ function initColeccion() {
   <section class="perks" data-perks></section>`;
 
   document.title = `${st.name} · ${C.store}`;
-  $("#collChips").addEventListener("click", e => {
+  $("#collChips")?.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
     $$("#collChips button").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); });
     const list = b.dataset.l ? items.filter(p => p.linea === b.dataset.l) : b.dataset.c ? items.filter(p => p.cat === b.dataset.c) : items;
@@ -955,8 +957,8 @@ function linesHTML(st, items) {
             <ul>${CATS.filter(c => c.linea === slug).map(c => `<li><a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
           </div>
         </div>
-        <div class="deals-bar"><p>${list.length} prendas</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo ${esc(l.collab || l.name)} <span>→</span></a>${arrowsHTML(id)}</div></div>
-        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>
+        ${list.length ? `<div class="deals-bar"><p>${list.length} ${list.length === 1 ? "prenda" : "prendas"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo ${esc(l.collab || l.name)} <span>→</span></a>${arrowsHTML(id)}</div></div>
+        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
       </div>
     </div>`;
   }).join("")}</section>`;
@@ -1096,8 +1098,8 @@ function initTienda() {
       : "0 productos";
     $("#grid").innerHTML = total
       ? pageItems.map(p => cardHTML(p, { style: !shop.estilo })).join("")
-      : cat && !PRODUCTS.some(p => p.cat === cat.slug)
-      ? `<div class="empty" style="grid-column:1/-1"><h2>${esc(cat.name)} llega muy pronto</h2><p>Estamos preparando esta categoría. Escríbenos y te avisamos apenas esté disponible.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`
+      : (cat || who) && !PRODUCTS.some(p => (!cat || p.cat === cat.slug) && (!ln || p.linea === ln.slug) && (!st || p.estilo === st.slug))
+      ? `<div class="empty" style="grid-column:1/-1"><h2>${esc(cat ? cat.name : who)} llega muy pronto</h2><p>Estamos preparando estas prendas. Escríbenos y te avisamos apenas estén disponibles.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`
       : `<div class="empty" style="grid-column:1/-1"><h2>No encontramos prendas con esos filtros</h2><p>Prueba quitando algún filtro o escríbenos: te ayudamos a encontrar lo que buscas.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`;
     const ask = $(".js-wa-search", $("#grid"));
     if (ask) ask.href = waLink(`Hola ${C.store} 👋, estoy buscando ${shop.q || (cat ? cat.name : "una prenda")}${who ? ` de ${who}` : ""}${shop.talla ? ` en talla ${shop.talla}` : ""}. ¿Me pueden ayudar?`);
@@ -1268,6 +1270,10 @@ function initPack() {
     sel = steps.map(() => ({ slug: null, size: null }));
     $$("#packStyle button").forEach(b => { const on = b.dataset.v === estilo; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
     $("#packName").textContent = `${PACK.name} ${st.name}`;
+    if (steps.some(s => !s.items.length)) {
+      $("#packSteps").innerHTML = soonHTML(`El ${PACK.name} ${st.name}`, "Muy pronto podrás armar tu outfit de 3 prendas con descuento. Mientras tanto, un asesor puede ayudarte a combinar por WhatsApp.");
+      update(); return;
+    }
     $("#packSteps").innerHTML = steps.map((s, i) => `
       <section class="step" id="step${i}" aria-labelledby="stepT${i}" style="padding:0">
         <div class="step__head"><span class="step__num">${i + 1}</span><h2 id="stepT${i}">${s.title}</h2><small id="stepS${i}">Sin elegir</small></div>

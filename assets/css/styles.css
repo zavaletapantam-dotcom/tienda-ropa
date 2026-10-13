@@ -1140,3 +1140,12 @@ img.fade.ok{opacity:1}
 .card__dots i{width:11px;height:11px;border-radius:50%;border:1px solid rgba(0,0,0,.14)}
 .card__dots small{font-size:10.5px;color:var(--muted);margin-left:2px}
 .guide__img{display:block;width:100%;max-width:420px;margin:14px auto 0;border:1px solid var(--line)}
+.soon{border:1px dashed var(--line);padding:clamp(28px,4vw,48px) 24px;text-align:center;display:grid;justify-items:center;gap:10px}
+.soon b{font-family:var(--serif);font-size:clamp(24px,2.4vw,34px);font-weight:600;color:var(--ink)}
+.soon p{font-size:14.5px;max-width:46ch}
+.soon .btn-outline{display:inline-flex;align-items:center;gap:10px;margin-top:6px}
+.soon .btn-outline svg{width:16px;height:16px}
+.ln--bleesst .soon{border-color:#333}
+.ln--bleesst .soon b{color:#fff}
+.ln--bleesst .soon .btn-outline{color:#fff;border-color:#fff}
+.ln--bleesst .soon .btn-outline:hover{background:#fff;color:var(--ink)}
