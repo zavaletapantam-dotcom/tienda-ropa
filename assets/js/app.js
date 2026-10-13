@@ -198,7 +198,7 @@ function renderLayout() {
     </div>
     <div class="wrap search" id="search">
       <form action="tienda.html" method="get" role="search">
-        <input type="search" name="q" id="searchInput" placeholder="Buscar camisas de lino, hoodies, jeans…" autocomplete="off" aria-label="Buscar productos">
+        <input type="search" name="q" id="searchInput" placeholder="Buscar polos, poleras, jeans, joggers…" autocomplete="off" aria-label="Buscar productos">
         <span class="search__hint">Enter ↵</span>
       </form>
       <div class="suggest" id="suggest"></div>
@@ -214,7 +214,7 @@ function renderLayout() {
       </div>
       ${NAV.slice(2).map(([k, label, href]) => `<a href="${href}"${isActive(k) ? ' class="active"' : ""}>${label}<span aria-hidden="true">→</span></a>`).join("")}
       <p class="drawer__label">Categorías</p>
-      <div class="drawer__cats">${CATS.map(c => `<a href="tienda.html?cat=${c.slug}">${c.name}</a>`).join("")}</div>
+      ${Object.values(LINES).map(l => `<p class="drawer__sub">${esc(l.collab || l.name)}</p><div class="drawer__cats">${CATS.filter(c => c.linea === l.slug).map(c => `<a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a>`).join("")}</div>`).join("")}
       <div class="drawer__wa"><a class="btn-wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}Hablar con un asesor</a></div>
     </div>
   </div>`;
@@ -348,7 +348,7 @@ function initHeader() {
     sug.innerHTML = res.length
       ? res.slice(0, 6).map(p => `<a href="${productUrl(p)}">${pic(p.imgs[0], "44px")}<span><b>${esc(p.name)}</b><small>${esc(catOf(p.cat)?.name || "")} · ${esc(lineName(p))}</small></span><span class="price-mini">${money(p.price)}</span></a>`).join("") +
         `<a class="suggest__all" href="tienda.html?q=${encodeURIComponent(q)}">Ver los ${res.length} resultados →</a>`
-      : `<p style="padding:8px 8px 4px">No encontramos “${esc(q)}”. Prueba con lino, hoodie, jean o blazer.</p>`;
+      : `<p style="padding:8px 8px 4px">No encontramos “${esc(q)}”. Prueba con polo, polera, jean o jogger.</p>`;
   });
   if (PAGE === "tienda") input.value = new URLSearchParams(location.search).get("q") || "";
 
@@ -387,12 +387,11 @@ function cardHTML(p, opts) {
     </div>
   </article>`;
 }
-function catCardHTML(c, estilo) {
-  const list = PRODUCTS.filter(p => p.cat === c.slug && (!estilo || p.estilo === estilo));
-  const n = list.length;
-  return `<a href="tienda.html?${estilo ? `estilo=${estilo}&` : ""}cat=${c.slug}" class="cat" style="--ph:${fotoColor(list[0].imgs[0])}">
-    ${pic(list[0].imgs[0], SZ.cat, { fade: true })}
-    <div class="cat__txt"><h3>${c.name}</h3><span>${n} ${n === 1 ? "prenda" : "prendas"}</span></div>
+function catCardHTML(c) {
+  const n = PRODUCTS.filter(p => p.cat === c.slug).length;
+  return `<a href="tienda.html?cat=${c.slug}" class="cat${n ? "" : " cat--soon"}" style="--ph:${fotoColor(c.cover)}">
+    ${pic(c.cover, SZ.cat, { fade: true })}
+    <div class="cat__txt"><h3>${esc(c.name)}</h3><span>${n ? `${n} ${n === 1 ? "prenda" : "prendas"}` : "Próximamente"}</span></div>
   </a>`;
 }
 function arrowsHTML(forId) {
@@ -847,7 +846,8 @@ function initColeccion() {
   remember(st.slug);
   const items = PRODUCTS.filter(p => p.estilo === st.slug);
   const deals = items.filter(p => p.deal);
-  const cats = CATS.filter(c => items.some(p => p.cat === c.slug));
+  const cats = CATS.filter(c => st.lines.includes(c.linea));
+  const catsWith = cats.filter(c => items.some(p => p.cat === c.slug));
   const other = Object.values(STYLES).find(s => s.slug !== st.slug);
   const off = Math.round(PACK.discount * 100);
 
@@ -878,7 +878,7 @@ function initColeccion() {
   <section class="cats">
     <div class="wrap">
       <div class="sec-head reveal"><div><div class="label">Categorías<span class="line"></span></div><h2 class="h2">Compra por prenda</h2></div><div class="head-right"><a href="tienda.html?estilo=${st.slug}" class="see-all">Ver todas <span>→</span></a>${arrowsHTML("trackCats")}</div></div>
-      <div class="track" id="trackCats">${cats.map(c => catCardHTML(c, st.slug)).join("")}</div>
+      <div class="track" id="trackCats">${cats.map(c => catCardHTML(c)).join("")}</div>
     </div>
   </section>
 
@@ -888,7 +888,7 @@ function initColeccion() {
       <div class="chipbar" id="collChips" role="group" aria-label="Filtrar por categoría">
         <button type="button" class="on" data-c="" aria-pressed="true">Todo <small>${items.length}</small></button>
         ${st.lines.length > 1 ? st.lines.map(l => `<button type="button" data-l="${l}" aria-pressed="false">${esc(lineOf(l).name)} <small>${items.filter(p => p.linea === l).length}</small></button>`).join("") : ""}
-        ${cats.map(c => `<button type="button" data-c="${c.slug}" aria-pressed="false">${c.name} <small>${items.filter(p => p.cat === c.slug).length}</small></button>`).join("")}
+        ${catsWith.map(c => `<button type="button" data-c="${c.slug}" aria-pressed="false">${c.name} <small>${items.filter(p => p.cat === c.slug).length}</small></button>`).join("")}
       </div>
       <div class="grid grid--wide" id="collGrid">${items.map(p => cardHTML(p)).join("")}</div>
     </div>
@@ -949,7 +949,7 @@ function linesHTML(st, items) {
           </div>
           <div class="ln__about">
             <p>${esc(l.desc)}</p>
-            <ul>${l.points.map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+            <ul>${CATS.filter(c => c.linea === slug).map(c => `<li><a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
           </div>
         </div>
         <div class="deals-bar"><p>${list.length} prendas</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo ${esc(l.collab || l.name)} <span>→</span></a>${arrowsHTML(id)}</div></div>
@@ -1059,11 +1059,11 @@ function initTienda() {
     const cat = catOf(shop.cat), st = styleOf(shop.estilo), ln = lineOf(shop.linea);
     const who = ln ? ln.collab || ln.name : st ? st.name : "";
     const base = shop.q ? `“${shop.q}”` : cat ? cat.name : shop.ofertas ? "Ofertas" : who || "Tienda";
-    const title = who && (cat || shop.ofertas) && !shop.q ? `${base} ${who}` : base;
+    const title = who && shop.ofertas && !cat && !shop.q ? `${base} ${who}` : base;
     $("#shopTitle").textContent = title;
-    $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : who && !cat ? (ln ? `${ln.tagline} ${ln.desc}` : st.desc) : cat ? `${cat.name} ${who ? `de ${who}` : "de Badass y Martir Atelier"}.` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Badass y Martir Atelier en un solo lugar. Consulta tallas y stock por WhatsApp.";
+    $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : who && !cat ? (ln ? `${ln.tagline} ${ln.desc}` : st.desc) : cat ? `${(l => l ? `${l.collab || l.name} · ${l.tagline}` : "")(lineOf(cat.linea))}` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Badass y Martir Atelier en un solo lugar. Consulta tallas y stock por WhatsApp.";
     $("#shopCrumb").textContent = title;
-    const heroImg = cat ? (inStyle.find(p => p.cat === cat.slug) || PRODUCTS.find(p => p.cat === cat.slug)).imgs[0] : st ? st.panel : "camisas-dobladas.jpg";
+    const heroImg = cat ? cat.cover : st ? st.panel : "camisas-dobladas.jpg";
     if ($("#shopHeroImg").dataset.foto !== heroImg) setPic($("#shopHeroImg"), heroImg);
     $(".page-hero").classList.toggle("page-hero--badass", shop.estilo === "badass");
     document.body.dataset.estilo = shop.estilo;
@@ -1093,9 +1093,11 @@ function initTienda() {
       : "0 productos";
     $("#grid").innerHTML = total
       ? pageItems.map(p => cardHTML(p, { style: !shop.estilo })).join("")
+      : cat && !PRODUCTS.some(p => p.cat === cat.slug)
+      ? `<div class="empty" style="grid-column:1/-1"><h2>${esc(cat.name)} llega muy pronto</h2><p>Estamos preparando esta categoría. Escríbenos y te avisamos apenas esté disponible.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`
       : `<div class="empty" style="grid-column:1/-1"><h2>No encontramos prendas con esos filtros</h2><p>Prueba quitando algún filtro o escríbenos: te ayudamos a encontrar lo que buscas.</p><a class="btn btn--dark js-wa-search" href="#" target="_blank" rel="noopener">${I.wa}Preguntar por WhatsApp</a></div>`;
     const ask = $(".js-wa-search", $("#grid"));
-    if (ask) ask.href = waLink(`Hola ${C.store} 👋, estoy buscando ${shop.q || (cat ? cat.name.toLowerCase() : "una prenda")}${who ? ` de ${who}` : ""}${shop.talla ? ` en talla ${shop.talla}` : ""}. ¿Me pueden ayudar?`);
+    if (ask) ask.href = waLink(`Hola ${C.store} 👋, estoy buscando ${shop.q || (cat ? cat.name : "una prenda")}${who ? ` de ${who}` : ""}${shop.talla ? ` en talla ${shop.talla}` : ""}. ¿Me pueden ayudar?`);
 
     // Paginación
     if (pages > 1) {
@@ -1249,7 +1251,7 @@ function initPack() {
   function build() {
     const st = styleOf(estilo);
     document.body.dataset.estilo = estilo;
-    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && s.cats.includes(p.cat)) }));
+    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && s.tipos.includes(catOf(p.cat)?.tipo)) }));
     sel = steps.map(() => ({ slug: null, size: null }));
     $$("#packStyle button").forEach(b => { const on = b.dataset.v === estilo; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
     $("#packName").textContent = `${PACK.name} ${st.name}`;
