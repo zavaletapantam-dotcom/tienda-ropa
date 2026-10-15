@@ -79,7 +79,7 @@ const generalMsg = () => `Hola ${C.store} 👋, quisiera más información sobre
 const remember = slug => { try { localStorage.setItem("maison_estilo", slug); } catch (_) {} };
 const stored = () => { try { return localStorage.getItem("maison_estilo") || ""; } catch (_) { return ""; } };
 const colorOpt = (p, color) => ((p.colors.find(c => c[0] === color) || [])[3]) || {};
-const guideFor = (p, color) => { const g = colorOpt(p, color).guide || p.guide; return g && GUIDE[g] ? GUIDE[g] : guideBase(p); };
+const guideFor = (p, color) => { const g = colorOpt(p, color).guide || p.guide; return g && GUIDE[g] ? GUIDE[g] : null; };
 const guideImgFor = (p, color) => colorOpt(p, color).guideImg || p.guideImg;
 const guideBase = p => ( p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
@@ -188,7 +188,7 @@ function renderLayout() {
   const top = `
   ${SPRITE}
   <div class="topbar" aria-hidden="true"><div class="topbar__track">${[
-    "Envíos a todo el Perú", "Badass y Martir Atelier",
+    "Envío a domicilio o recojo en tienda", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Badass y Martir Atelier",
     "Atención personalizada por WhatsApp", `Cambios hasta ${C.diasCambio} días después`,
   ].map(t => `<span>${t}</span>`).join("").repeat(2)}</div></div>
   <header class="header" id="header">
@@ -234,9 +234,7 @@ function renderLayout() {
           <p class="footer__tag">${esc(C.tagline)}</p>
           <p>Dos mundos de moda diferentes pero complementarios. Escríbenos y un asesor te ayudará a elegir tu talla y tu prenda ideal.</p>
           <div class="socials">
-            <a href="${C.social.instagram}" aria-label="Instagram">${I.insta}</a>
-            <a href="${C.social.facebook}" aria-label="Facebook">${I.fb}</a>
-            <a href="${C.social.tiktok}" aria-label="TikTok">${I.tiktok}</a>
+            ${socialLinks()}
             <a class="js-wa" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">${I.wa}</a>
           </div>
         </div>
@@ -303,10 +301,33 @@ function renderLayout() {
       <div class="cart__foot" id="cartFoot">
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
         <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
-        <p class="cart__note">El envío se coordina con el asesor. Él confirmará <b>stock, tallas y costo de envío</b> antes de que pagues.</p>
-        <a class="btn-wa" id="cartWa" href="#" target="_blank" rel="noopener">${I.wa}Consultar con un asesor</a>
+        <p class="cart__note">En el siguiente paso eliges <b>recojo en tienda</b> o <b>envío a domicilio</b> (${envioTxt()}).</p>
+        <button type="button" class="btn-wa" id="cartNext">${I.wa}Comprar con un asesor</button>
         <div class="cart__links"><button type="button" data-cart-close>Seguir comprando</button><button type="button" id="cartClear">${I.trash}Vaciar carrito</button></div>
       </div>
+      <form class="co" id="checkout" hidden novalidate>
+        <button type="button" class="co__back" id="coBack">${I.prev}Volver al carrito</button>
+        <h3>¿Cómo quieres recibir tu pedido?</h3>
+        <div class="co__opts" role="radiogroup">
+          <label class="co__opt"><input type="radio" name="entrega" value="domicilio" checked><span><b>Envío a domicilio</b><small>${envioTxt()} · ${C.entrega}</small></span></label>
+          <label class="co__opt"><input type="radio" name="entrega" value="recojo"><span><b>Recojo en tienda</b><small>Sin costo · ${esc(C.recojo || "dirección por confirmar")}</small></span></label>
+        </div>
+        <div class="co__f"><label for="coName">Nombre y apellido *</label><input id="coName" autocomplete="name" required></div>
+        <div class="co__f"><label for="coPhone">Celular</label><input id="coPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+        <div id="coShip">
+          <div class="co__f"><label for="coDist">Distrito / ciudad *</label><select id="coDist"><option value="">Elige tu distrito</option>${C.distritos.map(x => `<option>${esc(x)}</option>`).join("")}<option value="otro">Otro</option></select></div>
+          <div class="co__f" id="coOtherWrap" hidden><label for="coOther">¿Cuál? *</label><input id="coOther"></div>
+          <div class="co__f"><label for="coAddr">Dirección *</label><input id="coAddr" autocomplete="street-address" placeholder="Av. / Jr. / Calle, número, Mz. y Lt."></div>
+          <div class="co__f"><label for="coRef">Referencia</label><input id="coRef" placeholder="Ej. frente al parque, casa de dos pisos"></div>
+          <p class="co__eta">${I.truck}Se le entregará de ${C.entrega} como máximo.</p>
+        </div>
+        <div class="co__sum">
+          <div class="cart__row"><span>Subtotal</span><b id="coSub"></b></div>
+          <div class="cart__row"><span>Envío</span><b id="coShipCost"></b></div>
+          <div class="cart__row co__total"><span>Total</span><b id="coTotal"></b></div>
+        </div>
+        <button type="submit" class="btn-wa">${I.wa}Enviar pedido por WhatsApp</button>
+      </form>
     </aside>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
@@ -315,11 +336,16 @@ function renderLayout() {
   document.body.insertAdjacentHTML("beforeend", bottom);
 }
 
+/* Redes con link real (las vacías no se muestran) */
+const socialLinks = () => [["instagram", "Instagram", I.insta], ["facebook", "Facebook", I.fb], ["tiktok", "TikTok", I.tiktok]]
+  .filter(([k]) => C.social[k] && C.social[k] !== "#").map(([k, n, ic]) => `<a href="${C.social[k]}" target="_blank" rel="noopener" aria-label="${n}">${ic}</a>`).join("");
+const PAGOS = "Tarjeta de débito, Yape, Plin y transferencia de cualquier banco";
+const envioTxt = () => `${money(C.envio)} · gratis desde ${money(C.envioGratisDesde)}`;
 /* Rellena textos que vienen de CONFIG: <span data-c="email"></span> */
 function fillConfig() {
   const v = {
     store: C.store, email: C.email, city: C.city, hours: C.hours, whatsapp: waPretty(), tagline: C.tagline,
-    envioLima: money(C.envioLima), envioProvincia: money(C.envioProvincia),
+    envio: money(C.envio), envioGratisDesde: money(C.envioGratisDesde), entrega: C.entrega, pagos: PAGOS, recojo: C.recojo || "Dirección por confirmar",
     diasCambio: C.diasCambio,
     packDiscount: Math.round(PACK.discount * 100) + "%",
   };
@@ -396,10 +422,13 @@ function cardHTML(p, opts) {
   </article>`;
 }
 function catCardHTML(c) {
-  const n = PRODUCTS.filter(p => p.cat === c.slug).length;
+  const list = PRODUCTS.filter(p => p.cat === c.slug), n = list.length;
+  const cols = list.flatMap(p => p.colors), nc = cols.length;
+  const info = !n ? `<span>Próximamente</span>`
+    : `<span>${n > 1 ? `${n} modelos · ` : ""}${nc} ${nc === 1 ? "color" : "colores"}</span>${nc > 1 ? `<span class="cat__dots">${cols.slice(0, 8).map(k => `<i style="background:${k[1]}"></i>`).join("")}${nc > 8 ? `<small>+${nc - 8}</small>` : ""}</span>` : ""}`;
   return `<a href="tienda.html?cat=${c.slug}" class="cat${n ? "" : " cat--soon"}" style="--ph:${fotoColor(c.cover)}">
     ${pic(c.cover, SZ.cat, { fade: true })}
-    <div class="cat__txt"><h3>${esc(c.name)}</h3><span>${n ? `${n} ${n === 1 ? "prenda" : "prendas"}` : "Próximamente"}</span></div>
+    <div class="cat__txt"><h3>${esc(c.name)}</h3>${info}</div>
   </a>`;
 }
 function arrowsHTML(forId) {
@@ -407,12 +436,12 @@ function arrowsHTML(forId) {
 }
 function perksHTML() {
   const items = [
-    [I.pin, "Envíos a todo el Perú", `Lima ${money(C.envioLima)} · Provincia ${money(C.envioProvincia)}`],
+    [I.truck, "Envío a domicilio", `${envioTxt()}`],
+    [I.pin, "Recojo en tienda", "Sin costo adicional"],
+    [I.clock, "Entrega rápida", `De ${C.entrega} como máximo`],
     [I.swap, "Cambios", `Hasta ${C.diasCambio} días después de tu compra`],
-    [I.card, "Pago seguro", "Yape, Plin, tarjeta y transferencia"],
-    [I.shield, "Calidad garantizada", "Telas premium en cada prenda"],
+    [I.card, "Pagos", "Débito, Yape, Plin y transferencia"],
     [I.chat, "Asesoría", "Te atendemos por WhatsApp"],
-    [I.shirt, "Hecho en Perú", "Prendas con calidad peruana"],
   ];
   return `<div class="wrap">
     <div class="label center" style="margin-bottom:28px"><span class="line"></span>Garantías<span class="line"></span></div>
@@ -577,6 +606,48 @@ function addToCart(p, { size, color, qty = 1 }) {
   $$(".cart-count").forEach(b => { b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); });
   openCart(cart.indexOf(it || cart[cart.length - 1]));
 }
+/* Pedido con datos de entrega */
+const CO_KEY = "maison_checkout";
+const coData = () => {
+  const ent = ($('#checkout input[name="entrega"]:checked') || {}).value || "domicilio";
+  const dist = $("#coDist").value === "otro" ? $("#coOther").value.trim() : $("#coDist").value;
+  return { entrega: ent, nombre: $("#coName").value.trim(), celular: $("#coPhone").value.trim(), distrito: dist, distSel: $("#coDist").value, otro: $("#coOther").value.trim(), direccion: $("#coAddr").value.trim(), referencia: $("#coRef").value.trim() };
+};
+const shipCost = ent => (ent === "recojo" ? 0 : cartSub() >= C.envioGratisDesde ? 0 : C.envio);
+function orderMsg(o) {
+  const L = "———————————————", sub = cartSub(), env = shipCost(o.entrega), l = ["✨ *NUEVO PEDIDO* ✨", `👤 *Cliente:* ${o.nombre}`];
+  if (o.celular) l.push(`📞 *Celular:* ${o.celular}`);
+  l.push(L, "");
+  cart.forEach(x => {
+    const p = findProduct(x.slug);
+    l.push(`🛍️ *${p.name.toUpperCase()}*`, `${lineName(p)} · Color: ${x.color} · Talla: ${x.size}`);
+    l.push(hasPrice(p) ? `_Cant:_ ${x.qty}  ×  _P.U:_ ${money(p.price)}` : `_Cant:_ ${x.qty}  ×  _P.U:_ a consultar`);
+    l.push(hasPrice(p) ? `*Subtotal: ${money(p.price * x.qty)}*` : "*Subtotal: a consultar*", "");
+  });
+  l.push(L);
+  if (o.entrega === "recojo") {
+    l.push("🏬 *Entrega:* Recojo en tienda", `📍 *Dirección de recojo:* ${C.recojo || "por confirmar"}`, "📦 *Envío:* Sin costo");
+  } else {
+    l.push("🚚 *Entrega:* Envío a domicilio", `📍 *Dirección:* ${o.direccion}`, `🏙️ *Distrito:* ${o.distrito}`);
+    if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
+    l.push(`📦 *Envío:* ${env ? money(env) : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
+  }
+  l.push(L, `💰 *TOTAL: ${money(sub + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
+  return l.join("\n");
+}
+function renderCheckout() {
+  const o = coData(), env = shipCost(o.entrega);
+  $("#coShip").hidden = o.entrega !== "domicilio";
+  $("#coOtherWrap").hidden = $("#coDist").value !== "otro";
+  $("#coSub").textContent = money(cartSub()) + (cartAsk() ? " + a consultar" : "");
+  $("#coShipCost").textContent = o.entrega === "recojo" ? "Sin costo" : env ? money(env) : "Gratis";
+  $("#coTotal").textContent = money(cartSub() + env) + (cartAsk() ? " + a consultar" : "");
+}
+function showCheckout(on) {
+  $("#checkout").hidden = !on; $("#cartList").hidden = on; $("#cartFoot").hidden = on || !cart.length;
+  $("#cartTitle").firstChild.textContent = on ? "Datos de entrega " : "Tu carrito ";
+  if (on) { renderCheckout(); setTimeout(() => $("#coName").focus(), 60); }
+}
 /* Mensaje con todo el pedido para el asesor */
 function cartMsg() {
   const l = ["Hola, estoy interesado en estas prendas:", ""];
@@ -598,7 +669,7 @@ function renderCart() {
   $("#cartN").textContent = n ? `(${n})` : "";
   if (!cart.length) {
     list.innerHTML = `<div class="cart__empty">${I.bag}<h3>Tu carrito está vacío</h3><p>Agrega las prendas que te gusten y envíalas juntas a un asesor por WhatsApp.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`;
-    $("#cartFoot").hidden = true; return;
+    $("#cartFoot").hidden = true; if (!$("#checkout").hidden) showCheckout(false); return;
   }
   $("#cartFoot").hidden = false;
   list.innerHTML = cart.map((x, i) => {
@@ -621,13 +692,13 @@ function renderCart() {
   $("#cartSub").textContent = money(sub) + (cartAsk() ? " + a consultar" : "");
   $("#cartSave").textContent = "−" + money(save);
   $("#cartSaveRow").hidden = !save;
-  $("#cartWa").href = waLink(cartMsg());
 }
 let cartFrom = null;
 function openCart(flash) {
   const c = $("#cart"); if (!c) return;
   closeQV(); $("#drawer")?.classList.remove("open");
   cartFrom = document.activeElement;
+  showCheckout(false);
   c.classList.add("open"); c.setAttribute("aria-hidden", "false"); document.body.style.overflow = "hidden";
   if (flash != null) { const el = $(`.ci[data-i="${flash}"]`); if (el) { el.classList.add("flash"); el.scrollIntoView({ block: "nearest" }); } }
   setTimeout(() => $(".cart__head .icon-btn")?.focus(), 50);
@@ -649,7 +720,29 @@ function initCart() {
     else if (e.target.closest("[data-cart-rm]")) { cart.splice(i, 1); saveCart(); toast("Prenda quitada del carrito"); }
   });
   $("#cartClear").addEventListener("click", () => { if (confirm("¿Vaciar el carrito?")) { cart = []; saveCart(); } });
-  $("#cartWa").addEventListener("click", () => toast("Abriendo WhatsApp con tu pedido…"));
+  // Paso de entrega
+  try { const v = JSON.parse(localStorage.getItem(CO_KEY) || "{}");
+    if (v.nombre) $("#coName").value = v.nombre; if (v.celular) $("#coPhone").value = v.celular;
+    if (v.distSel) $("#coDist").value = v.distSel; if (v.otro) $("#coOther").value = v.otro;
+    if (v.direccion) $("#coAddr").value = v.direccion; if (v.referencia) $("#coRef").value = v.referencia;
+    if (v.entrega) { const r = $(`#checkout input[value="${v.entrega}"]`); if (r) r.checked = true; }
+  } catch (_) {}
+  $("#cartNext").addEventListener("click", () => showCheckout(true));
+  $("#coBack").addEventListener("click", () => showCheckout(false));
+  $("#checkout").addEventListener("input", renderCheckout);
+  $("#checkout").addEventListener("change", renderCheckout);
+  $("#checkout").addEventListener("submit", e => {
+    e.preventDefault();
+    const o = coData(), need = [["coName", o.nombre]];
+    if (o.entrega === "domicilio") { need.push(["coDist", o.distSel]); if (o.distSel === "otro") need.push(["coOther", o.otro]); need.push(["coAddr", o.direccion]); }
+    const bad = need.filter(([, v]) => !v).map(([id]) => id);
+    $$("#checkout .co__f").forEach(f => f.classList.remove("err"));
+    if (bad.length) { bad.forEach(id => document.getElementById(id).closest(".co__f").classList.add("err")); document.getElementById(bad[0]).focus(); toast("Completa los datos marcados"); return; }
+    try { localStorage.setItem(CO_KEY, JSON.stringify(o)); } catch (_) {}
+    const url = waLink(orderMsg(o)), w = window.open(url, "_blank");
+    if (w) w.opener = null; else location.href = url;
+    toast("Abriendo WhatsApp con tu pedido…");
+  });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
   // Si el cliente tiene la tienda abierta en otra pestaña, el carrito se mantiene igual
   addEventListener("storage", e => { if (e.key === CART_KEY) { loadCart(); renderCart(); } });
@@ -849,7 +942,7 @@ function initIntro() {
 /* =========================================================
    PÁGINA: COLECCIÓN (badass.html / martir.html)
    ========================================================= */
-const packReady = estilo => PACK.steps.every(s => PRODUCTS.some(p => p.estilo === estilo && s.tipos.includes(catOf(p.cat)?.tipo)));
+const packReady = estilo => PACK.steps.every(s => PRODUCTS.some(p => p.estilo === estilo && hasPrice(p) && s.tipos.includes(catOf(p.cat)?.tipo)));
 const soonHTML = (what, msg) => `<div class="soon"><b>${esc(what)} llega muy pronto</b><p>${esc(msg)}</p><a class="btn-outline" href="${waLink(`Hola ${C.store} 👋, quiero saber cuándo llega ${what}.`)}" target="_blank" rel="noopener">${I.wa}Avísame por WhatsApp</a></div>`;
 function initColeccion() {
   const st = styleOf(ESTILO), root = $("#coleccion");
@@ -859,36 +952,37 @@ function initColeccion() {
   const deals = items.filter(p => p.deal);
   const cats = CATS.filter(c => st.lines.includes(c.linea));
   const catsWith = cats.filter(c => items.some(p => p.cat === c.slug));
-  const other = Object.values(STYLES).find(s => s.slug !== st.slug);
   const off = Math.round(PACK.discount * 100);
 
   root.innerHTML = `
   ${heroHTML(st)}
   ${st.marquee ? `<div class="mq" aria-hidden="true"><div class="mq__track">${st.marquee.map(w => `<span>${esc(w)}</span>`).join("").repeat(2)}</div></div>` : ""}
   ${linesHTML(st, items)}
-  ${st.quote ? `<div class="quote"><div class="wrap"><p>“${esc(st.quote)}”</p><span>${esc(C.store)} · ${esc(st.name)}</span></div></div>` : ""}
 
-  ${deals.length ? `<section id="ofertas">
+  ${packReady(st.slug) ? `<section class="pack-cta">
     <div class="wrap">
-      <div class="deals__head reveal">
-        <div class="label center"><span class="line"></span>Solo por hoy<span class="line"></span></div>
-        <h2 class="h2">Ofertas del día</h2>
-        <p class="deals__sub">Precios especiales de ${esc(st.name)} que cambian cada mañana</p>
-      </div>
-      <div class="countdown" role="timer" aria-label="Tiempo restante de las ofertas">
-        <div class="cd-unit"><b id="tH">00</b><span>Horas</span></div><i class="cd-sep" aria-hidden="true"></i>
-        <div class="cd-unit"><b id="tM">00</b><span>Minutos</span></div><i class="cd-sep" aria-hidden="true"></i>
-        <div class="cd-unit"><b id="tS">00</b><span>Segundos</span></div>
-      </div>
-      <div class="deals-bar"><p>${deals.length} prendas con descuento en ${esc(st.name)}</p><div class="head-right"><a href="tienda.html?estilo=${st.slug}&ofertas=1" class="see-all">Ver todo <span>→</span></a>${arrowsHTML("trackDeals")}</div></div>
-      <div class="track" id="trackDeals">${deals.map(p => cardHTML(p)).join("")}</div>
-      <a href="tienda.html?estilo=${st.slug}&ofertas=1" class="btn-outline m-only">Ver todas las ofertas <span>→</span></a>
+      <a class="pack-cta__in" href="pack.html?estilo=${st.slug}">
+        <span class="pack-cta__off">−${off}%</span>
+        <span class="pack-cta__txt"><small>Pack Deluxe · ${esc(st.name)}</small><b>Arma tu outfit de 3 prendas y ahorra ${off}%</b><em>Elige un polo, un pantalón y una casaca: el descuento se aplica solo.</em></span>
+        <span class="btn btn--light">Armar mi pack <span>→</span></span>
+      </a>
     </div>
   </section>` : ""}
 
-  <section class="cats">
+  <section class="cats" id="ofertas">
     <div class="wrap">
-      <div class="sec-head reveal"><div><div class="label">Categorías<span class="line"></span></div><h2 class="h2">Compra por prenda</h2></div><div class="head-right"><a href="tienda.html?estilo=${st.slug}" class="see-all">Ver todas <span>→</span></a>${arrowsHTML("trackCats")}</div></div>
+      <div class="cats__head reveal">
+        <div><div class="label">Categorías<span class="line"></span></div><h2 class="h2">Compra por prenda</h2></div>
+        ${deals.length ? `<a class="cdx" href="tienda.html?estilo=${st.slug}&ofertas=1" aria-label="Ver ofertas del día">
+          <span class="cdx__txt"><small>Solo por hoy</small><b>Ofertas del día</b><em>${deals.length} ${deals.length === 1 ? "prenda" : "prendas"} con descuento</em></span>
+          <span class="countdown countdown--sm" role="timer" aria-label="Tiempo restante de las ofertas">
+            <span class="cd-unit"><b id="tH">00</b><span>h</span></span><i class="cd-sep" aria-hidden="true"></i>
+            <span class="cd-unit"><b id="tM">00</b><span>min</span></span><i class="cd-sep" aria-hidden="true"></i>
+            <span class="cd-unit"><b id="tS">00</b><span>seg</span></span>
+          </span>
+        </a>` : ""}
+        <div class="head-right"><a href="tienda.html?estilo=${st.slug}" class="see-all">Ver todas <span>→</span></a>${arrowsHTML("trackCats")}</div>
+      </div>
       <div class="track" id="trackCats">${cats.map(c => catCardHTML(c)).join("")}</div>
     </div>
   </section>
@@ -905,6 +999,8 @@ function initColeccion() {
     </div>
   </section>` : ""}
 
+  ${st.quote ? `<div class="quote"><div class="wrap"><p>“${esc(st.quote)}”</p><span>${esc(C.store)} · ${esc(st.name)}</span></div></div>` : ""}
+
   <section class="editorial editorial--${st.slug}">
     <div class="editorial__in">
       <div class="editorial__img" style="background:${fotoColor(st.editorial.img)}">${pic(st.editorial.img, SZ.half, { fade: true })}</div>
@@ -914,19 +1010,6 @@ function initColeccion() {
         <p>${esc(st.editorial.text)}</p>
         <a href="${items.length ? `tienda.html?estilo=${st.slug}` : "#lineas"}" class="btn ${st.slug === "badass" ? "btn--light" : "btn--teal"}">${items.length ? `Comprar ${esc(st.name)}` : "Ver lo que viene"} <span>→</span></a>
       </div>
-    </div>
-  </section>
-
-  ${packReady(st.slug) ? `<div class="cta-band">
-    <div class="wrap">
-      <div><span class="kicker-light">Pack Deluxe · ${esc(st.name)}</span><h2 style="margin-top:10px">Arma tu outfit ${esc(st.name)} de 3 prendas y ahorra <em>${off}%</em></h2></div>
-      <a href="pack.html?estilo=${st.slug}" class="btn btn--light">Armar mi pack <span>→</span></a>
-    </div>
-  </div>` : ""}
-
-  <section class="cross">
-    <div class="wrap">
-      <a class="cross__card cross--${other.slug}" href="${other.page}" style="background:${fotoColor(other.panel)}">${pic(other.panel, SZ.full, { fade: true })}<div class="cross__body"><small>El otro mundo de MAISON</small><h2>${brandTitle(other)}</h2><p>${esc(other.desc)}</p><b>Explorar ${esc(other.name)} →</b></div></a>
     </div>
   </section>
 
@@ -952,6 +1035,8 @@ function linesHTML(st, items) {
       : `<span class="ln__word">${esc(l.name)}</span>`;
     return `<div class="ln ln--${l.slug}">
       <div class="wrap">
+        ${list.length ? `<div class="deals-bar ln__bar"><p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>
+        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : ""}
         <div class="ln__head reveal">
           <div class="ln__brand">
             ${l.collab ? `<span class="ln__kicker">Maison <i>×</i> Uomo Cattivo</span>` : `<span class="ln__kicker">${esc(st.name)} · Línea ${i + 1}</span>`}
@@ -963,8 +1048,7 @@ function linesHTML(st, items) {
             <ul>${CATS.filter(c => c.linea === slug).map(c => `<li><a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
           </div>
         </div>
-        ${list.length ? `<div class="deals-bar"><p>${list.length} ${list.length === 1 ? "prenda" : "prendas"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo ${esc(l.collab || l.name)} <span>→</span></a>${arrowsHTML(id)}</div></div>
-        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
+        ${list.length ? "" : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
       </div>
     </div>`;
   }).join("")}</section>`;
@@ -1173,18 +1257,18 @@ function initProducto() {
             <button type="button" class="btn-cart" id="pAdd">${I.bag}Agregar al carrito</button>
           </div>
           <a class="pdp__direct" id="pWa" href="#" target="_blank" rel="noopener">${I.wa}O pídelo directo por WhatsApp</a>
-          <p class="pdp__note">Un asesor confirmará <b>stock, talla y costo de envío</b> contigo antes de pagar.</p>
+          <p class="pdp__note">Un asesor confirmará <b>stock y talla</b> contigo antes de pagar.</p>
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
         <div class="pdp__trust">
-          <div>${I.truck}<span><b>Envío a todo el Perú.</b> Lima ${money(C.envioLima)} · Provincia ${money(C.envioProvincia)}</span></div>
+          <div>${I.truck}<span><b>Envío a domicilio:</b> ${envioTxt()}. Llega en ${C.entrega}. También puedes <b>recoger en tienda</b>.</span></div>
           <div>${I.swap}<span><b>Cambios</b> hasta ${C.diasCambio} días después de recibir tu pedido</span></div>
-          <div>${I.card}<span><b>Paga como prefieras:</b> Yape, Plin, tarjeta o transferencia</span></div>
+          <div>${I.card}<span><b>Paga como prefieras:</b> ${PAGOS.charAt(0).toLowerCase() + PAGOS.slice(1)}</span></div>
         </div>
         <div class="acc">
           <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd>${p.material ? `<dt>Material</dt><dd>${esc(p.material)}</dd>` : ""}<dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
-          <details><summary>Envíos y cambios</summary><div class="acc__body">Lima: ${money(C.envioLima)} · Provincia: ${money(C.envioProvincia)}. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
+          <details><summary>Envíos y cambios</summary><div class="acc__body">Envío a domicilio: ${envioTxt()}, en ${C.entrega} como máximo. Recojo en tienda sin costo. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
       </div>
     </div>
@@ -1260,7 +1344,8 @@ function initProducto() {
 /* Guía de tallas: tabla de medidas y la imagen de cómo medir (puede cambiar según el color) */
 function guideHTML(p, color) {
   const g = guideFor(p, color), img = guideImgFor(p, color);
-  return `<div class="guide__scroll"><table><thead><tr>${g.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${g.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+  if (!g && !img) return `<p>Escríbenos por WhatsApp con tu altura y peso y te recomendamos la talla ideal.</p>`;
+  return `${g ? `<div class="guide__scroll"><table><thead><tr>${g.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${g.rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` : ""}
     <p>Medidas en centímetros. ¿Dudas? Escríbenos y te ayudamos a elegir.</p>
     ${img ? `<a href="${fotoUrl(img, 1600)}" target="_blank" rel="noopener"><img class="guide__img" src="${fotoUrl(img, 800)}" alt="Tabla de medidas: ${esc(p.name)}" loading="lazy"></a>` : ""}`;
 }
@@ -1277,7 +1362,7 @@ function initPack() {
   function build() {
     const st = styleOf(estilo);
     document.body.dataset.estilo = estilo;
-    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && s.tipos.includes(catOf(p.cat)?.tipo)) }));
+    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && hasPrice(p) && s.tipos.includes(catOf(p.cat)?.tipo)) }));
     sel = steps.map(() => ({ slug: null, size: null }));
     $$("#packStyle button").forEach(b => { const on = b.dataset.v === estilo; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
     $("#packName").textContent = `${PACK.name} ${st.name}`;
@@ -1381,7 +1466,7 @@ function initContacto() {
     <div class="c-card">${I.mail}<span><small>Correo</small><b>${esc(C.email)}</b></span><button type="button" class="copy" data-copy="${esc(C.email)}">Copiar</button></div>
     <div class="c-card">${I.pin}<span><small>Ubicación</small><b>${esc(C.city)}</b></span></div>
     <div class="c-card">${I.clock}<span><small>Horario</small><b>${esc(C.hours)}</b></span></div>`;
-  $("#contactSocial").innerHTML = `<a href="${C.social.instagram}" aria-label="Instagram">${I.insta}</a><a href="${C.social.facebook}" aria-label="Facebook">${I.fb}</a><a href="${C.social.tiktok}" aria-label="TikTok">${I.tiktok}</a>`;
+  $("#contactSocial").innerHTML = socialLinks();
   $$("[data-copy]").forEach(b => b.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast("Copiado"); } catch (_) { toast(b.dataset.copy); }
   }));
@@ -1410,12 +1495,12 @@ function initContacto() {
   $$("#contactForm input, #contactForm textarea").forEach(f => f.addEventListener("input", () => f.closest(".field").classList.remove("err")));
 
   const faqs = [
-    ["¿Cuánto cuesta el envío?", `El envío en Lima cuesta ${money(C.envioLima)} y a provincia ${money(C.envioProvincia)}.`],
-    ["¿Cuánto demora mi pedido?", "En Lima entregamos de 1 a 2 días hábiles. A provincia, de 2 a 5 días hábiles según el destino."],
+    ["¿Cuánto cuesta el envío?", `El envío a domicilio cuesta ${money(C.envio)} y es gratis en compras desde ${money(C.envioGratisDesde)}. También puedes recoger tu pedido en tienda sin costo.`],
+    ["¿Cuánto demora mi pedido?", `Con envío a domicilio, tu pedido se entrega de ${C.entrega} como máximo.`],
     ["¿Qué diferencia hay entre Badass y Martir Atelier?", "Badass es el lado urbano, cómodo y expresivo: Bassic (lo básico, siempre) y Bleesst (el lado más atrevido). Martir Atelier es el lado refinado y estructurado, con la colección Maison × Uomo Cattivo. Una misma persona puede ser ambos: combina prendas de los dos mundos."],
     ["¿Cómo sé cuál es mi talla?", "Cada producto tiene su guía de tallas con medidas en centímetros. Si tienes dudas, escríbenos por WhatsApp con tu altura y peso y te recomendamos la mejor talla."],
     ["¿Puedo cambiar una prenda?", `Sí. Tienes hasta ${C.diasCambio} días después de recibir tu pedido para cambiarla por otra talla o modelo, siempre que esté sin uso y con etiqueta.`],
-    ["¿Qué medios de pago aceptan?", "Yape, Plin, transferencia bancaria y tarjeta de crédito o débito. El asesor te envía los datos al confirmar tu pedido."],
+    ["¿Qué medios de pago aceptan?", `${PAGOS}. El asesor te envía los datos al confirmar tu pedido.`],
     ["¿Venden por mayor?", "Sí, trabajamos con emprendedores y tiendas. Escríbenos y te enviamos el catálogo con precios por mayor."],
   ];
   $("#faqList").innerHTML = faqs.map(([q, a]) => `<details><summary>${q}</summary><div class="acc__body">${a}</div></details>`).join("");
