@@ -15,7 +15,8 @@ window.CONFIG = {
   envio: 10,                 // envío a domicilio (S/)
   envioGratisDesde: 200,     // envío gratis desde este monto
   entrega: "1 a 2 días hábiles",
-  recojo: "",                // dirección de la tienda para recojo (pendiente)
+  recojo: "Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Naciones Unidas",   // dirección de la tienda para recojo
+  recojoRef: "Al costado del Tambo, frente a Sheyla",
   distritos: ["Nuevo Chimbote", "Chimbote"],
   diasCambio: 2,
   social: { instagram: "https://www.instagram.com/maison.pe_dandy/", facebook: "", tiktok: "" },

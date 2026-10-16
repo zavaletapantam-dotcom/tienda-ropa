@@ -310,7 +310,7 @@ function renderLayout() {
         <h3>¿Cómo quieres recibir tu pedido?</h3>
         <div class="co__opts" role="radiogroup">
           <label class="co__opt"><input type="radio" name="entrega" value="domicilio" checked><span><b>Envío a domicilio</b><small>${envioTxt()} · ${C.entrega}</small></span></label>
-          <label class="co__opt"><input type="radio" name="entrega" value="recojo"><span><b>Recojo en tienda</b><small>Sin costo · ${esc(C.recojo || "dirección por confirmar")}</small></span></label>
+          <label class="co__opt"><input type="radio" name="entrega" value="recojo"><span><b>Recojo en tienda</b><small>Sin costo · ${esc(C.recojo || "dirección por confirmar")}${C.recojoRef ? ` (${esc(C.recojoRef)})` : ""}</small></span></label>
         </div>
         <div class="co__f"><label for="coName">Nombre y apellido *</label><input id="coName" autocomplete="name" required></div>
         <div class="co__f"><label for="coPhone">Celular</label><input id="coPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
@@ -345,7 +345,7 @@ const envioTxt = () => `${money(C.envio)} · gratis desde ${money(C.envioGratisD
 function fillConfig() {
   const v = {
     store: C.store, email: C.email, city: C.city, hours: C.hours, whatsapp: waPretty(), tagline: C.tagline,
-    envio: money(C.envio), envioGratisDesde: money(C.envioGratisDesde), entrega: C.entrega, pagos: PAGOS, recojo: C.recojo || "Dirección por confirmar",
+    envio: money(C.envio), envioGratisDesde: money(C.envioGratisDesde), entrega: C.entrega, pagos: PAGOS, recojo: C.recojo ? C.recojo + (C.recojoRef ? ` (${C.recojoRef})` : "") : "Dirección por confirmar",
     diasCambio: C.diasCambio,
     packDiscount: Math.round(PACK.discount * 100) + "%",
   };
@@ -626,7 +626,9 @@ function orderMsg(o) {
   });
   l.push(L);
   if (o.entrega === "recojo") {
-    l.push("🏬 *Entrega:* Recojo en tienda", `📍 *Dirección de recojo:* ${C.recojo || "por confirmar"}`, "📦 *Envío:* Sin costo");
+    l.push("🏬 *Entrega:* Recojo en tienda", `📍 *Dirección de recojo:* ${C.recojo || "por confirmar"}`);
+    if (C.recojoRef) l.push(`📝 *Referencia:* ${C.recojoRef}`);
+    l.push("📦 *Envío:* Sin costo");
   } else {
     l.push("🚚 *Entrega:* Envío a domicilio", `📍 *Dirección:* ${o.direccion}`, `🏙️ *Distrito:* ${o.distrito}`);
     if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
@@ -1464,7 +1466,7 @@ function initContacto() {
   $("#contactCards").innerHTML = `
     <a class="c-card c-card--wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}<span><small>WhatsApp</small><b>${waPretty()}</b></span><span class="copy">Escribir</span></a>
     <div class="c-card">${I.mail}<span><small>Correo</small><b>${esc(C.email)}</b></span><button type="button" class="copy" data-copy="${esc(C.email)}">Copiar</button></div>
-    <div class="c-card">${I.pin}<span><small>Ubicación</small><b>${esc(C.city)}</b></span></div>
+    <div class="c-card">${I.pin}<span><small>Tienda (recojo)</small><b>${esc(C.recojo || C.city)}</b>${C.recojoRef ? `<small>${esc(C.recojoRef)} · ${esc(C.city)}</small>` : ""}</span></div>
     <div class="c-card">${I.clock}<span><small>Horario</small><b>${esc(C.hours)}</b></span></div>`;
   $("#contactSocial").innerHTML = socialLinks();
   $$("[data-copy]").forEach(b => b.addEventListener("click", async () => {
