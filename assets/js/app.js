@@ -1037,8 +1037,6 @@ function linesHTML(st, items) {
       : `<span class="ln__word">${esc(l.name)}</span>`;
     return `<div class="ln ln--${l.slug}">
       <div class="wrap">
-        ${list.length ? `<div class="deals-bar ln__bar"><p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>
-        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : ""}
         <div class="ln__head reveal">
           <div class="ln__brand">
             ${l.collab ? `<span class="ln__kicker">Maison <i>×</i> Uomo Cattivo</span>` : `<span class="ln__kicker">${esc(st.name)} · Línea ${i + 1}</span>`}
@@ -1050,7 +1048,8 @@ function linesHTML(st, items) {
             <ul>${CATS.filter(c => c.linea === slug).map(c => `<li><a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
           </div>
         </div>
-        ${list.length ? "" : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
+        ${list.length ? `<div class="deals-bar ln__bar"><p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>
+        <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
       </div>
     </div>`;
   }).join("")}</section>`;
