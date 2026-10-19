@@ -9,7 +9,7 @@ window.CONFIG = {
   whatsapp: "51936659911",
   store: "MAISON",
   tagline: "Dos mundos · Una sola esencia",
-  email: "contacto@maison.pe",
+  email: "maison.pe.dandy@gmail.com",
   city: "Chimbote, Perú",
   hours: "Atención 24 horas",
   envio: 10,                 // envío a domicilio (S/)
@@ -125,7 +125,7 @@ const SHOES = ["39", "40", "41", "42", "43"];
    - guide / guideImg: guía de tallas (SIZE_GUIDE) e imagen de medidas */
 window.PRODUCTS = [
   /* ---------------- MAISON × UOMO CATTIVO · polos, casacas y pantalones (fotos en fotos/: a = principal, b = al pasar el mouse) ---------------- */
-  { slug: "polo-luxury", name: "Polo Luxury", estilo: "martir", linea: "uomo-cattivo", cat: "polos-luxury", price: 70, old: 100, deal: true,
+  { slug: "polo-luxury", name: "Polo Luxury", estilo: "martir", linea: "uomo-cattivo", cat: "polos-luxury", price: 75, old: 100, deal: true,
     colors: [
       ["Negro", "#121212", ["luxury-negro-a.jpg", "luxury-negro-b.png", "luxury-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["luxury-blanco-a.jpg", "luxury-blanco-b.png", "luxury-blanco-c.png"]],
@@ -137,7 +137,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "luxury", guideImg: "medidas-luxury.webp",
     fit: "Slim fit de ajuste premium", material: "100% algodón High Cotton 1/1",
     desc: "Corte entallado en pecho y hombros con caída suelta y cómoda abajo. Puños en las mangas para mejor estructura, cuello reforzado de larga duración, etiqueta estampada para mayor confort y acabados luxury de alta calidad." },
-  { slug: "polo-monarca", name: "Polo Monarca", estilo: "martir", linea: "uomo-cattivo", cat: "polos-monarca", price: 80, old: 100, deal: true,
+  { slug: "polo-monarca", name: "Polo Monarca", estilo: "martir", linea: "uomo-cattivo", cat: "polos-monarca", price: 80, old: 110, deal: true,
     colors: [
       ["Negro", "#121212", ["monarca-negro-a.jpg", "monarca-negro-b.png", "monarca-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["monarca-blanco-a.jpg", "monarca-blanco-b.png", "monarca-blanco-c.png"]],
@@ -146,7 +146,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "monarca", guideImg: "medidas-monarca.webp",
     fit: "Polo camisero de ajuste entallado", material: "High Cotton, alto contenido de algodón",
     desc: "Polo camisero con cuello clásico y abertura frontal con botones. Tela de mayor gramaje, suave y transpirable, con estructura firme y caída impecable. Etiqueta tejida en el interior y costuras limpias: ideal para lo casual y lo semiformal." },
-  { slug: "polo-prime", name: "Polo Prime", estilo: "martir", linea: "uomo-cattivo", cat: "polos-prime", price: 70, isNew: true,
+  { slug: "polo-prime", name: "Polo Prime", estilo: "martir", linea: "uomo-cattivo", cat: "polos-prime", price: 70, old: 90, isNew: true,
     colors: [
       ["Negro", "#121212", ["prime-negro-a.jpg", "prime-negro-b.png", "prime-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["prime-blanco-a.jpg", "prime-blanco-b.png", "prime-blanco-c.png"]],
@@ -160,28 +160,28 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "prime", guideImg: "medidas-prime.webp",
     fit: "Slim fit", material: "Gamuza pima, 100% algodón",
     desc: "Corte ajustado en pecho y hombros, suelto en la parte inferior. Doble cuello para que mantenga su forma, puños en ambas mangas para estilizar los brazos y etiqueta tejida de la marca como toque final." },
-  { slug: "casaca-bolonia", name: "Casaca Bolonia", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 109.9, old: 219.9, deal: true,
+  { slug: "casaca-bolonia", name: "Casaca Bolonia", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 130, old: 219, deal: true,
     colors: [
       ["Beige", "#C9B9A3", ["bolonia-beige-a.webp", "bolonia-beige-b.webp", "bolonia-beige-c.webp", "bolonia-beige-d.webp"]],
       ["Marrón", "#6A4934", ["bolonia-marron-a.webp", "bolonia-marron-b.webp", "bolonia-marron-c.webp", "bolonia-marron-d.webp"]]],
     sizes: TOPS, guide: "bolonia", guideImg: "medidas-bolonia.webp",
     fit: "Corte relajado, tipo bomber",
     desc: "Casaca tipo bomber con cuello camisero en contraste, cierre frontal metálico y pretina con elástico en los laterales para un mejor ajuste. Costuras de diseño en el delantero, bolsillos laterales de acceso discreto y mangas amplias para moverte con libertad. Ideal para outfits urbanos y de entretiempo." },
-  { slug: "casaca-genova", name: "Casaca Génova", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 109.9, old: 219.9, deal: true,
+  { slug: "casaca-genova", name: "Casaca Génova", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 110, old: 190, deal: true,
     colors: [
       ["Amarillo", "#8C6A2C", ["genova-amarillo-a.webp", "genova-amarillo-b.webp", "genova-amarillo-c.webp", "genova-amarillo-d.webp"]],
       ["Verde", "#8F9787", ["genova-verde-a.webp", "genova-verde-b.webp", "genova-verde-c.webp"]]],
     sizes: TOPS, guide: "genova", guideImg: "medidas-genova.webp",
     fit: "Relaxed fit, tipo Harrington",
     desc: "Casaca Harrington a cuadros con cuello camisero en contraste de color sólido, cierre frontal metálico y puños con elástico. Bolsillos laterales funcionales y bajo ligeramente elasticado que mejora la estructura. Versátil para outfits urbanos y de entretiempo." },
-  { slug: "casaca-milano", name: "Casaca Milano", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 109.9, old: 219.9, deal: true,
+  { slug: "casaca-milano", name: "Casaca Milano", estilo: "martir", linea: "uomo-cattivo", cat: "casacas-cattivo", price: 120, old: 200, deal: true,
     colors: [
       ["Grey", "#A6A9AC", ["milano-grey-a.webp", "milano-grey-b.webp", "milano-grey-c.webp", "milano-grey-d.webp"]],
       ["Lila", "#8D7F90", ["milano-lila-a.webp", "milano-lila-b.webp", "milano-lila-c.webp", "milano-lila-d.webp"]]],
     sizes: TOPS, guide: "milano", guideImg: "medidas-milano.webp",
     fit: "Regular fit, tipo Harrington",
     desc: "Casaca Harrington con cuello camisero negro en contraste, cierre frontal metálico de largo completo y bolsillos inferiores con tapeta y broche. Puños con broche de ajuste y pretina parcialmente elasticada para mayor comodidad." },
-  { slug: "polo-perfect-business", name: "Polo Perfect Business", estilo: "martir", linea: "uomo-cattivo", cat: "polos-perfect-business", price: 50, old: 80, deal: true,
+  { slug: "polo-perfect-business", name: "Polo Perfect Business", estilo: "martir", linea: "uomo-cattivo", cat: "polos-perfect-business", price: 70, old: 90, deal: true,
     colors: [
       ["Negro", "#121212", ["business-negro-a.jpg", "business-negro-b.png", "business-negro-c.png"]],
       ["Beige", "#D8C2A6", ["business-beige-a.jpg", "business-beige-b.png", "business-beige-c.png"]],
@@ -192,7 +192,7 @@ window.PRODUCTS = [
     fit: "Slim fit", material: "Tejido acanalado con elasticidad",
     desc: "Cuello alto tipo mock con acabado acanalado que da estructura y estilo. Las rayas verticales estilizan la figura y el tejido se ajusta al cuerpo. Costuras laterales, hombros limpios y basta con doble pespunte para mayor durabilidad." },
   /* ---------------- MAISON × UOMO CATTIVO · casacas y pantalones ---------------- */
-  { slug: "pantalon-clasico-cattivo", name: "Pantalón Clásico Cattivo", estilo: "martir", linea: "uomo-cattivo", cat: "pantalon-clasico-cattivo", price: 90, old: 130, deal: true,
+  { slug: "pantalon-clasico-cattivo", name: "Pantalón Clásico Cattivo", estilo: "martir", linea: "uomo-cattivo", cat: "pantalon-clasico-cattivo", price: 100, old: 130, deal: true,
     colors: [
       ["Negro", "#121212", ["pclasico-negro-a.png", "pclasico-negro-b.png", "pclasico-negro-c.png", "pclasico-negro-d.png"]],
       ["Azul", "#1F2A44", ["pclasico-azul-a.webp", "pclasico-azul-b.webp", "pclasico-azul-c.webp", "pclasico-azul-d.webp"]],
@@ -203,7 +203,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "pantalon-clasico", guideImg: "medidas-pantalon-clasico.webp",
     fit: "Slim fit de caída recta",
     desc: "Pantalón clásico con caída recta y ligeramente ajustada desde la cadera hasta el bajo, con pinzas y bolsillos laterales tipo francés para un acabado limpio. Combina con zapatos de vestir o calzado casual elegante: ideal para lo formal, ejecutivo o business casual." },
-  { slug: "pantalon-sastre", name: "Pantalón Sastre", estilo: "martir", linea: "uomo-cattivo", cat: "pantalon-sastre", price: 90, old: 130, deal: true,
+  { slug: "pantalon-sastre", name: "Pantalón Sastre", estilo: "martir", linea: "uomo-cattivo", cat: "pantalon-sastre", price: 100, old: 130, deal: true,
     colors: [
       ["Negro", "#121212", ["sastre-negro-a.png", "sastre-negro-b.png", "sastre-negro-c.png"]],
       ["Azul", "#1E2940", ["sastre-azul-a.webp", "sastre-azul-b.webp", "sastre-azul-c.webp", "sastre-azul-d.webp"]],
@@ -211,8 +211,8 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "pantalon-sastre", guideImg: "medidas-pantalon-sastre.png",
     fit: "Slim fit de caída recta",
     desc: "Pantalón sastre con pinzas y ajustadores de botón en la pretina, caída recta y ligeramente ajustada desde la cadera hasta el bajo. Bolsillos laterales tipo francés y acabado limpio para ocasiones formales, ejecutivas o business casual." },
-  /* ---------------- BASSIC · poleras, casacas y jean clásico (precio a consultar) ---------------- */
-  { slug: "polera-basica", name: "Polera Básica", estilo: "badass", linea: "bassic", cat: "poleras-basicas", price: null, isNew: true,
+  /* ---------------- BASSIC · poleras, casacas y jean clásico ---------------- */
+  { slug: "polera-basica", name: "Polera Básica", estilo: "badass", linea: "bassic", cat: "poleras-basicas", price: 100, old: 140, isNew: true,
     colors: [
       ["Negro", "#111111", ["polera-basica-negro-a.jpg", "polera-basica-negro-b.png", "polera-basica-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["polera-basica-blanco-a.jpg", "polera-basica-blanco-b.png", "polera-basica-blanco-c.png"]],
@@ -224,7 +224,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "polera-basica", guideImg: "medidas-polera-basica.png",
     fit: "Oversize",
     desc: "Polera con capucha de corte amplio y hombro caído, en colores enteros. Lo básico, siempre: cómoda y fácil de combinar con todo." },
-  { slug: "polera-canguro", name: "Polera Canguro", estilo: "badass", linea: "bassic", cat: "poleras-canguro", price: null,
+  { slug: "polera-canguro", name: "Polera Canguro", estilo: "badass", linea: "bassic", cat: "poleras-canguro", price: 100, old: 140,
     colors: [
       ["Negro", "#111111", ["canguro-negro-a.jpg", "canguro-negro-b.webp"]],
       ["Blanco", "#F4F4F2", ["canguro-blanco-a.jpg", "canguro-blanco-b.png"]],
@@ -236,7 +236,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "polera-canguro", guideImg: "medidas-polera-canguro.png",
     fit: "Oversize",
     desc: "Polera con capucha y bolsillo canguro, de corte amplio y hombro caído, en colores enteros para el día a día." },
-  { slug: "polera-cr", name: "Polera CR", estilo: "badass", linea: "bassic", cat: "poleras-cr", price: null,
+  { slug: "polera-cr", name: "Polera CR", estilo: "badass", linea: "bassic", cat: "poleras-cr", price: 100, old: 140,
     colors: [
       ["Negro", "#111111", ["cr-negro-a.jpg", "cr-negro-b.png", "cr-negro-c.jpg", "cr-negro-d.jpg"]],
       ["Blanco", "#F4F4F2", ["cr-blanco-a.jpg", "cr-blanco-b.png", "cr-blanco-c.jpg", "cr-blanco-d.jpg"]],
@@ -246,7 +246,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "polera-cr", guideImg: "medidas-polera-cr.png",
     fit: "Oversize",
     desc: "Polera de cuello redondo, corte amplio y hombro caído, en colores enteros. Limpia y versátil." },
-  { slug: "casaca-basica", name: "Casaca Básica", estilo: "badass", linea: "bassic", cat: "casacas-basicas", price: null,
+  { slug: "casaca-basica", name: "Casaca Básica", estilo: "badass", linea: "bassic", cat: "casacas-basicas", price: 110, old: 160,
     colors: [
       ["Negro", "#111111", ["basica-negro-a.png", "basica-negro-b.png", "basica-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["basica-blanco-a.png", "basica-blanco-b.png", "basica-blanco-c.png"]],
@@ -257,14 +257,14 @@ window.PRODUCTS = [
     sizes: TOPS,
     fit: "Oversize",
     desc: "Casaca con capucha y cierre completo, de corte amplio y hombro caído, en colores enteros." },
-  { slug: "casaca-jacket-plus", name: "Casaca Jacket Plus", estilo: "badass", linea: "bassic", cat: "casacas-basicas", price: null,
+  { slug: "casaca-jacket-plus", name: "Casaca Jacket Plus", estilo: "badass", linea: "bassic", cat: "casacas-basicas", price: 120, old: 199,
     colors: [
       ["Negro", "#151515", ["jacket-negro-a.png", "jacket-negro-b.png", "jacket-negro-c.png", "jacket-negro-d.png"]],
       ["Lila", "#7E6C86", ["jacket-lila-a.png", "jacket-lila-b.png", "jacket-lila-c.png", "jacket-lila-d.png"]]],
     sizes: TOPS, guide: "jacket-plus", guideImg: "medidas-jacket-plus.png",
     fit: "Regular fit",
     desc: "Casaca de cierre frontal con cuello camisero, bolsillos laterales y pretina y puños ajustados. Sobria y fácil de llevar." },
-  { slug: "jean-clasico", name: "Jean Clásico", estilo: "badass", linea: "bassic", cat: "jean-clasicos", price: null,
+  { slug: "jean-clasico", name: "Jean Clásico", estilo: "badass", linea: "bassic", cat: "jean-clasicos", price: 100, old: 140,
     colors: [
       ["Negro", "#1A1A1A", ["clasico-negro-a.png", "clasico-negro-b.png", "clasico-negro-c.png"]],
       ["Azul marino", "#1D2433", ["clasico-azul-marino-a.png", "clasico-azul-marino-b.png"]],
@@ -276,8 +276,8 @@ window.PRODUCTS = [
     fit: "Regular fit",
     desc: "El jean de siempre: corte recto y cómodo con cinco bolsillos, en lavados lisos que combinan con todo." },
   /* ---------------- BASSIC · poleras y casacas ---------------- */
-  /* ---------------- BLEESST · casacas y jeans (precio a consultar) ---------------- */
-  { slug: "casaca-bomber", name: "Casaca Bomber", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: null, isNew: true,
+  /* ---------------- BLEESST · casacas y jeans (Jogger Baggy Prime: precio a consultar) ---------------- */
+  { slug: "casaca-bomber", name: "Casaca Bomber", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: 130, old: 219, isNew: true,
     colors: [
       ["Negro", "#141414", ["bomber-negro-a.png", "bomber-negro-b.png", "bomber-negro-c.png", "bomber-negro-d.png"]],
       ["Perla", "#ECE9E1", ["bomber-perla-a.png", "bomber-perla-b.png", "bomber-perla-c.png", "bomber-perla-d.png", "bomber-perla-e.png"]],
@@ -285,19 +285,19 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "casaca-bomber", guideImg: "medidas-casaca-bomber.png",
     fit: "Oversize acolchada",
     desc: "Casaca acolchada tipo puffer con cuello alto y cierre frontal. Abriga sin perder estilo; la versión Perla trae el interior estampado." },
-  { slug: "casaca-denim-street", name: "Casaca Denim Street", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: null,
+  { slug: "casaca-denim-street", name: "Casaca Denim Street", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: 249,
     colors: [
       ["Gris", "#C9CAC6", ["street-gris-a.webp", "street-gris-b.webp", "street-gris-c.webp", "street-gris-d.webp"]]],
     sizes: TOPS, guide: "casaca-street", guideImg: "medidas-casaca-street.webp",
     fit: "Regular fit",
     desc: "Casaca de denim claro con acabado crepé, cuello camisero, cierre frontal y detalles de cierre en el pecho." },
-  { slug: "casaca-panter", name: "Casaca Panter", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: null,
+  { slug: "casaca-panter", name: "Casaca Panter", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: 249,
     colors: [
       ["Negro", "#2B2B2B", ["panter-negro-a.webp", "panter-negro-b.webp", "panter-negro-c.webp"]]],
     sizes: TOPS, guide: "casaca-panter", guideImg: "medidas-casaca-panter.webp",
     fit: "Regular fit",
     desc: "Casaca de acabado tipo cuero lavado con capucha, cierre frontal y bolsillos con cierre. Atrevida y con carácter." },
-  { slug: "jean-baggy", name: "Jean Baggy", estilo: "badass", linea: "bleesst", cat: "jean-baggy", price: null, isNew: true,
+  { slug: "jean-baggy", name: "Jean Baggy", estilo: "badass", linea: "bleesst", cat: "jean-baggy", price: 100, old: 140, isNew: true,
     colors: [
       ["Negro", "#1E1F22", ["baggy-negro-a.png", "baggy-negro-b.png", "baggy-negro-c.png"]],
       ["Negro entero", "#111111", ["baggy-negro-entero-a.png", "baggy-negro-entero-b.png"]],
@@ -314,7 +314,7 @@ window.PRODUCTS = [
     sizes: BOTTOMS, guide: "baggy", guideImg: "medidas-baggy.png",
     fit: "Baggy fit",
     desc: "Jean de corte baggy, amplio de cadera a basta, con caída suelta que se acumula sobre las zapatillas. Disponible en lavados lisos, vintage, rasgados y two color." },
-  { slug: "jean-ballom", name: "Jean Ballom", estilo: "badass", linea: "bleesst", cat: "jean-ballom", price: null, isNew: true,
+  { slug: "jean-ballom", name: "Jean Ballom", estilo: "badass", linea: "bleesst", cat: "jean-ballom", price: 100, old: 140, isNew: true,
     colors: [
       ["Negro", "#222222", ["ballom-negro-a.png", "ballom-negro-b.png", "ballom-negro-c.png", "ballom-negro-d.png", "ballom-negro-e.png"]],
       ["Plomo claro", "#8E9093", ["ballom-plomo-claro-a.png", "ballom-plomo-claro-b.png", "ballom-plomo-claro-c.png", "ballom-plomo-claro-d.png", "ballom-plomo-claro-e.png"]],
@@ -323,7 +323,7 @@ window.PRODUCTS = [
     sizes: BOTTOMS, guide: "ballom", guideImg: "medidas-ballom.png",
     fit: "Balloon fit",
     desc: "Jean de silueta ballom: holgado en muslo y rodilla, con la basta recogida para un volumen marcado. Pretina con ajustadores laterales y lavados con desgaste." },
-  { slug: "mom-jean-street", name: "Mom Jean Street", estilo: "badass", linea: "bleesst", cat: "mom-jean-street", price: null,
+  { slug: "mom-jean-street", name: "Mom Jean Street", estilo: "badass", linea: "bleesst", cat: "mom-jean-street", price: 100, old: 140,
     colors: [
       ["Negro 2.0", "#232325", ["mom-negro-2-0-a.png", "mom-negro-2-0-b.png", "mom-negro-2-0-c.png", "mom-negro-2-0-d.png"]],
       ["Focal black", "#2C2C2E", ["mom-focal-black-a.png", "mom-focal-black-b.png", "mom-focal-black-c.png", "mom-focal-black-d.png"], { guide: "mom-ezzeta", guideImg: "medidas-mom-ezzeta.png" }],
