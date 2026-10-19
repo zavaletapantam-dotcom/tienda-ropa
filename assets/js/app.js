@@ -443,10 +443,11 @@ function cardHTML(p, opts) {
 function catCardHTML(c) {
   const list = PRODUCTS.filter(p => p.cat === c.slug), n = list.length;
   const cols = list.flatMap(p => p.colors), nc = cols.length;
-  const info = !n ? `<span>Próximamente</span>`
+  const info = !n ? `<span>${c.cover ? "Próximamente" : "En producción"}</span>`
     : `<span>${n > 1 ? `${n} modelos · ` : ""}${nc} ${nc === 1 ? "color" : "colores"}</span>${nc > 1 ? `<span class="cat__dots">${cols.slice(0, 8).map(k => `<i style="background:${k[1]}"></i>`).join("")}${nc > 8 ? `<small>+${nc - 8}</small>` : ""}</span>` : ""}`;
-  return `<a href="tienda.html?cat=${c.slug}" class="cat${n ? "" : " cat--soon"}" style="--ph:${fotoColor(c.cover)}">
-    ${pic(c.cover, SZ.cat, { fade: true })}
+  // Sin portada propia (prendas en producción): tarjeta de color, nunca foto de otra marca
+  return `<a href="tienda.html?cat=${c.slug}" class="cat${n ? "" : " cat--soon"}${c.cover ? "" : " cat--blank"}" style="--ph:${c.cover ? fotoColor(c.cover) : ""}">
+    ${c.cover ? pic(c.cover, SZ.cat, { fade: true }) : ""}
     <div class="cat__txt"><h3>${esc(c.name)}</h3>${info}</div>
   </a>`;
 }
@@ -881,7 +882,7 @@ function flyIn() {
   const start = () => {
     if (started) return; started = true;
     const W = fly.clientWidth, H = fly.clientHeight, T = hero.getBoundingClientRect();
-    const F = coverRect(T, v.nw, v.nh, 0.3, 1);
+    const F = coverRect(T, v.nw, v.nh, 0.18, 1); // igual que .slide img (object-position: center 18%)
     const [bx, by, bw, bh] = v.box, [ix, iy, iw] = v.img;
     const inset = (x, y, w, h) => `inset(${y}px ${W - x - w}px ${H - y - h}px ${x}px)`;
     const rect = (x, y, w, h) => ({ left: x + "px", top: y + "px", width: w + "px", height: h + "px" });
@@ -1212,7 +1213,8 @@ function initTienda() {
     $("#shopTitle").textContent = title;
     $("#shopSub").textContent = shop.q ? "Resultados de tu búsqueda" : who && !cat ? (ln ? `${ln.tagline} ${ln.desc}` : st.desc) : cat ? `${(l => l ? `${l.collab || l.name} · ${l.tagline}` : "")(lineOf(cat.linea))}` : shop.ofertas ? "Precios especiales por tiempo limitado." : "Badass y Martir Atelier en un solo lugar. Consulta tallas y stock por WhatsApp.";
     $("#shopCrumb").textContent = title;
-    const heroImg = cat ? cat.cover : st ? st.panel : "camisas-dobladas.jpg";
+    const catSt = cat && styleOf((lineOf(cat.linea) || {}).estilo);
+    const heroImg = (cat && cat.cover) || (st || catSt ? (st || catSt).panel : "prime-verde-a.webp");
     if ($("#shopHeroImg").dataset.foto !== heroImg) setPic($("#shopHeroImg"), heroImg);
     $(".page-hero").classList.toggle("page-hero--badass", shop.estilo === "badass");
     document.body.dataset.estilo = shop.estilo;

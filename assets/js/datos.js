@@ -33,15 +33,15 @@ window.STYLES = {
     desc: "El lado urbano, cómodo y expresivo. Ropa pensada para el día a día, con actitud y libertad de movimiento.",
     short: "Urbano, cómodo y expresivo. Bassic y Bleesst.",
     lines: ["bassic", "bleesst"],
-    panel: "st-ciudad.jpg",
+    panel: "panter-negro-a.webp",
     heroes: [
-      { img: "st-ciudad.jpg", kicker: "Colección", title: "Badass", sub: "El lado urbano, cómodo y expresivo de MAISON." },
-      { img: "st-franela-roja.jpg", kicker: "Bleesst", title: "El lado más atrevido", sub: "Estampados, bordados y cortes con actitud." },
-      { img: "st-hoodie-arena.jpg", kicker: "Bassic", title: "Lo básico, siempre", sub: "Colores enteros, 100% algodón y comodidad para todos los días." },
+      { img: "panter-negro-a.webp", kicker: "Colección", title: "Badass", sub: "El lado urbano, cómodo y expresivo de MAISON." },
+      { img: "street-gris-a.webp", kicker: "Bleesst", title: "El lado más atrevido", sub: "Estampados, bordados y cortes con actitud." },
+      { img: "polera-basica-acero-a.jpg", kicker: "Bassic", title: "Lo básico, siempre", sub: "Colores enteros, 100% algodón y comodidad para todos los días." },
     ],
     marquee: ["Badass", "Urbano", "Oversize", "Boxy fit", "Bassic", "Bleesst"],
     editorial: {
-      img: "st-rooftop.jpg", kicker: "Manifiesto", title: "Libertad de movimiento",
+      img: "panter-negro-c.webp", kicker: "Manifiesto", title: "Libertad de movimiento",
       text: "Cortes amplios, telas gruesas y prendas pensadas para el día a día. Badass es para quienes visten como viven: con actitud y sin pedir permiso.",
     },
   },
@@ -51,15 +51,15 @@ window.STYLES = {
     desc: "El lado pesado, refinado y estructurado. Prendas de mayor calidad, con cortes precisos y una construcción impecable.",
     short: "Refinado y estructurado. Maison × Uomo Cattivo.",
     lines: ["uomo-cattivo"],
-    panel: "om-lino-arena.jpg",
+    panel: "business-verde-a.webp",
     heroes: [
-      { img: "om-lino-arena.jpg", kicker: "Colección", title: "Martir Atelier", sub: "Prendas de mayor calidad, con cortes precisos y una construcción impecable." },
-      { img: "om-blazer-tweed.jpg", kicker: "Maison × Uomo Cattivo", title: "Alta calidad", sub: "La colección creada junto a Uomo Cattivo." },
-      { img: "om-abrigo-camel.jpg", kicker: "Atelier", title: "Cortes precisos", sub: "Abrigos, casacas y pantalones hechos para durar." },
+      { img: "business-verde-a.webp", kicker: "Colección", title: "Martir Atelier", sub: "Prendas de mayor calidad, con cortes precisos y una construcción impecable." },
+      { img: "milano-lila-a.webp", kicker: "Maison × Uomo Cattivo", title: "Alta calidad", sub: "La colección creada junto a Uomo Cattivo." },
+      { img: "pclasico-beige-a.webp", kicker: "Atelier", title: "Cortes precisos", sub: "Abrigos, casacas y pantalones hechos para durar." },
     ],
     quote: "La calidad no se explica, se siente.",
     editorial: {
-      img: "om-sobrecamisa-arena.jpg", kicker: "El atelier", title: "Construcción impecable",
+      img: "bolonia-beige-c.webp", kicker: "El atelier", title: "Construcción impecable",
       text: "Telas nobles, cortes precisos y acabados cuidados en cada costura. Martir Atelier es el lado más refinado de MAISON.",
     },
   },
@@ -90,14 +90,14 @@ window.LINES = {
    cover: foto de la tarjeta mientras la categoría no tenga productos cargados. */
 window.CATEGORIES = [
   /* BASSIC · lo básico, siempre */
-  { slug: "polos-bassic",          name: "Polos Bassic",            linea: "bassic",       tipo: "top",    cover: "polo-basico-blanco.jpg" },
+  { slug: "polos-bassic",          name: "Polos Bassic",            linea: "bassic",       tipo: "top",    cover: null },
   { slug: "poleras-basicas",       name: "Poleras Básicas",         linea: "bassic",       tipo: "top",    cover: "polera-basica-negro-a.jpg" },
   { slug: "poleras-canguro",       name: "Poleras Canguro",         linea: "bassic",       tipo: "top",    cover: "canguro-verde-a.jpg" },
   { slug: "poleras-cr",            name: "Poleras CR",              linea: "bassic",      tipo: "top",    cover: "cr-verde-a.jpg" },
   { slug: "casacas-basicas",       name: "Casacas Básicas",         linea: "bassic",       tipo: "abrigo", cover: "basica-acero-a.png" },
   { slug: "jean-clasicos",         name: "Jean Clásicos",           linea: "bassic",       tipo: "abajo",  cover: "clasico-negro-a.png" },
   /* BLEESST · el lado más atrevido */
-  { slug: "polos-bleesst",         name: "Polos Bleesst",           linea: "bleesst",      tipo: "top",    cover: "st-oversize-skyline.jpg" },
+  { slug: "polos-bleesst",         name: "Polos Bleesst",           linea: "bleesst",      tipo: "top",    cover: null },
   { slug: "casacas-bleesst",       name: "Casacas Bleesst",         linea: "bleesst",      tipo: "abrigo", cover: "bomber-verde-a.png" },
   { slug: "jean-baggy",            name: "Jean Baggy",              linea: "bleesst",      tipo: "abajo",  cover: "baggy-celeste-a.png" },
   { slug: "jean-ballom",           name: "Jean Ballom",             linea: "bleesst",      tipo: "abajo",  cover: "ballom-negro-a.png" },
