@@ -1137,6 +1137,17 @@ img.fade.ok{opacity:1}
 @media (min-width:641px){.cart.open ~ .toast{left:auto;right:220px;transform:translate(50%,-10px)}.cart.open ~ .toast.show{transform:translate(50%,0)}}
 .drawer__sub{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;font-weight:600}
 .ln__about li a{color:inherit}
+.ln__allies{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);display:grid;gap:10px}
+.ln__allies-k{font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted);font-weight:500}
+.ln__allies-list{display:flex;flex-wrap:wrap;gap:8px 18px}
+.ln__allies a{display:inline-flex;align-items:center;gap:8px;color:var(--ink);transition:opacity .2s}
+.ln__allies a:hover{opacity:.7}
+.ln__allies svg{width:16px;height:16px;flex:none}
+.ln__allies b{font-size:13px;font-weight:600;letter-spacing:.18em;text-transform:uppercase}
+.ln__allies small{font-size:12px;color:var(--muted)}
+.ln--bleesst .ln__allies{border-color:#2b2b2b}
+.ln--bleesst .ln__allies a{color:#fff}
+.ln--bleesst .ln__allies-k,.ln--bleesst .ln__allies small{color:var(--sage-light)}
 .ln__about li:hover{border-color:currentColor}
 .card__dots{display:flex;gap:4px;align-items:center;margin:6px 0 2px}
 .card__dots i{width:11px;height:11px;border-radius:50%;border:1px solid rgba(0,0,0,.14)}

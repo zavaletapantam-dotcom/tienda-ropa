@@ -1083,6 +1083,11 @@ function initColeccion() {
 }
 
 /* Bloques de cada línea dentro del mundo: Bassic y Bleesst (Badass) o Maison × Uomo Cattivo (Martir) */
+/* Marcas con exclusividad en la línea: aviso discreto de "muy pronto" con su Instagram */
+function alliesHTML(l) {
+  if (!l.allies || !l.allies.length) return "";
+  return `<div class="ln__allies"><span class="ln__allies-k">Muy pronto en ${esc(l.name)} · En exclusiva</span><div class="ln__allies-list">${l.allies.map(a => `<a href="https://www.instagram.com/${a.ig}/" target="_blank" rel="noopener" aria-label="${esc(a.name)} en Instagram (@${a.ig})">${I.insta}<b>${esc(a.name)}</b><small>@${a.ig}</small></a>`).join("")}</div></div>`;
+}
 function linesHTML(st, items) {
   return `<section class="lines lines--${st.slug}" id="lineas">${st.lines.map((slug, i) => {
     const l = lineOf(slug), list = items.filter(p => p.linea === slug), id = "trackLine" + i;
@@ -1100,6 +1105,7 @@ function linesHTML(st, items) {
           <div class="ln__about">
             <p>${esc(l.desc)}</p>
             <ul>${CATS.filter(c => c.linea === slug).map(c => `<li><a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a></li>`).join("")}</ul>
+            ${alliesHTML(l)}
           </div>
         </div>
         ${list.length ? `<div class="deals-bar ln__bar"><p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>

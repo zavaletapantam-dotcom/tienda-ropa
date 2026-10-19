@@ -65,17 +65,20 @@ window.STYLES = {
   },
 };
 
-/* Las líneas dentro de cada mundo. Badass = Bassic + Bleesst · Martir Atelier = Maison × Uomo Cattivo */
+/* Las líneas dentro de cada mundo. Badass = Bassic + Bleesst · Martir Atelier = Maison × Uomo Cattivo
+   allies = marcas con contrato de exclusividad (se muestran como "muy pronto" con su Instagram) */
 window.LINES = {
   bassic: {
     slug: "bassic", name: "Bassic", estilo: "badass", tagline: "Lo básico, siempre.",
     desc: "Polos, poleras y buzos en colores enteros. Comodidad de todos los días, en 20/1 y 100% algodón.",
     points: ["Polos", "Poleras", "Buzos", "Colores enteros", "Comodidad", "20/1, 100% algodón"],
+    allies: [{ name: "Ezzeta", ig: "ezzetacompany" }],
   },
   bleesst: {
     slug: "bleesst", name: "Bleesst", estilo: "badass", tagline: "El lado más atrevido.", logo: "assets/marcas/bleesst.svg?v=1",
     desc: "Estampados, bordados, cortes y fusiones visuales en polos, jeans, casacas y poleras.",
     points: ["Polos", "Jeans", "Casacas", "Poleras", "Estampados", "Bordados, cortes y fusiones visuales"],
+    allies: [{ name: "Ezzeta", ig: "ezzetacompany" }, { name: "Crepante", ig: "crepante" }],
   },
   "uomo-cattivo": {
     slug: "uomo-cattivo", name: "Uomo Cattivo", estilo: "martir", tagline: "La esencia de la alta calidad.", logo: "assets/marcas/mm.svg?v=1",
