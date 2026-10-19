@@ -276,7 +276,7 @@ window.PRODUCTS = [
     fit: "Regular fit",
     desc: "El jean de siempre: corte recto y cómodo con cinco bolsillos, en lavados lisos que combinan con todo." },
   /* ---------------- BASSIC · poleras y casacas ---------------- */
-  /* ---------------- BLEESST · casacas y jeans (Jogger Baggy Prime: precio a consultar) ---------------- */
+  /* ---------------- BLEESST · casacas y jeans ---------------- */
   { slug: "casaca-bomber", name: "Casaca Bomber", estilo: "badass", linea: "bleesst", cat: "casacas-bleesst", price: 130, old: 219, isNew: true,
     colors: [
       ["Negro", "#141414", ["bomber-negro-a.png", "bomber-negro-b.png", "bomber-negro-c.png", "bomber-negro-d.png"]],
@@ -335,7 +335,7 @@ window.PRODUCTS = [
     sizes: BOTTOMS, guide: "mom", guideImg: "medidas-mom.png",
     fit: "Mom fit",
     desc: "Jean de tiro alto y pierna recta relajada, con lavados clásicos y efectos de desgaste. Cómodo para el día a día con un estilo urbano." },
-  { slug: "jogger-baggy-prime", name: "Jogger Baggy Prime (Cargo)", estilo: "badass", linea: "bleesst", cat: "jogger-baggy-prime", price: null,
+  { slug: "jogger-baggy-prime", name: "Jogger Baggy Prime (Cargo)", estilo: "badass", linea: "bleesst", cat: "jogger-baggy-prime", price: 109, old: 150,
     colors: [
       ["Negro", "#151515", ["cargo-negro-a.png", "cargo-negro-b.png", "cargo-negro-c.png", "cargo-negro-d.png"]],
       ["Beige", "#D8D2B4", ["cargo-beige-a.png", "cargo-beige-b.png", "cargo-beige-c.png", "cargo-beige-d.png"]],
