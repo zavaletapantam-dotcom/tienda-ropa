@@ -17,7 +17,9 @@ window.CONFIG = {
   entrega: "1 a 2 días hábiles",
   recojo: "Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Naciones Unidas",   // dirección de la tienda para recojo
   recojoRef: "Al costado del Tambo, frente a Sheyla",
-  distritos: ["Nuevo Chimbote", "Chimbote"],
+  distritos: ["Chimbote", "Nuevo Chimbote"],   // envío a domicilio solo a estos distritos
+  courier: "Shalom",                            // envío a provincia: el cliente recoge en una agencia de este courier
+  provinciaCosto: "Según tarifa de Shalom",     // costo del envío a provincia (lo confirma el asesor)
   diasCambio: 2,
   social: { instagram: "https://www.instagram.com/maison.pe_dandy/", facebook: "", tiktok: "" },
 };

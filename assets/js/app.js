@@ -111,6 +111,8 @@ const I = {
   wa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-wa"/></svg>',
   truck: svg('<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>'),
   pin: svg('<path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>'),
+  store: svg('<path d="M4 10v10h16V10M3 4h18l-1 6H4L3 4Z"/><path d="M10 20v-5h4v5"/>'),
+  box: svg('<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>'),
   swap: svg('<path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>'),
   card: svg('<rect x="3" y="6" width="18" height="13" rx="1"/><path d="M3 10h18M7 15h4"/>'),
   shield: svg('<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'),
@@ -301,25 +303,38 @@ function renderLayout() {
       <div class="cart__foot" id="cartFoot">
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
         <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
-        <p class="cart__note">En el siguiente paso eliges <b>recojo en tienda</b> o <b>envío a domicilio</b> (${envioTxt()}).</p>
+        <p class="cart__note">En el siguiente paso eliges <b>envío a domicilio</b> (${C.distritos.map(esc).join(" y ")}), <b>recojo en tienda</b> o <b>envío a provincia</b> por ${esc(C.courier)}.</p>
         <button type="button" class="btn-wa" id="cartNext">${I.wa}Comprar con un asesor</button>
         <div class="cart__links"><button type="button" data-cart-close>Seguir comprando</button><button type="button" id="cartClear">${I.trash}Vaciar carrito</button></div>
       </div>
       <form class="co" id="checkout" hidden novalidate>
         <button type="button" class="co__back" id="coBack">${I.prev}Volver al carrito</button>
         <h3>¿Cómo quieres recibir tu pedido?</h3>
-        <div class="co__opts" role="radiogroup">
-          <label class="co__opt"><input type="radio" name="entrega" value="domicilio" checked><span><b>Envío a domicilio</b><small>${envioTxt()} · ${C.entrega}</small></span></label>
-          <label class="co__opt"><input type="radio" name="entrega" value="recojo"><span><b>Recojo en tienda</b><small>Sin costo · ${esc(C.recojo || "dirección por confirmar")}${C.recojoRef ? ` (${esc(C.recojoRef)})` : ""}</small></span></label>
+        <div class="co__opts" role="radiogroup" aria-label="Forma de entrega">
+          ${coOptHTML("domicilio", I.truck, "Envío a domicilio", [`Solo ${C.distritos.map(esc).join(" y ")}`, envioTxt(), `Llega en ${C.entrega}`])}
+          ${coOptHTML("recojo", I.store, "Recojo en tienda", ["Sin costo", esc(C.recojo || "Dirección por confirmar") + (C.recojoRef ? ` (${esc(C.recojoRef)})` : "")])}
+          ${coOptHTML("provincia", I.box, "Envío a provincia", [`A todo el Perú por ${esc(C.courier)}`, `Recoges tu pedido en la agencia ${esc(C.courier)} que elijas`, esc(C.provinciaCosto)])}
         </div>
-        <div class="co__f"><label for="coName">Nombre y apellido *</label><input id="coName" autocomplete="name" required></div>
-        <div class="co__f"><label for="coPhone">Celular</label><input id="coPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
-        <div id="coShip">
-          <div class="co__f"><label for="coDist">Distrito / ciudad *</label><select id="coDist"><option value="">Elige tu distrito</option>${C.distritos.map(x => `<option>${esc(x)}</option>`).join("")}<option value="otro">Otro</option></select></div>
-          <div class="co__f" id="coOtherWrap" hidden><label for="coOther">¿Cuál? *</label><input id="coOther"></div>
-          <div class="co__f"><label for="coAddr">Dirección *</label><input id="coAddr" autocomplete="street-address" placeholder="Av. / Jr. / Calle, número, Mz. y Lt."></div>
-          <div class="co__f"><label for="coRef">Referencia</label><input id="coRef" placeholder="Ej. frente al parque, casa de dos pisos"></div>
-          <p class="co__eta">${I.truck}Se le entregará de ${C.entrega} como máximo.</p>
+        <p class="co__hint" id="coHint">Elige una opción para continuar</p>
+        <div class="co__fields" id="coFields" hidden>
+          <div class="co__f"><label for="coName">Nombre y apellido *</label><input id="coName" autocomplete="name" required></div>
+          <div class="co__f"><label for="coPhone">Celular</label><input id="coPhone" type="tel" inputmode="tel" autocomplete="tel"></div>
+          <div class="co__grp" id="coShip">
+            <div class="co__f"><label for="coDist">Distrito *</label><select id="coDist"><option value="">Elige tu distrito</option>${C.distritos.map(x => `<option>${esc(x)}</option>`).join("")}</select></div>
+            <div class="co__f"><label for="coAddr">Dirección *</label><input id="coAddr" autocomplete="street-address" placeholder="Av. / Jr. / Calle, número, Mz. y Lt."></div>
+            <div class="co__f"><label for="coRef">Referencia</label><input id="coRef" placeholder="Ej. frente al parque, casa de dos pisos"></div>
+            <p class="co__eta">${I.truck}Se le entregará de ${C.entrega} como máximo.</p>
+          </div>
+          <div class="co__grp" id="coProv">
+            <div class="co__row">
+              <div class="co__f"><label for="coDep">Departamento *</label><select id="coDep"><option value="">Cargando…</option></select></div>
+              <div class="co__f"><label for="coPrv">Provincia *</label><select id="coPrv" disabled><option value="">Elige</option></select></div>
+            </div>
+            <div class="co__f"><label for="coDistP">Distrito *</label><select id="coDistP" disabled><option value="">Elige tu distrito</option></select></div>
+            <div class="co__f"><label for="coAg">Agencia ${esc(C.courier)} *</label><input id="coAg" placeholder="Nombre o dirección de la agencia donde lo recogerás"></div>
+            <div class="co__f"><label for="coAgAlt">¿No hay agencia ${esc(C.courier)} donde vives?</label><input id="coAgAlt" placeholder="Dinos en qué agencia te gustaría recibir tu pedido"></div>
+            <p class="co__eta">${I.box}Te confirmamos por WhatsApp el costo del envío por ${esc(C.courier)}.</p>
+          </div>
         </div>
         <div class="co__sum">
           <div class="cart__row"><span>Subtotal</span><b id="coSub"></b></div>
@@ -341,6 +356,10 @@ const socialLinks = () => [["instagram", "Instagram", I.insta], ["facebook", "Fa
   .filter(([k]) => C.social[k] && C.social[k] !== "#").map(([k, n, ic]) => `<a href="${C.social[k]}" target="_blank" rel="noopener" aria-label="${n}">${ic}</a>`).join("");
 const PAGOS = "Tarjeta de débito, Yape, Plin y transferencia de cualquier banco";
 const envioTxt = () => `${money(C.envio)} · gratis desde ${money(C.envioGratisDesde)}`;
+/* Opción de entrega del checkout: solo se ve el título; el detalle se despliega al elegirla */
+function coOptHTML(value, icon, title, lines) {
+  return `<label class="co__opt"><input type="radio" name="entrega" value="${value}"><span class="co__ic">${icon}</span><span class="co__t"><b>${title}</b><span class="co__d"><span><span class="co__dl">${lines.map(x => `<span>${x}</span>`).join("")}</span></span></span></span><span class="co__chk" aria-hidden="true"></span></label>`;
+}
 /* Rellena textos que vienen de CONFIG: <span data-c="email"></span> */
 function fillConfig() {
   const v = {
@@ -609,11 +628,33 @@ function addToCart(p, { size, color, qty = 1 }) {
 /* Pedido con datos de entrega */
 const CO_KEY = "maison_checkout";
 const coData = () => {
-  const ent = ($('#checkout input[name="entrega"]:checked') || {}).value || "domicilio";
-  const dist = $("#coDist").value === "otro" ? $("#coOther").value.trim() : $("#coDist").value;
-  return { entrega: ent, nombre: $("#coName").value.trim(), celular: $("#coPhone").value.trim(), distrito: dist, distSel: $("#coDist").value, otro: $("#coOther").value.trim(), direccion: $("#coAddr").value.trim(), referencia: $("#coRef").value.trim() };
+  const v = id => $("#" + id).value.trim();
+  return { entrega: ($('#checkout input[name="entrega"]:checked') || {}).value || "", nombre: v("coName"), celular: v("coPhone"),
+    distrito: v("coDist"), direccion: v("coAddr"), referencia: v("coRef"),
+    dep: v("coDep"), prov: v("coPrv"), distP: v("coDistP"), agencia: v("coAg"), agenciaAlt: v("coAgAlt") };
 };
-const shipCost = ent => (ent === "recojo" ? 0 : cartSub() >= C.envioGratisDesde ? 0 : C.envio);
+const shipCost = ent => (ent !== "domicilio" ? 0 : cartSub() >= C.envioGratisDesde ? 0 : C.envio);
+/* Departamentos, provincias y distritos del Perú (assets/js/ubigeo.js, ~27 KB): se cargan solo al elegir "Envío a provincia" */
+let ubiP;
+const fillSel = (id, items, first) => { const s = $("#" + id); s.innerHTML = `<option value="">${first}</option>` + items.map(x => `<option>${esc(x)}</option>`).join(""); s.disabled = !items.length; };
+const ubiDep = () => (window.UBIGEO || []).find(d => d[0] === $("#coDep").value);
+const ubiPrv = () => ((ubiDep() || [])[1] || []).find(p => p[0] === $("#coPrv").value);
+function loadUbigeo() {
+  return ubiP || (ubiP = new Promise((ok, ko) => {
+    const s = document.createElement("script");
+    s.src = "assets/js/ubigeo.js?v=1"; // los datos no cambian: si algún día cambian, sube este número
+    s.onload = () => { fillSel("coDep", UBIGEO.map(d => d[0]), "Elige"); ok(); };
+    s.onerror = () => { ubiP = null; $("#coDep").innerHTML = `<option value="">Sin conexión, reintenta</option>`; ko(); };
+    document.head.append(s);
+  }));
+}
+function setUbigeo({ dep, prov, distP } = {}) {
+  if (dep) $("#coDep").value = dep;
+  fillSel("coPrv", ((ubiDep() || [])[1] || []).map(p => p[0]), "Elige");
+  if (prov) $("#coPrv").value = prov;
+  fillSel("coDistP", (ubiPrv() || [])[1] || [], "Elige tu distrito");
+  if (distP) $("#coDistP").value = distP;
+}
 function orderMsg(o) {
   const L = "———————————————", sub = cartSub(), env = shipCost(o.entrega), l = ["✨ *NUEVO PEDIDO* ✨", `👤 *Cliente:* ${o.nombre}`];
   if (o.celular) l.push(`📞 *Celular:* ${o.celular}`);
@@ -625,7 +666,12 @@ function orderMsg(o) {
     l.push(hasPrice(p) ? `*Subtotal: ${money(p.price * x.qty)}*` : "*Subtotal: a consultar*", "");
   });
   l.push(L);
-  if (o.entrega === "recojo") {
+  if (o.entrega === "provincia") {
+    l.push(`📦 *Entrega:* Envío a provincia por ${C.courier}`, `🗺️ *Destino:* ${o.distP}, ${o.prov} – ${o.dep}`);
+    if (o.agencia) l.push(`🏢 *Agencia ${C.courier}:* ${o.agencia}`);
+    if (o.agenciaAlt) l.push(`📝 *No hay agencia donde vive, prefiere recibirlo en:* ${o.agenciaAlt}`);
+    l.push(`🚚 *Envío:* ${C.provinciaCosto}`);
+  } else if (o.entrega === "recojo") {
     l.push("🏬 *Entrega:* Recojo en tienda", `📍 *Dirección de recojo:* ${C.recojo || "por confirmar"}`);
     if (C.recojoRef) l.push(`📝 *Referencia:* ${C.recojoRef}`);
     l.push("📦 *Envío:* Sin costo");
@@ -634,21 +680,22 @@ function orderMsg(o) {
     if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
     l.push(`📦 *Envío:* ${env ? money(env) : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
   }
-  l.push(L, `💰 *TOTAL: ${money(sub + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
+  l.push(L, `💰 *TOTAL: ${money(sub + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}${o.entrega === "provincia" ? ` + envío ${C.courier}` : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
   return l.join("\n");
 }
 function renderCheckout() {
   const o = coData(), env = shipCost(o.entrega);
-  $("#coShip").hidden = o.entrega !== "domicilio";
-  $("#coOtherWrap").hidden = $("#coDist").value !== "otro";
+  $("#coFields").hidden = !o.entrega; $("#coHint").hidden = !!o.entrega;
+  $("#coShip").hidden = o.entrega !== "domicilio"; $("#coProv").hidden = o.entrega !== "provincia";
+  if (o.entrega === "provincia") loadUbigeo().catch(() => {});
   $("#coSub").textContent = money(cartSub()) + (cartAsk() ? " + a consultar" : "");
-  $("#coShipCost").textContent = o.entrega === "recojo" ? "Sin costo" : env ? money(env) : "Gratis";
-  $("#coTotal").textContent = money(cartSub() + env) + (cartAsk() ? " + a consultar" : "");
+  $("#coShipCost").textContent = { "": "—", recojo: "Sin costo", provincia: C.provinciaCosto }[o.entrega] ?? (env ? money(env) : "Gratis");
+  $("#coTotal").textContent = money(cartSub() + env) + (cartAsk() ? " + a consultar" : "") + (o.entrega === "provincia" ? " + envío" : "");
 }
 function showCheckout(on) {
   $("#checkout").hidden = !on; $("#cartList").hidden = on; $("#cartFoot").hidden = on || !cart.length;
   $("#cartTitle").firstChild.textContent = on ? "Datos de entrega " : "Tu carrito ";
-  if (on) { renderCheckout(); setTimeout(() => $("#coName").focus(), 60); }
+  if (on) { renderCheckout(); if (!$("#coFields").hidden) setTimeout(() => $("#coName").focus(), 60); }
 }
 /* Mensaje con todo el pedido para el asesor */
 function cartMsg() {
@@ -725,18 +772,24 @@ function initCart() {
   // Paso de entrega
   try { const v = JSON.parse(localStorage.getItem(CO_KEY) || "{}");
     if (v.nombre) $("#coName").value = v.nombre; if (v.celular) $("#coPhone").value = v.celular;
-    if (v.distSel) $("#coDist").value = v.distSel; if (v.otro) $("#coOther").value = v.otro;
+    if (v.distrito) $("#coDist").value = v.distrito;
     if (v.direccion) $("#coAddr").value = v.direccion; if (v.referencia) $("#coRef").value = v.referencia;
+    if (v.agencia) $("#coAg").value = v.agencia; if (v.agenciaAlt) $("#coAgAlt").value = v.agenciaAlt;
     if (v.entrega) { const r = $(`#checkout input[value="${v.entrega}"]`); if (r) r.checked = true; }
+    if (v.entrega === "provincia" && v.dep) loadUbigeo().then(() => setUbigeo(v)).catch(() => {});
   } catch (_) {}
+  $("#coDep").addEventListener("change", () => setUbigeo());
+  $("#coPrv").addEventListener("change", () => setUbigeo({ prov: $("#coPrv").value }));
   $("#cartNext").addEventListener("click", () => showCheckout(true));
   $("#coBack").addEventListener("click", () => showCheckout(false));
   $("#checkout").addEventListener("input", renderCheckout);
   $("#checkout").addEventListener("change", renderCheckout);
   $("#checkout").addEventListener("submit", e => {
     e.preventDefault();
-    const o = coData(), need = [["coName", o.nombre]];
-    if (o.entrega === "domicilio") { need.push(["coDist", o.distSel]); if (o.distSel === "otro") need.push(["coOther", o.otro]); need.push(["coAddr", o.direccion]); }
+    const o = coData(), need = [["coName", o.nombre]], opts = $(".co__opts");
+    if (!o.entrega) { opts.classList.remove("shake"); void opts.offsetWidth; opts.classList.add("shake"); toast("Elige cómo quieres recibir tu pedido"); return; }
+    if (o.entrega === "domicilio") need.push(["coDist", o.distrito], ["coAddr", o.direccion]);
+    if (o.entrega === "provincia") need.push(["coDep", o.dep], ["coPrv", o.prov], ["coDistP", o.distP], ["coAg", o.agencia || o.agenciaAlt]);
     const bad = need.filter(([, v]) => !v).map(([id]) => id);
     $$("#checkout .co__f").forEach(f => f.classList.remove("err"));
     if (bad.length) { bad.forEach(id => document.getElementById(id).closest(".co__f").classList.add("err")); document.getElementById(bad[0]).focus(); toast("Completa los datos marcados"); return; }
@@ -1262,7 +1315,7 @@ function initProducto() {
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
         <div class="pdp__trust">
-          <div>${I.truck}<span><b>Envío a domicilio:</b> ${envioTxt()}. Llega en ${C.entrega}. También puedes <b>recoger en tienda</b>.</span></div>
+          <div>${I.truck}<span><b>Envío a domicilio</b> en ${C.distritos.map(esc).join(" y ")}: ${envioTxt()}. Llega en ${C.entrega}. También puedes <b>recoger en tienda</b> o pedir <b>envío a provincia</b> por ${esc(C.courier)}.</span></div>
           <div>${I.swap}<span><b>Cambios</b> hasta ${C.diasCambio} días después de recibir tu pedido</span></div>
           <div>${I.card}<span><b>Paga como prefieras:</b> ${PAGOS.charAt(0).toLowerCase() + PAGOS.slice(1)}</span></div>
         </div>
