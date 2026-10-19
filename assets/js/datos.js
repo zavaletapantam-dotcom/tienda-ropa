@@ -99,8 +99,10 @@ window.CATEGORIES = [
   { slug: "casacas-bleesst",       name: "Casacas Bleesst",         linea: "bleesst",      tipo: "abrigo", cover: "bomber-verde-a.png" },
   { slug: "jean-baggy",            name: "Jean Baggy",              linea: "bleesst",      tipo: "abajo",  cover: "baggy-celeste-a.png" },
   { slug: "jean-ballom",           name: "Jean Ballom",             linea: "bleesst",      tipo: "abajo",  cover: "ballom-negro-a.png" },
+  { slug: "jogger-forest",         name: "Jogger Forest",           linea: "bleesst",      tipo: "abajo",  cover: "banner-urbano.jpg" },
   { slug: "mom-jean-street",       name: "Mom Jean Street",         linea: "bleesst",      tipo: "abajo",  cover: "mom-celeste-2-0-a.png" },
   { slug: "jogger-baggy-prime",    name: "Jogger Baggy Prime (Cargo)", linea: "bleesst",   tipo: "abajo",  cover: "cargo-beige-a.png" },
+  { slug: "jean-flared",           name: "Jean Flared",             linea: "bleesst",      tipo: "abajo",  cover: "casaca-denim.jpg" },
   /* MAISON × UOMO CATTIVO · la esencia de la alta calidad */
   { slug: "polos-luxury",          name: "Polos Luxury",            linea: "uomo-cattivo", tipo: "top",    cover: "luxury-negro-a.jpg" },
   { slug: "polos-monarca",         name: "Polos Monarca",           linea: "uomo-cattivo", tipo: "top",    cover: "monarca-negro-a.jpg" },
