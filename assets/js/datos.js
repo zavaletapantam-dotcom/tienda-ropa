@@ -125,10 +125,11 @@ const SHOES = ["39", "40", "41", "42", "43"];
    - deal: true  → aparece en "Ofertas del día" con etiqueta de descuento
    - isNew: true → etiqueta "Nuevo"
    - colors: [nombre, color, [fotos]] → cada color con sus fotos: modelo, frente, espalda (la 2.ª aparece al pasar el mouse)
-   - guide / guideImg: guía de tallas (SIZE_GUIDE) e imagen de medidas */
+   - guide / guideImg: guía de tallas (SIZE_GUIDE) e imagen de medidas
+   - porColor: true → un apartado por cada color (Polo Luxury Negro, Polo Luxury Blanco…) */
 window.PRODUCTS = [
   /* ---------------- MAISON × UOMO CATTIVO · polos, casacas y pantalones (fotos en fotos/: a = principal, b = al pasar el mouse) ---------------- */
-  { slug: "polo-luxury", name: "Polo Luxury", estilo: "martir", linea: "uomo-cattivo", cat: "polos-luxury", price: 75, old: 100, deal: true,
+  { slug: "polo-luxury", name: "Polo Luxury", estilo: "martir", linea: "uomo-cattivo", cat: "polos-luxury", price: 75, old: 100, deal: true, porColor: true,
     colors: [
       ["Negro", "#121212", ["luxury-negro-a.jpg", "luxury-negro-b.png", "luxury-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["luxury-blanco-a.jpg", "luxury-blanco-b.png", "luxury-blanco-c.png"]],
@@ -140,7 +141,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "luxury", guideImg: "medidas-luxury.webp",
     fit: "Slim fit de ajuste premium", material: "100% algodón High Cotton 1/1",
     desc: "Corte entallado en pecho y hombros con caída suelta y cómoda abajo. Puños en las mangas para mejor estructura, cuello reforzado de larga duración, etiqueta estampada para mayor confort y acabados luxury de alta calidad." },
-  { slug: "polo-monarca", name: "Polo Monarca", estilo: "martir", linea: "uomo-cattivo", cat: "polos-monarca", price: 80, old: 110, deal: true,
+  { slug: "polo-monarca", name: "Polo Monarca", estilo: "martir", linea: "uomo-cattivo", cat: "polos-monarca", price: 80, old: 110, deal: true, porColor: true,
     colors: [
       ["Negro", "#121212", ["monarca-negro-a.jpg", "monarca-negro-b.png", "monarca-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["monarca-blanco-a.jpg", "monarca-blanco-b.png", "monarca-blanco-c.png"]],
@@ -149,7 +150,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "monarca", guideImg: "medidas-monarca.webp",
     fit: "Polo camisero de ajuste entallado", material: "High Cotton, alto contenido de algodón",
     desc: "Polo camisero con cuello clásico y abertura frontal con botones. Tela de mayor gramaje, suave y transpirable, con estructura firme y caída impecable. Etiqueta tejida en el interior y costuras limpias: ideal para lo casual y lo semiformal." },
-  { slug: "polo-prime", name: "Polo Prime", estilo: "martir", linea: "uomo-cattivo", cat: "polos-prime", price: 70, old: 90, isNew: true,
+  { slug: "polo-prime", name: "Polo Prime", estilo: "martir", linea: "uomo-cattivo", cat: "polos-prime", price: 70, old: 90, isNew: true, porColor: true,
     colors: [
       ["Negro", "#121212", ["prime-negro-a.jpg", "prime-negro-b.png", "prime-negro-c.png"]],
       ["Blanco", "#F4F4F2", ["prime-blanco-a.jpg", "prime-blanco-b.png", "prime-blanco-c.png"]],
@@ -184,7 +185,7 @@ window.PRODUCTS = [
     sizes: TOPS, guide: "milano", guideImg: "medidas-milano.webp",
     fit: "Regular fit, tipo Harrington",
     desc: "Casaca Harrington con cuello camisero negro en contraste, cierre frontal metálico de largo completo y bolsillos inferiores con tapeta y broche. Puños con broche de ajuste y pretina parcialmente elasticada para mayor comodidad." },
-  { slug: "polo-perfect-business", name: "Polo Perfect Business", estilo: "martir", linea: "uomo-cattivo", cat: "polos-perfect-business", price: 70, old: 90, deal: true,
+  { slug: "polo-perfect-business", name: "Polo Perfect Business", estilo: "martir", linea: "uomo-cattivo", cat: "polos-perfect-business", price: 70, old: 90, deal: true, porColor: true,
     colors: [
       ["Negro", "#121212", ["business-negro-a.jpg", "business-negro-b.png", "business-negro-c.png"]],
       ["Beige", "#D8C2A6", ["business-beige-a.jpg", "business-beige-b.png", "business-beige-c.png"]],
@@ -348,6 +349,13 @@ window.PRODUCTS = [
     fit: "Baggy fit cargo",
     desc: "Pantalón cargo de corte baggy con bolsillos laterales con tapa, pierna amplia y caída relajada. Funcional y cómodo para un look urbano." },
 ];
+
+/* Las prendas con porColor se separan en un producto por color: slug "polo-luxury-negro", nombre "Polo Luxury Negro".
+   base = slug original (sirve para unir los colores en la página del producto y para los enlaces antiguos) */
+window.PRODUCTS = window.PRODUCTS.flatMap(p => !p.porColor ? [p] : p.colors.map(c => ({
+  ...p, base: p.slug, colors: [c], name: `${p.name} ${c[0]}`,
+  slug: `${p.slug}-${c[0].normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "-")}`,
+})));
 
 /* Pack Deluxe: el cliente elige su estilo y una prenda de cada paso */
 window.PACK = {

@@ -1272,7 +1272,9 @@ function initTienda() {
    ========================================================= */
 function initProducto() {
   const root = $("#pdp");
-  const p = findProduct(new URLSearchParams(location.search).get("p"));
+  const qs = new URLSearchParams(location.search), slug = qs.get("p");
+  // Enlaces antiguos (?p=polo-luxury&c=Negro) → el apartado de ese color
+  const p = findProduct(slug) || PRODUCTS.find(x => x.base === slug && x.colors[0][0] === qs.get("c")) || PRODUCTS.find(x => x.base === slug);
   if (!p) {
     root.innerHTML = `<div class="notfound wrap"><span class="label center">Error 404</span><h1>No encontramos esta prenda</h1><p>Puede que ya no esté disponible o que el enlace esté incompleto. Mira todo lo que tenemos en la tienda.</p><a class="btn btn--dark" href="tienda.html">Ir a la tienda <span>→</span></a></div>`;
     return;
@@ -1305,7 +1307,9 @@ function initProducto() {
         <p class="pdp__desc">${esc(p.desc)}</p>
         <div class="opt">
           <div class="opt-label">Color <em id="pColorName">${esc(state.color)}</em></div>
-          <div class="swatches" id="pColors">${p.colors.map(([n, c]) => `<button type="button" class="${n === state.color ? "on" : ""}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("")}</div>
+          <div class="swatches" id="pColors">${p.base
+            ? PRODUCTS.filter(x => x.base === p.base).map(x => `<a href="${productUrl(x)}" class="${x === p ? "on" : ""}" style="background:${x.colors[0][1]}" title="${x.colors[0][0]}" aria-label="Color ${x.colors[0][0]}"${x === p ? ` aria-current="page"` : ""}></a>`).join("")
+            : p.colors.map(([n, c]) => `<button type="button" class="${n === state.color ? "on" : ""}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("")}</div>
         </div>
         <div class="opt">
           <div class="opt-label">Talla <button type="button" class="link-btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía de tallas</button></div>

@@ -563,8 +563,8 @@ html[data-estilo="martir"].vt-in::after{--vt-from:var(--shade-om-panel)}
 .opt-label em{font-style:normal;font-weight:500;letter-spacing:1px;color:var(--muted);text-transform:none;font-size:13px}
 .link-btn{color:var(--teal);border-bottom:1px solid currentColor;font-weight:500;letter-spacing:1.5px;font-size:11.5px;text-transform:uppercase}
 .swatches{display:flex;gap:12px;flex-wrap:wrap}
-.swatches button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);outline:1px solid transparent;outline-offset:3px;transition:.2s}
-.swatches button.on{outline-color:var(--ink)}
+.swatches button,.swatches a{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);outline:1px solid transparent;outline-offset:3px;transition:.2s}
+.swatches button.on,.swatches a.on{outline-color:var(--ink)}
 .size-btns{display:flex;gap:8px;flex-wrap:wrap}
 .size-btns button{min-width:56px;height:48px;padding:0 10px;border:1px solid var(--line);font-weight:600;color:var(--ink);letter-spacing:1px;transition:.2s}
 .size-btns button:hover{border-color:var(--ink)}
