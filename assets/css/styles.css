@@ -130,6 +130,7 @@ section{padding:clamp(56px,6vw,96px) 0}
 .drawer__cats{display:flex;flex-wrap:wrap;gap:8px}
 .drawer__cats a{border:1px solid var(--line);padding:8px 12px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--ink)}
 .drawer__wa{margin-top:auto;padding-top:26px}
+.drawer__wa .socials-row{justify-content:center;margin-top:16px}
 
 /* ---------- Botones ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;font-size:12px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase;padding:16px 30px;transition:.3s var(--ease);border:1px solid transparent}
