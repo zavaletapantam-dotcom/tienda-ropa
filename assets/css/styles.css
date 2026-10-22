@@ -1195,6 +1195,7 @@ img.fade.ok{opacity:1}
 [data-estilo="badass"] .pack-cta__in{background:var(--ink)}
 .ln__bar{border-top:0;padding-top:0}
 .ln__bar p b{color:inherit;font-weight:600;letter-spacing:.5px}
+.ln__top{margin:0;font-family:var(--serif);font-weight:600;font-size:clamp(22px,2.6vw,34px);line-height:1.1;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
 @media (max-width:860px){
   .cats__head{grid-template-columns:1fr auto}
   .cdx{grid-column:1/-1;grid-row:2;justify-self:stretch;justify-content:space-between}

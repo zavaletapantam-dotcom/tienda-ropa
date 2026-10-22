@@ -536,7 +536,7 @@ function heroHTML(st) {
   return `<section class="hero hero--${st.slug}" id="hero" aria-label="${esc(st.name)}">
     ${st.heroes.map((h, i) => {
       const tag = i ? "h2" : "h1";
-      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light${i ? "" : " kicker-strong"}">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#lineas" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
+      return `<div class="slide${i ? "" : " active"}">${pic(h.img, SZ.full, { lazy: i > 0, high: i === 0 })}<div class="slide__txt"><div class="wrap"><span class="kicker-light kicker-strong">${esc(h.kicker)}</span><${tag} class="slide__title">${i ? esc(h.title) : brandTitle(st)}</${tag}><p class="slide__sub">${esc(h.sub)}</p><a href="#lineas" class="btn btn--light">Ver la colección <span>→</span></a></div></div></div>`;
     }).join("")}
     <div class="hero__ctrl">
       <button class="hero__arrow" id="heroPrev" aria-label="Anterior">${I.prev}</button>
@@ -1015,16 +1015,6 @@ function initColeccion() {
   ${st.marquee ? `<div class="mq" aria-hidden="true"><div class="mq__track">${st.marquee.map(w => `<span>${esc(w)}</span>`).join("").repeat(2)}</div></div>` : ""}
   ${linesHTML(st, items)}
 
-  ${packReady(st.slug) ? `<section class="pack-cta">
-    <div class="wrap">
-      <a class="pack-cta__in" href="pack.html?estilo=${st.slug}">
-        <span class="pack-cta__off">−${off}%</span>
-        <span class="pack-cta__txt"><small>Pack Deluxe · ${esc(st.name)}</small><b>Arma tu outfit de 3 prendas y ahorra ${off}%</b><em>Elige un polo, un pantalón y una casaca: el descuento se aplica solo.</em></span>
-        <span class="btn btn--light">Armar mi pack <span>→</span></span>
-      </a>
-    </div>
-  </section>` : ""}
-
   <section class="cats" id="ofertas">
     <div class="wrap">
       <div class="cats__head reveal">
@@ -1042,6 +1032,16 @@ function initColeccion() {
       <div class="track" id="trackCats">${cats.map(c => catCardHTML(c)).join("")}</div>
     </div>
   </section>
+
+  ${packReady(st.slug) ? `<section class="pack-cta">
+    <div class="wrap">
+      <a class="pack-cta__in" href="pack.html?estilo=${st.slug}">
+        <span class="pack-cta__off">−${off}%</span>
+        <span class="pack-cta__txt"><small>Pack Deluxe · ${esc(st.name)}</small><b>Arma tu outfit de 3 prendas y ahorra ${off}%</b><em>Elige un polo, un pantalón y una casaca: el descuento se aplica solo.</em></span>
+        <span class="btn btn--light">Armar mi pack <span>→</span></span>
+      </a>
+    </div>
+  </section>` : ""}
 
   ${items.length ? `<section id="coleccion-grid">
     <div class="wrap">
@@ -1090,7 +1090,8 @@ function alliesHTML(l) {
 }
 function linesHTML(st, items) {
   return `<section class="lines lines--${st.slug}" id="lineas">${st.lines.map((slug, i) => {
-    const l = lineOf(slug), list = items.filter(p => p.linea === slug), id = "trackLine" + i;
+    const l = lineOf(slug), id = "trackLine" + i;
+    const list = l.top ? l.top.slugs.map(s => items.find(p => p.slug === s)).filter(Boolean) : items.filter(p => p.linea === slug);
     const name = l.slug === "bleesst" ? `<img class="ln__logo" src="${l.logo}" alt="Bleesst" width="956" height="298" loading="lazy">`
       : l.slug === "uomo-cattivo" ? `<span class="ln__collab"><img class="ln__mono" src="${l.logo}" alt="" width="219" height="216" loading="lazy"><span>Uomo Cattivo</span></span>`
       : `<span class="ln__word">${esc(l.name)}</span>`;
@@ -1108,7 +1109,7 @@ function linesHTML(st, items) {
             ${alliesHTML(l)}
           </div>
         </div>
-        ${list.length ? `<div class="deals-bar ln__bar"><p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p><div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>
+        ${list.length ? `<div class="deals-bar ln__bar">${l.top ? `<h3 class="ln__top">${esc(l.top.title)}</h3>` : `<p><b>${esc(l.collab || l.name)}</b> · ${list.length} ${list.length === 1 ? "modelo" : "modelos"}</p>`}<div class="head-right"><a href="tienda.html?linea=${l.slug}" class="see-all">Ver todo <span>→</span></a>${arrowsHTML(id)}</div></div>
         <div class="track" id="${id}">${list.map(p => cardHTML(p)).join("")}</div>` : soonHTML(l.collab || l.name, "Estamos preparando las primeras prendas de esta línea.")}
       </div>
     </div>`;

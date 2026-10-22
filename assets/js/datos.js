@@ -66,7 +66,8 @@ window.STYLES = {
 };
 
 /* Las líneas dentro de cada mundo. Badass = Bassic + Bleesst · Martir Atelier = Maison × Uomo Cattivo
-   allies = marcas con contrato de exclusividad (se muestran como "muy pronto" con su Instagram) */
+   allies = marcas con contrato de exclusividad (se muestran como "muy pronto" con su Instagram)
+   top = solo estas prendas (slugs) en el bloque de la línea, con su título; sin top se muestran todas */
 window.LINES = {
   bassic: {
     slug: "bassic", name: "Bassic", estilo: "badass", tagline: "Lo básico, siempre.",
@@ -85,6 +86,7 @@ window.LINES = {
     collab: "Maison × Uomo Cattivo",
     desc: "La colección de MAISON junto a Uomo Cattivo: polos, casacas, pantalones y más prendas de alta calidad.",
     points: ["Polos", "Casacas", "Pantalones", "Y más prendas de la colección"],
+    top: { title: "Lo más vendido del día de hoy", slugs: ["polo-luxury-negro", "polo-luxury-blanco", "polo-monarca-negro", "casaca-bolonia", "casaca-milano"] },
   },
 };
 
@@ -94,13 +96,14 @@ window.LINES = {
 window.CATEGORIES = [
   /* BASSIC · lo básico, siempre */
   { slug: "polos-bassic",          name: "Polos Bassic",            linea: "bassic",       tipo: "top",    cover: null },
+  /* Polos Bleesst va junto a Polos Bassic para que los polos en producción se vean juntos en "Compra por prenda" */
+  { slug: "polos-bleesst",         name: "Polos Bleesst",           linea: "bleesst",      tipo: "top",    cover: null },
   { slug: "poleras-basicas",       name: "Poleras Básicas",         linea: "bassic",       tipo: "top",    cover: "polera-basica-negro-a.jpg" },
   { slug: "poleras-canguro",       name: "Poleras Canguro",         linea: "bassic",       tipo: "top",    cover: "canguro-verde-a.jpg" },
   { slug: "poleras-cr",            name: "Poleras CR",              linea: "bassic",      tipo: "top",    cover: "cr-verde-a.jpg" },
   { slug: "casacas-basicas",       name: "Casacas Básicas",         linea: "bassic",       tipo: "abrigo", cover: "basica-acero-a.png" },
   { slug: "jean-clasicos",         name: "Jean Clásicos",           linea: "bassic",       tipo: "abajo",  cover: "clasico-negro-a.png" },
   /* BLEESST · el lado más atrevido */
-  { slug: "polos-bleesst",         name: "Polos Bleesst",           linea: "bleesst",      tipo: "top",    cover: null },
   { slug: "casacas-bleesst",       name: "Casacas Bleesst",         linea: "bleesst",      tipo: "abrigo", cover: "bomber-verde-a.png" },
   { slug: "jean-baggy",            name: "Jean Baggy",              linea: "bleesst",      tipo: "abajo",  cover: "baggy-celeste-a.png" },
   { slug: "jean-ballom",           name: "Jean Ballom",             linea: "bleesst",      tipo: "abajo",  cover: "ballom-negro-a.png" },
