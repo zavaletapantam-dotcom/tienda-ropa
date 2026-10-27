@@ -21,7 +21,7 @@ window.CONFIG = {
   courier: "Shalom",                            // envío a provincia: el cliente recoge en una agencia de este courier
   provinciaCosto: "Según tarifa de Shalom",     // costo del envío a provincia (lo confirma el asesor)
   diasCambio: 2,
-  social: { instagram: "https://www.instagram.com/maison.pe_dandy/", facebook: "", tiktok: "https://www.tiktok.com/@maison.pe_dandy" },
+  social: { instagram: "https://www.instagram.com/maison.pe_dandy/", facebook: "https://www.facebook.com/profile.php?id=61595690223679", tiktok: "https://www.tiktok.com/@maison.pe_dandy" },
 };
 
 /* Los dos mundos de MAISON. Cada uno tiene su propia página (badass.html / martir.html).
