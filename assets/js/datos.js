@@ -19,7 +19,7 @@ window.CONFIG = {
   envio: 10,                 // envío a domicilio (S/)
   envioGratisDesde: 200,     // envío gratis desde este monto
   entrega: "1 a 2 días hábiles",
-  recojo: "Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar",   // dirección de la tienda para recojo
+  recojo: "Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar, Nuevo Chimbote",   // dirección de la tienda para recojo
   recojoRef: "",                                 // referencia para llegar (opcional)
   distritos: ["Chimbote", "Nuevo Chimbote"],   // envío a domicilio solo a estos distritos
   courier: "Shalom",                            // envío a provincia: el cliente recoge en una agencia de este courier
