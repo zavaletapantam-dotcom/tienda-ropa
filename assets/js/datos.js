@@ -14,13 +14,13 @@ window.CONFIG = {
   // Responsable de la tienda (aparece en Términos, Privacidad, Uso de datos y Libro de Reclamaciones)
   titular: "Daniel Samir Zolorzano Chavez",
   ruc: "10764152285",
-  domicilioLegal: "Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Nuevo Chimbote, Santa, Áncash",
+  domicilioLegal: "Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar, Nuevo Chimbote, Santa, Áncash",
   hours: "Atención 24 horas",
   envio: 10,                 // envío a domicilio (S/)
   envioGratisDesde: 200,     // envío gratis desde este monto
   entrega: "1 a 2 días hábiles",
-  recojo: "Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Naciones Unidas",   // dirección de la tienda para recojo
-  recojoRef: "Al costado del Tambo, frente a Sheyla",
+  recojo: "Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar",   // dirección de la tienda para recojo
+  recojoRef: "",                                 // referencia para llegar (opcional)
   distritos: ["Chimbote", "Nuevo Chimbote"],   // envío a domicilio solo a estos distritos
   courier: "Shalom",                            // envío a provincia: el cliente recoge en una agencia de este courier
   provinciaCosto: "Según tarifa de Shalom",     // costo del envío a provincia (lo confirma el asesor)
