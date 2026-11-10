@@ -1,0 +1,24 @@
+/* Documentos para el Registro Nacional de Protección de Datos Personales (se imprimen a PDF con Edge) */
+@font-face{font-family:"Jost";font-weight:300 800;src:url(../../assets/fonts/jost-normal.woff2) format("woff2")}
+@font-face{font-family:"Cormorant Garamond";font-weight:500 600;src:url(../../assets/fonts/cormorant-normal.woff2) format("woff2")}
+@page{size:A4;margin:22mm 20mm 20mm}
+*{box-sizing:border-box}
+body{font-family:"Jost",Arial,sans-serif;font-size:10.5pt;line-height:1.6;color:#1a1a1a;margin:0}
+header.doc{border-bottom:2px solid #014D4E;padding-bottom:12px;margin-bottom:22px}
+header.doc .marca{font-family:"Cormorant Garamond",Georgia,serif;font-size:13pt;letter-spacing:4px;color:#014D4E;font-weight:600}
+h1{font-family:"Cormorant Garamond",Georgia,serif;font-size:26pt;font-weight:600;line-height:1.1;margin:6px 0 6px;color:#0F0F0F}
+header.doc p{margin:0;color:#5A5A5A;font-size:10pt}
+h2{font-family:"Cormorant Garamond",Georgia,serif;font-size:17pt;font-weight:600;color:#014D4E;margin:24px 0 8px;break-after:avoid}
+h3{font-size:11pt;font-weight:600;margin:16px 0 6px;break-after:avoid}
+p{margin:0 0 9px}
+ul,ol{margin:0 0 10px;padding-left:20px}
+li{margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin:6px 0 14px;font-size:10pt;break-inside:auto}
+th,td{border:1px solid #DCE3E2;padding:7px 9px;vertical-align:top;text-align:left}
+th{background:#EEF4F3;width:32%;font-weight:600}
+tr{break-inside:avoid}
+.caja{background:#EEF4F3;border-left:3px solid #014D4E;padding:10px 14px;margin:10px 0 14px}
+.salto{break-before:page}
+.firma{margin-top:40px;display:flex;gap:40px}
+.firma div{flex:1;border-top:1px solid #1a1a1a;padding-top:6px;font-size:9.5pt}
+footer.pie{margin-top:26px;padding-top:10px;border-top:1px solid #DCE3E2;font-size:8.5pt;color:#87918F}

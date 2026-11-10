@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Documento de seguridad · MAISON</title><link rel="stylesheet" href="estilo.css"></head>
+<body>
+<header class="doc">
+  <div class="marca">MAISON</div>
+  <h1>Documento de seguridad de los datos personales</h1>
+  <p>Medidas técnicas y organizativas de los bancos de datos "Clientes de MAISON" y "Libro de Reclamaciones de MAISON" · Noviembre de 2026</p>
+</header>
+
+<table>
+  <tr><th>Titular y responsable de seguridad</th><td>Daniel Samir Zolorzano Chavez · RUC 10764152285 · Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar, Nuevo Chimbote, Santa, Áncash · maison.pe.dandy@gmail.com</td></tr>
+  <tr><th>Sistemas</th><td>Página web maison.pe, base de datos en la nube (Cloudflare D1) y panel de administración en maison.pe/admin.</td></tr>
+</table>
+
+<h2>1. Medidas técnicas</h2>
+<ul>
+  <li><b>Conexión cifrada:</b> toda la página, el panel y la base de datos funcionan solo con conexión segura (HTTPS). Quien entra por una dirección sin cifrar es redirigido a la cifrada.</li>
+  <li><b>Contraseñas:</b> nunca se guardan en texto. Se guardan cifradas con PBKDF2 SHA 256 (100 000 iteraciones y un valor aleatorio por usuario).</li>
+  <li><b>Acceso al panel:</b> solo con usuario y contraseña personal. Tras 5 intentos fallidos seguidos, el usuario se bloquea 15 minutos.</li>
+  <li><b>Sesiones:</b> la sesión del panel vence a las 12 horas y la del cliente a los 30 días. Se guardan en cookies protegidas (solo por conexión segura e inaccesibles para otros programas de la página), y en la base solo queda un resumen cifrado del código de sesión.</li>
+  <li><b>Altas de administradores:</b> se hacen con un enlace de activación que sirve una sola vez y vence en 48 horas. Cada persona crea su propia contraseña: nadie más la conoce.</li>
+  <li><b>Protección contra abusos:</b> límite de envíos por conexión para pedidos, reclamos e intentos de acceso, y rechazo de envíos que no vienen de la propia página.</li>
+  <li><b>Datos mínimos:</b> no se piden ni se guardan datos de tarjetas ni de cuentas bancarias, ni datos sensibles.</li>
+  <li><b>Privacidad del panel:</b> el panel no aparece en buscadores y su contenido no se guarda en la memoria del navegador.</li>
+  <li><b>Proveedor de nube:</b> Cloudflare guarda la información cifrada y permite recuperar la base de datos a un momento anterior si hiciera falta.</li>
+</ul>
+
+<h2>2. Medidas organizativas</h2>
+<ul>
+  <li><b>Personas con acceso:</b> solo el titular y un administrador designado por él, cada uno con su propio usuario. No se comparten contraseñas.</li>
+  <li><b>Registro de acciones:</b> el sistema anota quién confirmó o canceló cada pedido, quién cambió el stock y cuándo, y quién respondió cada reclamo.</li>
+  <li><b>Retiro de accesos:</b> si un administrador deja de colaborar con MAISON, se desactiva su usuario el mismo día.</li>
+  <li><b>Eliminación de cuentas:</b> cuando un cliente elimina su cuenta, el sistema borra su nombre, correo, foto e historial y deja las ventas solo como cifras anónimas.</li>
+  <li><b>Derechos de los clientes:</b> las solicitudes de acceso, rectificación, cancelación u oposición llegan a maison.pe.dandy@gmail.com y se responden dentro de los plazos de ley.</li>
+  <li><b>Equipos:</b> las personas con acceso usan equipos con contraseña o bloqueo de pantalla y cierran sesión del panel en equipos compartidos.</li>
+</ul>
+
+<h2>3. Si ocurre un incidente de seguridad</h2>
+<ol>
+  <li>Cambiar de inmediato las contraseñas del panel y cerrar todas las sesiones.</li>
+  <li>Revisar qué datos pudieron verse afectados y a qué clientes.</li>
+  <li>Comunicarlo a la Autoridad Nacional de Protección de Datos Personales y a los clientes afectados, en los plazos que fija el reglamento de la Ley 29733.</li>
+  <li>Dejar constancia escrita de lo ocurrido y de las medidas tomadas.</li>
+</ol>
+
+<div class="firma"><div>Daniel Samir Zolorzano Chavez<br>Titular del banco de datos · RUC 10764152285</div><div>Fecha</div></div>
+
+<footer class="pie">MAISON · Documento de seguridad · Se revisa cuando cambian los sistemas, los proveedores o las personas con acceso.</footer>
+</body></html>
