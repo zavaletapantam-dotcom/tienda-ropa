@@ -83,12 +83,44 @@ const guideFor = (p, color) => { const g = colorOpt(p, color).guide || p.guide; 
 const guideImgFor = (p, color) => colorOpt(p, color).guideImg || p.guideImg;
 const guideBase = p => ( p.cat === "calzado" ? GUIDE.shoes : /^\d+$/.test(p.sizes[0]) ? GUIDE.bottoms : GUIDE.tops);
 
+/* ---------- Datos en vivo: precios, estado y stock que se manejan en el panel admin ---------- */
+/* SES: si el inicio de sesión con Google está activo y quién es el cliente (null = sin cuenta) */
+let SES = { google: false, cliente: null };
+/* Stock de una talla: número, o null si todavía no se cargó (sin cargar = se puede pedir) */
+const stockDe = (p, color, talla) => { const s = p.stock && p.stock[color]; return s && s[talla] !== undefined ? s[talla] : null; };
+/* Una talla se puede pedir si la prenda no está agotada y su stock no está en 0 (en ese color, o en alguno si no se indica) */
+const tallaLibre = (p, talla, color) => !p.agotado && (color ? stockDe(p, color, talla) !== 0 : p.colors.some(([c]) => stockDe(p, c, talla) !== 0));
+const colorLibre = (p, color) => p.sizes.some(t => tallaLibre(p, t, color));
+function aplicarCatalogo(c) {
+  if (!c || !c.p) return;
+  for (let i = PRODUCTS.length - 1; i >= 0; i--) {
+    const p = PRODUCTS[i], d = c.p[p.slug];
+    if (!d) continue; // prenda nueva que aún no está en la base: se ve como en datos.js
+    if (d.estado === "oculto") { PRODUCTS.splice(i, 1); continue; }
+    p.price = d.precio; p.old = d.antes;
+    if (!p.old) p.deal = false;
+    p.stock = d.stock || {};
+    p.agotado = d.estado === "agotado" || p.colors.every(([col]) => p.sizes.every(t => stockDe(p, col, t) === 0));
+  }
+}
+async function cargarVivo() {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 4000);
+  try {
+    const r = await fetch("/api/inicio", { cache: "no-store", credentials: "same-origin", signal: ctl.signal });
+    if (r.ok) { const j = await r.json(); aplicarCatalogo(j.c); if (j.s) SES = j.s; }
+  } catch (_) {} finally { clearTimeout(t); }
+}
+/* Código de pedido (MS + 6 letras/números sin 0, O, 1 ni I): va en el mensaje de WhatsApp y en el panel */
+const LETRAS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const nuevoCodigo = () => "MS" + Array.from(crypto.getRandomValues(new Uint8Array(6)), b => LETRAS[b % 32]).join("");
+
 function productMsg(p, o = {}) {
   const l = ["Hola, estoy interesado en esta prenda:", "", `🛍️ *${p.name}*`, `✨ Colección: ${lineName(p)} · ${styleOf(p.estilo)?.name || ""}`];
   if (o.color) l.push(`🎨 Color: ${o.color}`);
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
   l.push(hasPrice(p) ? `💰 Precio: ${money(p.price)}${o.qty > 1 ? " c/u" : ""}` : "💰 Precio: a consultar");
+  if (o.codigo) l.push(`🧾 Pedido: *${o.codigo}*`);
   l.push("", `🔗 ${absUrl(productUrl(p))}`);
   return l.join("\n");
 }
@@ -129,6 +161,12 @@ const I = {
   insta: svg('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>'),
   fb: svg('<path d="M14 21v-7h3l.6-4H14V8c0-.8.4-1.2 1.2-1.2h2.3V3.2A16 16 0 0 0 15 3c-2.7 0-4.4 1.7-4.4 4.6V10H7.6v4h3v7Z"/>'),
   tiktok: svg('<path d="M21 7.9V12a10 10 0 0 1-5-2v4.5a6.5 6.5 0 1 1-8-6.3v4.3a2.5 2.5 0 1 0 4 2V3h4.1A6 6 0 0 0 21 7.9Z"/>'),
+  user: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+  tag: svg('<path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
+  spark: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>'),
+  clock2: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
+  book: svg('<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20v3H6.5M9 7h7M9 11h5"/>'),
+  google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.5 5.5 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7Z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24Z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1Z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9Z"/></svg>',
 };
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-wa" viewBox="0 0 24 24"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.39-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.07c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.7.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.13-.27-.2-.57-.35Zm-5.42 7.4h-.01a9.87 9.87 0 0 1-5.03-1.37l-.36-.22-3.74.98 1-3.65-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.45 4.44-9.88 9.89-9.88a9.82 9.82 0 0 1 9.88 9.89c0 5.45-4.44 9.88-9.88 9.88Zm8.41-18.3A11.82 11.82 0 0 0 12.05 0C5.5 0 .16 5.34.16 11.89c0 2.1.55 4.14 1.59 5.95L.06 24l6.3-1.65a11.88 11.88 0 0 0 5.68 1.45h.01c6.55 0 11.89-5.34 11.89-11.89 0-3.18-1.24-6.17-3.48-8.42Z"/></symbol></svg>`;
 
@@ -199,6 +237,7 @@ function renderLayout() {
       <nav class="nav" aria-label="Principal">${nav}</nav>
       <div class="header__icons">
         <button class="icon-btn" id="openSearch" aria-label="Buscar" aria-expanded="false" aria-controls="search">${I.search}</button>
+        <a class="icon-btn acct-btn" id="acctBtn" href="cuenta.html" hidden aria-label="Mi cuenta">${I.user}</a>
         <button class="icon-btn cart-btn" type="button" data-open-cart aria-label="Abrir carrito">${I.bag}<span class="cart-count" hidden>0</span></button>
         <a class="header__wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}<span>Asesor</span></a>
         <button class="icon-btn burger" id="openMenu" aria-label="Abrir menú">${I.menu}</button>
@@ -221,6 +260,7 @@ function renderLayout() {
         <a class="om" href="martir.html">${pic(STYLES.martir.panel, "45vw")}<span>Martir Atelier</span></a>
       </div>
       ${NAV.slice(2).map(([k, label, href]) => `<a href="${href}"${isActive(k) ? ' class="active"' : ""}>${label}<span aria-hidden="true">→</span></a>`).join("")}
+      <a href="cuenta.html" class="js-acct${PAGE === "cuenta" ? " active" : ""}" hidden>Mi cuenta<span aria-hidden="true">→</span></a>
       <p class="drawer__label">Categorías</p>
       ${Object.values(LINES).map(l => `<p class="drawer__sub">${esc(l.collab || l.name)}</p><div class="drawer__cats">${CATS.filter(c => c.linea === l.slug).map(c => `<a href="tienda.html?cat=${c.slug}">${esc(c.name)}</a>`).join("")}</div>`).join("")}
       <div class="drawer__wa"><a class="btn-wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}Hablar con un asesor</a><div class="socials-row">${socialLinks()}</div></div>
@@ -262,9 +302,10 @@ function renderLayout() {
           <h2>Ayuda</h2>
           <a class="js-wa" href="#" target="_blank" rel="noopener">WhatsApp: ${waPretty()}</a>
           <a href="mailto:${C.email}">${esc(C.email)}</a>
-          <a href="ayuda.html#terminos">Términos y condiciones</a>
-          <a href="ayuda.html#privacidad">Políticas de privacidad</a>
-          <a href="ayuda.html#reclamaciones">Libro de reclamaciones</a>
+          <a href="terminos.html">Términos y condiciones</a>
+          <a href="privacidad.html">Política de privacidad</a>
+          <a href="datos.html">Uso de datos</a>
+          <a class="footer__libro" href="libro-de-reclamaciones.html">${I.book}Libro de reclamaciones</a>
         </div>
       </div>
       <div class="footer__bottom"><span>© ${new Date().getFullYear()} ${esc(C.store)}. Todos los derechos reservados.</span><span>${esc(C.city)}</span></div>
@@ -304,6 +345,7 @@ function renderLayout() {
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
         <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
         <p class="cart__note">En el siguiente paso eliges <b>envío a domicilio</b> (${C.distritos.map(esc).join(" y ")}), <b>recojo en tienda</b> o <b>envío a provincia</b> por ${esc(C.courier)}.</p>
+        <p class="cart__warn" id="cartWarn" hidden>Quita las prendas agotadas para continuar</p>
         <button type="button" class="btn-wa" id="cartNext">${I.wa}Comprar con un asesor</button>
         <div class="cart__links"><button type="button" data-cart-close>Seguir comprando</button><button type="button" id="cartClear">${I.trash}Vaciar carrito</button></div>
       </div>
@@ -344,6 +386,34 @@ function renderLayout() {
         <button type="submit" class="btn-wa">${I.wa}Enviar pedido por WhatsApp</button>
       </form>
     </aside>
+  </div>
+  <div class="acc-modal" id="accModal" aria-hidden="true">
+    <div class="acc-modal__bg" data-acc-x></div>
+    <div class="acc-modal__box" role="dialog" aria-modal="true" aria-labelledby="accTitle">
+      <button type="button" class="acc-modal__x" data-acc-x aria-label="Cerrar">${I.close}</button>
+      <div class="acc-modal__mark">${logoSVG("mark", "logo-ink")}</div>
+      <h2 id="accTitle">Crea tu cuenta y gana más en cada compra</h2>
+      <p class="acc-modal__lead">Mientras más compras, mejores son tus beneficios. Tu cuenta guarda tu historial y te abre promociones pensadas para ti.</p>
+      <ul class="acc-modal__perks">
+        <li>${I.tag}<span>Descuentos que crecen con tus compras</span></li>
+        <li>${I.spark}<span>Promociones hechas para ti</span></li>
+        <li>${I.clock2}<span>Tu historial siempre a la mano</span></li>
+      </ul>
+      <label class="acc-check"><input type="checkbox" id="accAcepto"><span>Acepto los <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>
+      <label class="acc-check"><input type="checkbox" id="accPromos"><span>Quiero recibir promociones</span></label>
+      <button type="button" class="acc-google" id="accGoogle" disabled>${I.google}<span>Continuar con Google</span></button>
+      <button type="button" class="acc-skip" id="accSkip">No, gracias. Ir a WhatsApp</button>
+    </div>
+  </div>
+  <div class="acc-modal" id="accListo" aria-hidden="true">
+    <div class="acc-modal__bg" data-acc-x></div>
+    <div class="acc-modal__box acc-modal__box--sm" role="dialog" aria-modal="true" aria-labelledby="accListoT">
+      <button type="button" class="acc-modal__x" data-acc-x aria-label="Cerrar">${I.close}</button>
+      <div class="acc-modal__mark">${logoSVG("mark", "logo-ink")}</div>
+      <h2 id="accListoT">¡Bienvenido a MAISON!</h2>
+      <p class="acc-modal__lead" id="accListoP">Tu cuenta ya está lista.</p>
+      <button type="button" class="btn-wa" id="accSeguir">${I.wa}Continuar a WhatsApp</button>
+    </div>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
 
@@ -418,16 +488,18 @@ function priceHTML(p, withOff = true) {
 }
 function cardHTML(p, opts) {
   const showStyle = !!(opts && opts.style === true);
-  const tag = p.deal ? `<span class="tag">-${pct(p)}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : "";
+  const tag = p.agotado ? `<span class="tag tag--out">Agotado</span>` : p.deal ? `<span class="tag">-${pct(p)}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : "";
   const url = productUrl(p);
-  return `<article class="card">
+  return `<article class="card${p.agotado ? " card--out" : ""}">
     <div class="card__img" style="--ph:${fotoColor(p.imgs[0])}">
       <a class="card__link" href="${url}" aria-label="Ver ${esc(p.name)}">
         ${pic(p.imgs[0], SZ.card, { cls: "img-main", alt: p.name, fade: true })}
         ${pic(p.imgs[1] || p.imgs[0], SZ.card, { cls: "img-hover", hold: true })}
       </a>
       ${tag}
-      <div class="sizes">${p.sizes.map(s => `<button type="button" data-qv="${p.slug}" data-size="${s}" aria-label="Talla ${s} de ${esc(p.name)}">${s}</button>`).join("")}</div>
+      ${p.agotado ? "" : `<div class="sizes">${p.sizes.map(s => tallaLibre(p, s)
+        ? `<button type="button" data-qv="${p.slug}" data-size="${s}" aria-label="Talla ${s} de ${esc(p.name)}">${s}</button>`
+        : `<button type="button" class="no" disabled aria-label="Talla ${s} de ${esc(p.name)} agotada">${s}</button>`).join("")}</div>`}
     </div>
     <div class="card__info">
       <div>
@@ -656,8 +728,8 @@ function setUbigeo({ dep, prov, distP } = {}) {
   fillSel("coDistP", (ubiPrv() || [])[1] || [], "Elige tu distrito");
   if (distP) $("#coDistP").value = distP;
 }
-function orderMsg(o) {
-  const L = "———————————————", sub = cartSub(), env = shipCost(o.entrega), l = ["✨ *NUEVO PEDIDO* ✨", `👤 *Cliente:* ${o.nombre}`];
+function orderMsg(o, codigo) {
+  const L = "———————————————", sub = cartSub(), env = shipCost(o.entrega), l = ["✨ *NUEVO PEDIDO* ✨", `🧾 *Pedido:* ${codigo}`, `👤 *Cliente:* ${o.nombre}`];
   if (o.celular) l.push(`📞 *Celular:* ${o.celular}`);
   l.push(L, "");
   cart.forEach(x => {
@@ -723,13 +795,13 @@ function renderCart() {
   }
   $("#cartFoot").hidden = false;
   list.innerHTML = cart.map((x, i) => {
-    const p = findProduct(x.slug);
-    return `<div class="ci" data-i="${i}">
+    const p = findProduct(x.slug), out = !tallaLibre(p, x.size, x.color);
+    return `<div class="ci${out ? " ci--out" : ""}" data-i="${i}">
       <a class="ci__img" href="${productUrl(p)}&c=${encodeURIComponent(x.color)}" style="background:${fotoColor(colorImgs(p, x.color)[0])}">${pic(colorImgs(p, x.color)[0], "84px", { lazy: false, alt: p.name })}</a>
       <div class="ci__info">
         <small>${esc(lineName(p))}</small>
         <a class="ci__name" href="${productUrl(p)}">${esc(p.name)}</a>
-        <span class="ci__opts">${esc(x.color)} · Talla ${esc(x.size)}</span>
+        <span class="ci__opts">${esc(x.color)} · Talla ${esc(x.size)}${out ? ` · <b class="ci__out">Agotado</b>` : ""}</span>
         <div class="ci__row">
           <div class="qty qty--sm"><button type="button" data-cq="-1" aria-label="Quitar uno de ${esc(p.name)}">−</button><output>${x.qty}</output><button type="button" data-cq="1" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>
           <span class="ci__price">${!hasPrice(p) ? `<small>Precio</small><b class="price-ask">A consultar</b>` : `${x.qty > 1 ? `<small>${money(p.price)} c/u</small>` : ""}<b>${money(p.price * x.qty)}</b>`}</span>
@@ -738,11 +810,14 @@ function renderCart() {
       <button type="button" class="ci__rm" data-cart-rm aria-label="Quitar ${esc(p.name)} del carrito">${I.close}</button>
     </div>`;
   }).join("");
-  const sub = cartSub(), save = cartSave();
+  const sub = cartSub(), save = cartSave(), outs = cartOut();
   $("#cartSub").textContent = money(sub) + (cartAsk() ? " + a consultar" : "");
   $("#cartSave").textContent = "−" + money(save);
   $("#cartSaveRow").hidden = !save;
+  $("#cartWarn").hidden = !outs; $("#cartNext").disabled = !!outs;
 }
+/* Prendas del carrito que se agotaron después de agregarlas (no se pueden pedir) */
+const cartOut = () => cart.filter(x => !tallaLibre(findProduct(x.slug), x.size, x.color)).length;
 let cartFrom = null;
 function openCart(flash) {
   const c = $("#cart"); if (!c) return;
@@ -794,40 +869,165 @@ function initCart() {
     const bad = need.filter(([, v]) => !v).map(([id]) => id);
     $$("#checkout .co__f").forEach(f => f.classList.remove("err"));
     if (bad.length) { bad.forEach(id => document.getElementById(id).closest(".co__f").classList.add("err")); document.getElementById(bad[0]).focus(); toast("Completa los datos marcados"); return; }
+    if (cartOut()) { toast("Quita las prendas agotadas para continuar"); showCheckout(false); return; }
     try { localStorage.setItem(CO_KEY, JSON.stringify(o)); } catch (_) {}
-    const url = waLink(orderMsg(o)), w = window.open(url, "_blank");
-    if (w) w.opener = null; else location.href = url;
-    toast("Abriendo WhatsApp con tu pedido…");
+    const codigo = nuevoCodigo();
+    irAWhatsApp(waLink(orderMsg(o, codigo)), {
+      codigo, origen: "carrito", datos: o,
+      items: cart.map(x => ({ slug: x.slug, color: x.color, talla: x.size, cantidad: x.qty })),
+    }, "Abriendo WhatsApp con tu pedido…");
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
   // Si el cliente tiene la tienda abierta en otra pestaña, el carrito se mantiene igual
   addEventListener("storage", e => { if (e.key === CART_KEY) { loadCart(); renderCart(); } });
 }
 
+/* =========================================================
+   WHATSAPP Y CUENTA
+   Antes de ir a WhatsApp: SI el cliente no tiene cuenta → ventana para crearla (una vez por visita);
+   SI ya tiene cuenta → va directo. Cada pedido se guarda en la base (pendiente) con su código.
+   ========================================================= */
+const PEND_KEY = "maison_pendiente", VISTO_KEY = "maison_invitado";
+const sesStore = {
+  get: k => { try { return sessionStorage.getItem(k); } catch (_) { return null; } },
+  set: (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch (_) {} },
+};
+function abrirUrl(url) { const w = window.open(url, "_blank"); if (w) w.opener = null; else location.href = url; }
+/* Guarda el pedido aunque la página se cierre al abrir WhatsApp (keepalive) */
+function registrarPedido(ped) {
+  if (!ped) return;
+  try { fetch("/api/pedidos", { method: "POST", keepalive: true, credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify(ped) }).catch(() => {}); } catch (_) {}
+}
+function irAWhatsApp(url, ped, aviso) {
+  const seguir = () => { registrarPedido(ped); abrirUrl(url); if (aviso) toast(aviso); };
+  if (SES.google && !SES.cliente && sesStore.get(VISTO_KEY) !== "1" && $("#accModal")) abrirCuentaModal({ url, ped, seguir });
+  else seguir();
+}
+
+/* La página de atrás queda fija mientras la ventana está abierta (también en iPhone) */
+let scrollLock = null;
+function bloquearScroll(on) {
+  const s = document.body.style;
+  if (on && !scrollLock) {
+    scrollLock = { y: scrollY, css: s.cssText };
+    Object.assign(s, { position: "fixed", top: `-${scrollLock.y}px`, left: "0", right: "0", width: "100%", overflow: "hidden" });
+  } else if (!on && scrollLock) {
+    s.cssText = scrollLock.css; scrollTo({ top: scrollLock.y, behavior: "instant" }); scrollLock = null;
+  }
+}
+let accCtx = null;
+function abrirCuentaModal(ctx = {}) {
+  const m = $("#accModal"); if (!m) return;
+  accCtx = ctx;
+  $("#accSkip").textContent = ctx.seguir ? "No, gracias. Ir a WhatsApp" : "Ahora no";
+  $("#accAcepto").checked = false; $("#accGoogle").disabled = true;
+  m.classList.add("open"); m.setAttribute("aria-hidden", "false"); bloquearScroll(true);
+  setTimeout(() => $(".acc-modal__x", m).focus(), 60);
+}
+function cerrarModal(sel) {
+  const m = $(sel); if (!m || !m.classList.contains("open")) return false;
+  m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); bloquearScroll(false);
+  return true;
+}
+function mostrarCuenta() {
+  const on = SES.google || !!SES.cliente, c = SES.cliente, b = $("#acctBtn");
+  if (b) {
+    b.hidden = !on; b.classList.toggle("is-in", !!c);
+    b.setAttribute("aria-label", c ? "Mi cuenta" : "Crear cuenta o iniciar sesión");
+    b.innerHTML = !c ? I.user : c.foto ? `<img src="${esc(c.foto)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc((c.nombre || c.email || "?").trim()[0].toUpperCase())}</span>`;
+  }
+  $$(".js-acct").forEach(a => (a.hidden = !on));
+}
+function initCuenta() {
+  // Todos los enlaces de WhatsApp de la tienda pasan por irAWhatsApp (los que son pedido traen _pedido)
+  document.addEventListener("click", e => {
+    const a = e.target.closest && e.target.closest('a[href^="https://wa.me/"]');
+    if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    const x = a._pedido && a._pedido();
+    irAWhatsApp(x ? waLink(x.msg) : a.href, x ? x.ped : null);
+  });
+  mostrarCuenta();
+  const m = $("#accModal"), listo = $("#accListo");
+  if (!m) return;
+  $("#acctBtn")?.addEventListener("click", e => { if (!SES.cliente) { e.preventDefault(); abrirCuentaModal(); } });
+  // Cerrar con la X, tocando afuera o con Escape: no se va a WhatsApp y la ventana no vuelve a salir en esta visita
+  $$("[data-acc-x]", m).forEach(el => el.addEventListener("click", () => { cerrarModal("#accModal"); sesStore.set(VISTO_KEY, "1"); }));
+  $("#accSkip").addEventListener("click", () => {
+    sesStore.set(VISTO_KEY, "1"); cerrarModal("#accModal");
+    if (accCtx && accCtx.seguir) accCtx.seguir();
+  });
+  $("#accAcepto").addEventListener("change", e => ($("#accGoogle").disabled = !e.target.checked));
+  $("#accGoogle").addEventListener("click", () => {
+    if (!$("#accAcepto").checked) return;
+    if (accCtx && accCtx.url) sesStore.set(PEND_KEY, JSON.stringify({ url: accCtx.url, ped: accCtx.ped || null }));
+    location.href = `/api/auth/google?acepto=1&promos=${$("#accPromos").checked ? 1 : 0}&volver=${encodeURIComponent(location.pathname + location.search)}`;
+  });
+  $$("[data-acc-x]", listo).forEach(el => el.addEventListener("click", () => { cerrarModal("#accListo"); sesStore.set(PEND_KEY, null); }));
+  $("#accSeguir").addEventListener("click", () => {
+    let p = null; try { p = JSON.parse(sesStore.get(PEND_KEY)); } catch (_) {}
+    sesStore.set(PEND_KEY, null); cerrarModal("#accListo");
+    if (p && p.url) { registrarPedido(p.ped); abrirUrl(p.url); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    if (cerrarModal("#accModal")) sesStore.set(VISTO_KEY, "1");
+    if (cerrarModal("#accListo")) sesStore.set(PEND_KEY, null);
+  });
+
+  // Vuelta de Google: #cuenta=lista (cuenta nueva) | hola (ya tenía) | cancelado | error | no-disponible | falta-aceptar
+  const h = location.hash.match(/^#cuenta=([\w-]+)/);
+  if (!h) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  const r = h[1], nombre = SES.cliente ? (SES.cliente.nombre || "").split(" ")[0] : "";
+  if ((r === "lista" || r === "hola") && SES.cliente) {
+    const saludo = r === "lista" ? `¡Bienvenido a MAISON${nombre ? ", " + nombre : ""}!` : `¡Hola de nuevo${nombre ? ", " + nombre : ""}!`;
+    if (sesStore.get(PEND_KEY)) {
+      $("#accListoT").textContent = saludo;
+      $("#accListoP").textContent = r === "lista" ? "Tu cuenta ya está lista. Sigamos con tu pedido." : "Ya iniciaste sesión. Sigamos con tu pedido.";
+      listo.classList.add("open"); listo.setAttribute("aria-hidden", "false"); bloquearScroll(true);
+    } else toast(r === "lista" ? `${saludo} Tu cuenta está lista` : saludo);
+  } else if (r === "cancelado") toast("No se creó la cuenta. Puedes hacerlo cuando quieras");
+  else toast("No pudimos iniciar sesión con Google. Inténtalo de nuevo");
+}
+
 /* ---------- Vista rápida ---------- */
 const qv = { p: null, size: null, color: null };
 function openQV(slug, size) {
   const p = findProduct(slug); if (!p || !$("#modal")) return;
-  Object.assign(qv, { p, size: size || null, color: p.colors[0][0] });
-  setPic($("#qvImg"), p.imgs[0], "(max-width:640px) 100vw, 480px"); $("#qvImg").alt = p.name;
+  // Empieza en un color que tenga la talla tocada (o cualquier talla disponible)
+  const col = (size && p.colors.find(([c]) => tallaLibre(p, size, c))) || p.colors.find(([c]) => colorLibre(p, c)) || p.colors[0];
+  Object.assign(qv, { p, size: size || null, color: col[0] });
+  setPic($("#qvImg"), colorImgs(p, qv.color)[0], "(max-width:640px) 100vw, 480px"); $("#qvImg").alt = p.name;
   $("#qvCat").textContent = [catOf(p.cat)?.name, lineName(p)].filter(Boolean).join(" · ");
   $("#qvName").textContent = p.name;
   $("#qvPrice").innerHTML = priceHTML(p, false) + (p.old ? `<span class="tag">-${pct(p)}%</span>` : "");
   $("#qvColorName").textContent = qv.color;
-  $("#qvColors").innerHTML = p.colors.map(([n, c], i) => `<button type="button" class="${i ? "" : "on"}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("");
+  $("#qvColors").innerHTML = p.colors.map(([n, c]) => `<button type="button" class="${n === qv.color ? "on" : ""}${colorLibre(p, n) ? "" : " sw-out"}" style="background:${c}" title="${n}${colorLibre(p, n) ? "" : " (agotado)"}" aria-label="Color ${n}${colorLibre(p, n) ? "" : ", agotado"}" data-c="${n}"></button>`).join("");
   $$("#qvColors button").forEach(b => b.addEventListener("click", () => {
     $$("#qvColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    qv.color = b.dataset.c; $("#qvColorName").textContent = qv.color; setPic($("#qvImg"), colorImgs(qv.p, qv.color)[0], "(max-width:640px) 100vw, 480px"); updateQV();
+    qv.color = b.dataset.c; $("#qvColorName").textContent = qv.color; setPic($("#qvImg"), colorImgs(qv.p, qv.color)[0], "(max-width:640px) 100vw, 480px"); qvSizes(); updateQV();
   }));
-  $("#qvSizes").innerHTML = p.sizes.map(s => `<button type="button"${s === qv.size ? ' class="on"' : ""}>${s}</button>`).join("");
-  $$("#qvSizes button").forEach(b => b.addEventListener("click", () => {
-    $$("#qvSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    qv.size = b.textContent; updateQV();
-  }));
+  qvSizes();
   $("#qvMore").href = productUrl(p);
+  $("#qvAdd").disabled = !!p.agotado;
+  $("#qvAdd").lastChild.textContent = p.agotado ? "Agotado" : "Agregar al carrito";
+  $("#qvWa").hidden = !!p.agotado;
   updateQV();
   const m = $("#modal"); m.classList.add("open"); m.setAttribute("aria-hidden", "false");
   document.body.style.overflow = "hidden";
+}
+/* Tallas de la vista rápida según el color elegido (las agotadas no se pueden elegir) */
+function qvSizes() {
+  const p = qv.p;
+  if (qv.size && !tallaLibre(p, qv.size, qv.color)) qv.size = null;
+  $("#qvSizes").innerHTML = p.sizes.map(s => tallaLibre(p, s, qv.color)
+    ? `<button type="button"${s === qv.size ? ' class="on"' : ""}>${s}</button>`
+    : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("");
+  $$("#qvSizes button:not(:disabled)").forEach(b => b.addEventListener("click", () => {
+    $$("#qvSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");
+    qv.size = b.textContent; updateQV();
+  }));
 }
 function updateQV() { $("#qvWa").href = waLink(productMsg(qv.p, { size: qv.size, color: qv.color })); }
 function closeQV() {
@@ -838,6 +1038,10 @@ function initQV() {
   const m = $("#modal"); if (!m) return;
   $$("[data-close]", m).forEach(el => el.addEventListener("click", closeQV));
   guardSize($("#qvWa"), () => qv.size, $("#qvSizes"));
+  $("#qvWa")._pedido = () => {
+    const codigo = nuevoCodigo();
+    return { msg: productMsg(qv.p, { size: qv.size, color: qv.color, codigo }), ped: { codigo, origen: "producto", items: [{ slug: qv.p.slug, color: qv.color, talla: qv.size, cantidad: 1 }] } };
+  };
   $("#qvAdd").addEventListener("click", () => {
     if (!needSize(qv.size, $("#qvSizes"))) return;
     closeQV();
@@ -1282,7 +1486,8 @@ function initProducto() {
   }
   const cat = catOf(p.cat), st = styleOf(p.estilo), d = pct(p);
   const cParam = new URLSearchParams(location.search).get("c");
-  const state = { size: null, color: (p.colors.find(c => c[0] === cParam) || p.colors[0])[0], qty: 1 };
+  const state = { size: null, color: (p.colors.find(c => c[0] === cParam) || p.colors.find(([c]) => colorLibre(p, c)) || p.colors[0])[0], qty: 1 };
+  const out = !!p.agotado;
   let imgs = colorImgs(p, state.color);
   document.body.dataset.estilo = p.estilo;
   document.title = `${p.name} · ${C.store}`;
@@ -1296,7 +1501,7 @@ function initProducto() {
         <div class="gallery__thumbs" id="gThumbs">${imgs.map((f, i) => `<button type="button" class="${i ? "" : "on"}" data-i="${i}" aria-label="Ver foto ${i + 1}">${pic(f, "84px", { lazy: false })}</button>`).join("")}</div>
         <div class="gallery__wrap">
           <div class="gallery__main" id="gMain">${imgs.map((f, i) => `<figure style="background:${fotoColor(f)}">${pic(f, SZ.half, { lazy: i > 0, high: i === 0, alt: p.name + (i ? ` — foto ${i + 1}` : "") })}</figure>`).join("")}</div>
-          ${p.deal ? `<span class="tag">-${d}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : ""}
+          ${out ? `<span class="tag tag--out">Agotado</span>` : p.deal ? `<span class="tag">-${d}%</span>` : p.isNew ? `<span class="tag tag--new">Nuevo</span>` : ""}
           <div class="gallery__dots" id="gDots">${imgs.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>
         </div>
       </div>
@@ -1309,21 +1514,21 @@ function initProducto() {
         <div class="opt">
           <div class="opt-label">Color <em id="pColorName">${esc(state.color)}</em></div>
           <div class="swatches" id="pColors">${p.base
-            ? PRODUCTS.filter(x => x.base === p.base).map(x => `<a href="${productUrl(x)}" class="${x === p ? "on" : ""}" style="background:${x.colors[0][1]}" title="${x.colors[0][0]}" aria-label="Color ${x.colors[0][0]}"${x === p ? ` aria-current="page"` : ""}></a>`).join("")
-            : p.colors.map(([n, c]) => `<button type="button" class="${n === state.color ? "on" : ""}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-c="${n}"></button>`).join("")}</div>
+            ? PRODUCTS.filter(x => x.base === p.base).map(x => `<a href="${productUrl(x)}" class="${x === p ? "on" : ""}${x.agotado ? " sw-out" : ""}" style="background:${x.colors[0][1]}" title="${x.colors[0][0]}${x.agotado ? " (agotado)" : ""}" aria-label="Color ${x.colors[0][0]}${x.agotado ? ", agotado" : ""}"${x === p ? ` aria-current="page"` : ""}></a>`).join("")
+            : p.colors.map(([n, c]) => `<button type="button" class="${n === state.color ? "on" : ""}${colorLibre(p, n) ? "" : " sw-out"}" style="background:${c}" title="${n}${colorLibre(p, n) ? "" : " (agotado)"}" aria-label="Color ${n}${colorLibre(p, n) ? "" : ", agotado"}" data-c="${n}"></button>`).join("")}</div>
         </div>
         <div class="opt">
           <div class="opt-label">Talla <button type="button" class="link-btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía de tallas</button></div>
-          <div class="size-btns" id="pSizes">${p.sizes.map(s => `<button type="button" data-s="${s}">${s}</button>`).join("")}</div>
+          <div class="size-btns" id="pSizes"></div>
           <div class="guide" id="guide">${guideHTML(p, state.color)}</div>
         </div>
         <div class="opt">
           <div class="opt-label">Cantidad</div>
           <div class="pdp__actions">
             <div class="qty"><button type="button" data-q="-1" aria-label="Quitar uno">−</button><output id="pQty" aria-live="polite">1</output><button type="button" data-q="1" aria-label="Agregar uno">+</button></div>
-            <button type="button" class="btn-cart" id="pAdd">${I.bag}Agregar al carrito</button>
+            <button type="button" class="btn-cart" id="pAdd"${out ? " disabled" : ""}>${I.bag}${out ? "Agotado" : "Agregar al carrito"}</button>
           </div>
-          <a class="pdp__direct" id="pWa" href="#" target="_blank" rel="noopener">${I.wa}O pídelo directo por WhatsApp</a>
+          <a class="pdp__direct" id="pWa" href="#" target="_blank" rel="noopener">${I.wa}${out ? "Avísame cuando vuelva" : "O pídelo directo por WhatsApp"}</a>
           <p class="pdp__note">Un asesor confirmará <b>stock y talla</b> contigo antes de pagar.</p>
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
@@ -1346,7 +1551,7 @@ function initProducto() {
       <div class="track" id="trackRel"></div>
     </div>
   </section>
-  <div class="buybar"><div><small>${p.old && hasPrice(p) ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><button type="button" class="btn-cart" id="pAdd2">${I.bag}Agregar al carrito</button></div>`;
+  <div class="buybar"><div><small>${p.old && hasPrice(p) ? `Antes ${money(p.old)}` : "Precio"}</small><b>${money(p.price)}</b></div><button type="button" class="btn-cart" id="pAdd2"${out ? " disabled" : ""}>${I.bag}${out ? "Agotado" : "Agregar al carrito"}</button></div>`;
 
   // Relacionados: mismo estilo (primero otras categorías para completar el look)
   const sameStyle = PRODUCTS.filter(x => x.estilo === p.estilo && x !== p);
@@ -1379,23 +1584,38 @@ function initProducto() {
   const showGuide = () => { $("#guide").innerHTML = guideHTML(p, state.color); };
 
   // Opciones
-  const update = () => { $("#pWa").href = waLink(productMsg(p, state)); };
+  const aviso = waLink(`Hola ${C.store} 👋, quisiera saber cuándo vuelve *${p.name}*.\n\n🔗 ${absUrl(productUrl(p))}`);
+  const update = () => { $("#pWa").href = out ? aviso : waLink(productMsg(p, state)); };
+  // Tallas del color elegido: las que están en 0 se ven tachadas y no se pueden elegir
+  const pSizes = () => {
+    if (state.size && !tallaLibre(p, state.size, state.color)) state.size = null;
+    $("#pSizes").innerHTML = p.sizes.map(s => tallaLibre(p, s, state.color)
+      ? `<button type="button" data-s="${s}"${s === state.size ? ' class="on"' : ""}>${s}</button>`
+      : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("");
+  };
+  pSizes();
   $$("#pColors button").forEach(b => b.addEventListener("click", () => {
     $$("#pColors button").forEach(x => x.classList.remove("on")); b.classList.add("on");
-    state.color = b.dataset.c; $("#pColorName").textContent = state.color; showColor(); showGuide(); update();
+    state.color = b.dataset.c; $("#pColorName").textContent = state.color; showColor(); showGuide(); pSizes(); update();
   }));
-  $$("#pSizes button").forEach(b => b.addEventListener("click", () => {
+  $("#pSizes").addEventListener("click", e => {
+    const b = e.target.closest("button[data-s]"); if (!b) return;
     $$("#pSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");
     state.size = b.dataset.s; update();
-  }));
+  });
+  if (!out) $("#pWa")._pedido = () => {
+    const codigo = nuevoCodigo();
+    return { msg: productMsg(p, { ...state, codigo }), ped: { codigo, origen: "producto", items: [{ slug: p.slug, color: state.color, talla: state.size, cantidad: state.qty }] } };
+  };
   $$("[data-q]").forEach(b => b.addEventListener("click", () => {
     state.qty = Math.min(10, Math.max(1, state.qty + +b.dataset.q)); $("#pQty").textContent = state.qty; update();
   }));
   $("#guideBtn").addEventListener("click", e => {
     const open = $("#guide").classList.toggle("open"); e.currentTarget.setAttribute("aria-expanded", open);
   });
-  guardSize($("#pWa"), () => state.size, $("#pSizes"));
+  if (!out) guardSize($("#pWa"), () => state.size, $("#pSizes"));
   [$("#pAdd"), $("#pAdd2")].forEach(b => b.addEventListener("click", () => {
+    if (out) return;
     if (!needSize(state.size, $("#pSizes"))) { $("#pSizes").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     addToCart(p, { size: state.size, color: state.color, qty: state.qty });
   }));
@@ -1429,8 +1649,8 @@ function initPack() {
   function build() {
     const st = styleOf(estilo);
     document.body.dataset.estilo = estilo;
-    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && hasPrice(p) && s.tipos.includes(catOf(p.cat)?.tipo)) }));
-    sel = steps.map(() => ({ slug: null, size: null }));
+    steps = PACK.steps.map(s => ({ ...s, items: PRODUCTS.filter(p => p.estilo === estilo && hasPrice(p) && !p.agotado && s.tipos.includes(catOf(p.cat)?.tipo)) }));
+    sel = steps.map(() => ({ slug: null, color: null, size: null }));
     $$("#packStyle button").forEach(b => { const on = b.dataset.v === estilo; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
     $("#packName").textContent = `${PACK.name} ${st.name}`;
     if (steps.some(s => !s.items.length)) {
@@ -1456,22 +1676,35 @@ function initPack() {
     build();
   });
 
+  // Color y talla de la prenda elegida en un paso (las tallas agotadas de ese color no se pueden elegir)
+  function stepOpts(i) {
+    const p = findProduct(sel[i].slug), x = sel[i], z = $("#stepZ" + i);
+    z.hidden = false;
+    z.innerHTML = `${p.colors.length > 1 ? `<span>Color <em>${esc(x.color)}</em></span><div class="swatches">${p.colors.map(([n, c]) => `<button type="button" class="${n === x.color ? "on" : ""}${colorLibre(p, n) ? "" : " sw-out"}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-step="${i}" data-col="${esc(n)}"></button>`).join("")}</div>` : ""}
+      <span>Talla</span><div class="size-btns">${p.sizes.map(s => tallaLibre(p, s, x.color)
+        ? `<button type="button" data-step="${i}" data-s="${s}"${s === x.size ? ' class="on"' : ""}>${s}</button>`
+        : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("")}</div>`;
+  }
   $("#packSteps").addEventListener("click", e => {
     const pick = e.target.closest(".pick");
     if (pick) {
-      const i = +pick.dataset.step;
-      sel[i] = { slug: pick.dataset.slug, size: null };
+      const i = +pick.dataset.step, p = findProduct(pick.dataset.slug);
+      sel[i] = { slug: p.slug, color: (p.colors.find(([c]) => colorLibre(p, c)) || p.colors[0])[0], size: null };
       $$(`.pick[data-step="${i}"]`).forEach(b => { const on = b === pick; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
-      const p = findProduct(sel[i].slug), z = $("#stepZ" + i);
-      z.hidden = false;
-      z.innerHTML = `<span>Talla</span><div class="size-btns">${p.sizes.map(s => `<button type="button" data-step="${i}" data-s="${s}">${s}</button>`).join("")}</div>`;
-      update(); return;
+      stepOpts(i); update(); return;
+    }
+    const col = e.target.closest("[data-col]");
+    if (col) {
+      const i = +col.dataset.step, p = findProduct(sel[i].slug);
+      sel[i].color = col.dataset.col;
+      if (sel[i].size && !tallaLibre(p, sel[i].size, sel[i].color)) sel[i].size = null;
+      stepOpts(i); update(); return;
     }
     const sz = e.target.closest("[data-s]");
     if (sz) {
       const i = +sz.dataset.step;
       sel[i].size = sz.dataset.s;
-      $$(`#stepZ${i} button`).forEach(b => b.classList.toggle("on", b === sz));
+      $$(`#stepZ${i} .size-btns button`).forEach(b => b.classList.toggle("on", b === sz));
       update();
       const next = sel.findIndex(x => !x.slug || !x.size);
       if (next > i) setTimeout(() => $("#step" + next).scrollIntoView({ behavior: "smooth", block: "start" }), 250);
@@ -1496,7 +1729,7 @@ function initPack() {
     $("#sumList").innerHTML = steps.map((s, i) => {
       const p = chosen[i];
       return p
-        ? `<div class="summary__item">${pic(p.imgs[0], "48px", { lazy: false })}<span><b>${esc(p.name)}</b>${sel[i].size ? `Talla ${sel[i].size}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
+        ? `<div class="summary__item">${pic(colorImgs(p, sel[i].color)[0], "48px", { lazy: false })}<span><b>${esc(p.name)}</b>${p.colors.length > 1 ? `${esc(sel[i].color)} · ` : ""}${sel[i].size ? `Talla ${sel[i].size}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
         : `<div class="summary__item"><span class="ph">${i + 1}</span><span>${s.title}</span><em>—</em></div>`;
     }).join("");
     $("#sumSub").textContent = money(sub);
@@ -1508,10 +1741,16 @@ function initPack() {
     $("#pbTotal").textContent = money(total);
     $("#pbInfo").textContent = complete ? `Pack completo · −${off}%` : `${done} de ${steps.length} prendas`;
 
-    const msg = [`Hola ${C.store} 👋, quiero armar mi *${PACK.name} ${st.name}*:`, "",
-      ...chosen.map((p, i) => (p ? `${i + 1}. ${p.name} — Talla ${sel[i].size || "?"} — ${money(p.price)}` : "")),
+    const msg = codigo => [`Hola ${C.store} 👋, quiero armar mi *${PACK.name} ${st.name}*:`, `🧾 Pedido: *${codigo}*`, "",
+      ...chosen.map((p, i) => (p ? `${i + 1}. ${p.name}${p.colors.length > 1 ? ` — ${sel[i].color}` : ""} — Talla ${sel[i].size || "?"} — ${money(p.price)}` : "")),
       "", `Precio normal: ${money(sub)}`, `Precio pack (−${off}%): ${money(total)}`].join("\n");
-    [$("#sumWa"), $("#pbWa")].forEach(a => { a.href = complete ? waLink(msg) : "#"; a.setAttribute("aria-disabled", !complete); });
+    [$("#sumWa"), $("#pbWa")].forEach(a => {
+      a.href = complete ? waLink(msg("")) : "#"; a.setAttribute("aria-disabled", !complete);
+      a._pedido = complete ? () => {
+        const codigo = nuevoCodigo();
+        return { msg: msg(codigo), ped: { codigo, origen: "pack", items: sel.map(x => ({ slug: x.slug, color: x.color, talla: x.size, cantidad: 1 })) } };
+      } : null;
+    });
   }
   [$("#sumWa"), $("#pbWa")].forEach(a => a.addEventListener("click", e => {
     if (a.getAttribute("aria-disabled") === "true") {
@@ -1554,10 +1793,7 @@ function initContacto() {
     const lines = [`Hola ${C.store} 👋, les escribo desde la web.`, "", `👤 Nombre: ${v("cName")}`];
     if (v("cPhone")) lines.push(`📞 Teléfono: ${v("cPhone")}`);
     lines.push(`📌 Motivo: ${v("cTopic")}`, "", v("cMsg"));
-    const url = waLink(lines.join("\n"));
-    const w = window.open(url, "_blank");
-    if (w) w.opener = null; else location.href = url;
-    toast("Abriendo WhatsApp con tu mensaje…");
+    irAWhatsApp(waLink(lines.join("\n")), null, "Abriendo WhatsApp con tu mensaje…");
   });
   $$("#contactForm input, #contactForm textarea").forEach(f => f.addEventListener("input", () => f.closest(".field").classList.remove("err")));
 
@@ -1588,16 +1824,21 @@ function initAyuda() {
 /* =========================================================
    ARRANQUE
    ========================================================= */
-renderLayout();
-({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda }[PAGE] || (() => {}))();
-$$("[data-perks]").forEach(el => (el.innerHTML = perksHTML()));
-fillConfig();
-initHeader();
-initQV();
-initCart();
-initCarousels();
-initReveal();
-initFotos();
-if (PAGE === "coleccion") flyIn();
-else document.documentElement.classList.remove("vt-in", "vt-run");
+/* La intro no necesita precios ni stock: carga en segundo plano. Las demás páginas esperan los datos en vivo (máx. 4 s). */
+(async () => {
+  if (PAGE === "intro") cargarVivo(); else await cargarVivo();
+  renderLayout();
+  ({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda }[PAGE] || (() => {}))();
+  $$("[data-perks]").forEach(el => (el.innerHTML = perksHTML()));
+  fillConfig();
+  initHeader();
+  initQV();
+  initCart();
+  initCuenta();
+  initCarousels();
+  initReveal();
+  initFotos();
+  if (PAGE === "coleccion") flyIn();
+  else document.documentElement.classList.remove("vt-in", "vt-run");
+})();
 })();

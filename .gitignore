@@ -3,3 +3,4 @@
 _hoja/
 node_modules/
 *.zip
+dist/

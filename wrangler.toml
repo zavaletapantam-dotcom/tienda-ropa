@@ -1,0 +1,28 @@
+# Configuración del proyecto de Cloudflare Pages "maison-pe" (tienda en https://maison.pe)
+# Se publica con:  npm run publicar   (arma ./dist, sincroniza la base y sube todo)
+name = "maison-pe"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-06-01"
+
+# Base de datos real: productos, stock, pedidos, clientes, administradores y reclamos
+[[d1_databases]]
+binding = "DB"
+database_name = "maison-db"
+database_id = "8150e244-694c-4710-8fb6-d74ead370e56"
+migrations_dir = "migrations"
+
+# GOOGLE_CLIENT_ID: el "ID de cliente" de la app de Google del dueño (no es secreto).
+# GOOGLE_CLIENT_SECRET va como secreto en Cloudflare, nunca en este archivo.
+[vars]
+GOOGLE_CLIENT_ID = ""
+
+# Vistas previas (npm run publicar -- --prueba): usan una base de prueba, nunca la real
+[env.preview]
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "maison-db-prueba"
+database_id = "0059edea-83bd-4db5-a0c4-ab19b44ba272"
+migrations_dir = "migrations"
+
+[env.preview.vars]
+GOOGLE_CLIENT_ID = ""
