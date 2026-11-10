@@ -47,7 +47,7 @@ const hex = n => n.toString(16).padStart(2, "0");
   // Fotos fijas en los .html: <img data-foto="nombre.jpg" data-sizes="100vw" ...>
   const pick = (m, target) => { const ws = Object.keys(m.s).map(Number); return m.s[ws.find(w => w >= target) || ws[ws.length - 1]]; };
   const versions = {};
-  for (const f of ["assets/css/styles.css", "assets/js/marca.js", "assets/js/datos.js", "assets/js/fotos.js", "assets/js/app.js"])
+  for (const f of ["assets/css/styles.css", "assets/css/admin.css", "assets/js/marca.js", "assets/js/datos.js", "assets/js/fotos.js", "assets/js/app.js", "assets/js/admin.js"])
     versions[f] = hash(fs.readFileSync(path.join(ROOT, f)));
   for (const html of fs.readdirSync(ROOT).filter(f => f.endsWith(".html"))) {
     let s = fs.readFileSync(path.join(ROOT, html), "utf8");

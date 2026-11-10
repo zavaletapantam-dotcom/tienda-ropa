@@ -384,6 +384,7 @@ function renderLayout() {
           <div class="cart__row co__total"><span>Total</span><b id="coTotal"></b></div>
         </div>
         <button type="submit" class="btn-wa">${I.wa}Enviar pedido por WhatsApp</button>
+        <p class="co__legal">Tus datos se usan solo para gestionar tu pedido. <a href="privacidad.html">Ver Política de privacidad</a></p>
       </form>
     </aside>
   </div>
@@ -1811,6 +1812,54 @@ function initContacto() {
 }
 
 /* =========================================================
+   PÁGINA: LIBRO DE RECLAMACIONES (la hoja llega al panel, sección Reclamos)
+   ========================================================= */
+function initLibro() {
+  const form = $("#libroForm"); if (!form) return;
+  const hoy = () => new Date().toLocaleString("es-PE", { timeZone: "America/Lima", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  $("#lFecha").textContent = hoy();
+  $("#lMenor").addEventListener("change", e => { $("#lApoW").hidden = !e.target.checked; });
+  $$("input, textarea", form).forEach(f => f.addEventListener("input", () => f.closest(".field")?.classList.remove("err")));
+  const v = n => (form.elements[n].value || "").trim();
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const d = {
+      tipo: form.elements.tipo.value, nombre: v("nombre"), documento_tipo: v("documento_tipo"), documento: v("documento"), domicilio: v("domicilio"),
+      telefono: v("telefono"), email: v("email"), menor: $("#lMenor").checked, apoderado: v("apoderado"), bien: form.elements.bien.value,
+      monto: v("monto").replace(",", "."), descripcion: v("descripcion"), pedido_codigo: v("pedido_codigo").toUpperCase(), detalle: v("detalle"), pedido_consumidor: v("pedido_consumidor"),
+    };
+    const malos = ["nombre", "documento", "domicilio", "telefono", "descripcion", "detalle", "pedido_consumidor"].filter(k => !d[k]);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(d.email)) malos.push("email");
+    if (d.menor && !d.apoderado) malos.push("apoderado");
+    if (d.monto && !(+d.monto >= 0)) malos.push("monto");
+    const marcar = ks => { ks.forEach(k => form.elements[k]?.closest(".field")?.classList.add("err")); const f = form.elements[ks[0]]; if (f) f.focus(); toast("Completa los datos marcados"); };
+    if (malos.length) return marcar(malos);
+    $("#lEnviar").disabled = true;
+    try {
+      const r = await fetch("/api/reclamos", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...d, monto: d.monto === "" ? null : +d.monto }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) { if (j.campos) return marcar(j.campos); throw new Error(j.error); }
+      const fecha = new Date(j.fecha).toLocaleString("es-PE", { timeZone: "America/Lima", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      const fila = (t, x) => (x ? `<dt>${t}</dt><dd>${esc(x)}</dd>` : "");
+      form.hidden = true;
+      const ok = $("#libroOk");
+      ok.innerHTML = `<div class="libro__sello">${I.book}</div>
+        <h2>Hoja N° ${esc(j.numero)} registrada</h2>
+        <p>Te responderemos a <b>${esc(d.email)}</b> en un plazo máximo de 15 días hábiles. Guarda esta constancia.</p>
+        <dl class="libro__dl">${fila("Fecha", fecha)}${fila("Proveedor", `${C.titular} · RUC ${C.ruc}`)}${fila("Tipo", d.tipo === "reclamo" ? "Reclamo" : "Queja")}
+          ${fila("Nombre", d.nombre)}${fila("Documento", `${d.documento_tipo} ${d.documento}`)}${fila("Domicilio", d.domicilio)}${fila("Teléfono", d.telefono)}${fila("Correo", d.email)}
+          ${d.menor ? fila("Madre, padre o apoderado", d.apoderado) : ""}${fila("Bien contratado", d.bien === "producto" ? "Producto" : "Servicio")}${fila("Monto reclamado", d.monto ? money(+d.monto) : "")}
+          ${fila("Descripción", d.descripcion)}${fila("Código de pedido", d.pedido_codigo)}${fila("Detalle", d.detalle)}${fila("¿Qué solicitas?", d.pedido_consumidor)}</dl>
+        <button type="button" class="btn btn--dark" id="lPrint">Imprimir o guardar en PDF <span>→</span></button>`;
+      ok.hidden = false; ok.scrollIntoView({ behavior: "smooth", block: "start" });
+      $("#lPrint").addEventListener("click", () => print());
+    } catch (_) {
+      toast("No se pudo enviar. Revisa tu conexión e inténtalo de nuevo"); $("#lEnviar").disabled = false;
+    }
+  });
+}
+
+/* =========================================================
    PÁGINA: AYUDA (menú lateral activo)
    ========================================================= */
 function initAyuda() {
@@ -1829,7 +1878,7 @@ function initAyuda() {
 (async () => {
   if (PAGE === "intro") cargarVivo(); else await cargarVivo();
   renderLayout();
-  ({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda }[PAGE] || (() => {}))();
+  ({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda, libro: initLibro }[PAGE] || (() => {}))();
   $$("[data-perks]").forEach(el => (el.innerHTML = perksHTML()));
   fillConfig();
   initHeader();

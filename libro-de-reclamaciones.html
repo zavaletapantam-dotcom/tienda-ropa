@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Libro de Reclamaciones · MAISON</title>
+<meta name="description" content="Libro de Reclamaciones virtual de MAISON conforme al Código de Protección y Defensa del Consumidor.">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MAISON">
+<meta property="og:title" content="Libro de Reclamaciones · MAISON">
+<meta property="og:description" content="Registra tu reclamo o queja.">
+<meta property="og:image" content="https://maison.pe/img/og-maison-2.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="assets/fonts/jost-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/cormorant-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css?v=def32ffc">
+</head>
+<body data-page="libro">
+
+<main>
+  <section class="page-hero">
+    <img src="img/business-plomo-a-800.aef59231.webp" srcset="img/business-plomo-a-400.f3b34046.webp 400w, img/business-plomo-a-800.aef59231.webp 800w, img/business-plomo-a-1200.712e76fa.webp 1200w, img/business-plomo-a-1600.2017bd71.webp 1600w" sizes="100vw" decoding="async" data-foto="business-plomo-a.webp" data-sizes="100vw" alt="" fetchpriority="high">
+    <div class="wrap">
+      <nav class="crumbs" aria-label="Ruta"><a href="index.html#elegir">Inicio</a><span aria-hidden="true">/</span><a href="ayuda.html">Ayuda</a><span aria-hidden="true">/</span><span>Libro de Reclamaciones</span></nav>
+      <h1>Libro de Reclamaciones</h1>
+      <p>Hoja de reclamación virtual</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap libro">
+      <div class="libro__prov">
+        <div><small>Fecha</small><b id="lFecha"></b></div>
+        <div><small>Proveedor</small><b><span data-c="titular">Daniel Samir Zolorzano Chavez</span> · RUC <span data-c="ruc">10764152285</span></b></div>
+        <div><small>Domicilio</small><b data-c="domicilioLegal">Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Nuevo Chimbote, Santa, Áncash</b></div>
+      </div>
+
+      <form class="form libro__form" id="libroForm" novalidate>
+        <fieldset>
+          <legend>1. Tus datos</legend>
+          <div class="field"><label for="lNombre">Nombre completo *</label><input id="lNombre" name="nombre" autocomplete="name" maxlength="120"><span class="msg">Escribe tu nombre completo</span></div>
+          <div class="libro__row">
+            <div class="field"><label for="lDocT">Documento *</label><select id="lDocT" name="documento_tipo"><option>DNI</option><option value="CE">Carné de extranjería</option><option>Pasaporte</option><option>RUC</option></select></div>
+            <div class="field"><label for="lDoc">Número *</label><input id="lDoc" name="documento" inputmode="numeric" maxlength="20"><span class="msg">Escribe el número de tu documento</span></div>
+          </div>
+          <div class="field"><label for="lDom">Domicilio *</label><input id="lDom" name="domicilio" autocomplete="street-address" maxlength="200"><span class="msg">Escribe tu domicilio</span></div>
+          <div class="libro__row">
+            <div class="field"><label for="lTel">Teléfono *</label><input id="lTel" name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="30"><span class="msg">Escribe tu teléfono</span></div>
+            <div class="field"><label for="lEmail">Correo *</label><input id="lEmail" name="email" type="email" autocomplete="email" maxlength="254"><span class="msg">Escribe un correo válido</span></div>
+          </div>
+          <label class="libro__chk"><input type="checkbox" id="lMenor" name="menor"> Soy menor de edad</label>
+          <div class="field" id="lApoW" hidden><label for="lApo">Nombre de tu madre, padre o apoderado *</label><input id="lApo" name="apoderado" maxlength="160"><span class="msg">Escribe el nombre de tu madre, padre o apoderado</span></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>2. Lo que compraste o contrataste</legend>
+          <div class="libro__opts" role="radiogroup" aria-label="Producto o servicio">
+            <label><input type="radio" name="bien" value="producto" checked> Producto</label>
+            <label><input type="radio" name="bien" value="servicio"> Servicio</label>
+          </div>
+          <div class="libro__row">
+            <div class="field"><label for="lMonto">Monto reclamado (S/)</label><input id="lMonto" name="monto" inputmode="decimal" maxlength="12"><span class="msg">Escribe un monto válido</span></div>
+            <div class="field"><label for="lPed">Código de pedido</label><input id="lPed" name="pedido_codigo" maxlength="20" placeholder="Ej. MS7K2QXA"></div>
+          </div>
+          <div class="field"><label for="lDesc">Descripción *</label><input id="lDesc" name="descripcion" maxlength="300" placeholder="Ej. Polo Luxury Verde, talla M"><span class="msg">Cuéntanos qué compraste o contrataste</span></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>3. Tu reclamo o queja</legend>
+          <div class="libro__tipos" role="radiogroup" aria-label="Tipo">
+            <label><input type="radio" name="tipo" value="reclamo" checked><span><b>Reclamo</b>No estás conforme con un producto o servicio.</span></label>
+            <label><input type="radio" name="tipo" value="queja"><span><b>Queja</b>No estás conforme con algo que no es el producto o servicio, o con la atención que recibiste.</span></label>
+          </div>
+          <div class="field"><label for="lDet">Detalle *</label><textarea id="lDet" name="detalle" maxlength="2500"></textarea><span class="msg">Cuéntanos qué pasó</span></div>
+          <div class="field"><label for="lPide">¿Qué solicitas? *</label><textarea id="lPide" name="pedido_consumidor" maxlength="1200"></textarea><span class="msg">Cuéntanos qué solicitas</span></div>
+        </fieldset>
+
+        <p class="libro__nota">Presentar un reclamo no te impide acudir a otras vías ni es requisito para denunciar ante el Indecopi. Responderemos en un plazo máximo de 15 días hábiles.</p>
+        <button type="submit" class="btn btn--dark" id="lEnviar">Enviar hoja de reclamación <span>→</span></button>
+      </form>
+
+      <div class="libro__ok" id="libroOk" hidden></div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/js/marca.js?v=b0e3f4c3"></script>
+<script src="assets/js/datos.js?v=30bb8fc9"></script>
+<script src="assets/js/fotos.js?v=e7bda862"></script>
+<script src="assets/js/app.js?v=8b406195"></script>
+</body>
+</html>
