@@ -434,6 +434,7 @@ function coOptHTML(value, icon, title, lines) {
 function fillConfig() {
   const v = {
     store: C.store, email: C.email, city: C.city, hours: C.hours, whatsapp: waPretty(), tagline: C.tagline,
+    titular: C.titular, ruc: C.ruc, domicilioLegal: C.domicilioLegal,
     envio: money(C.envio), envioGratisDesde: money(C.envioGratisDesde), entrega: C.entrega, pagos: PAGOS, recojo: C.recojo ? C.recojo + (C.recojoRef ? ` (${C.recojoRef})` : "") : "Dirección por confirmar",
     diasCambio: C.diasCambio,
     packDiscount: Math.round(PACK.discount * 100) + "%",
