@@ -193,26 +193,28 @@ async function pantallaActivar(token) {
   }
   $("#app").innerHTML = `<div class="gate"><form class="gate__box" id="fAct" novalidate>
     <div class="gate__logo">${logoSVG("stacked")}</div>
-    <h1>Hola, ${esc(nombre.split(" ")[0])}</h1>
-    <p class="gate__lead">Crea tu acceso al panel de MAISON</p>
+    <h1>Crea tu acceso</h1>
+    <p class="gate__lead">Panel de MAISON</p>
+    <div class="f"><label for="aN">Tu nombre</label><input class="inp" id="aN" autocomplete="name" maxlength="60" value="${esc(nombre)}"></div>
     <div class="f"><label for="aU">Usuario</label><input class="inp" id="aU" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ej. daniel"></div>
     <div class="f"><label for="aC">Contraseña</label><input class="inp" id="aC" type="password" autocomplete="new-password" placeholder="Mínimo 10 caracteres"></div>
     <div class="f"><label for="aC2">Repite la contraseña</label><input class="inp" id="aC2" type="password" autocomplete="new-password"></div>
     <p class="alert alert--bad" id="aErr" hidden></p>
     <button class="btn btn--pri btn--full" id="aBtn">Crear mi acceso</button>
   </form></div>`;
-  $("#aU").focus();
+  $("#aN").focus(); $("#aN").select();
   $("#fAct").addEventListener("submit", async e => {
     e.preventDefault();
-    const u = $("#aU").value.trim().toLowerCase(), c = $("#aC").value, err = $("#aErr");
+    const n = $("#aN").value.trim(), u = $("#aU").value.trim().toLowerCase(), c = $("#aC").value, err = $("#aErr");
     const mal = t => { err.textContent = t; err.hidden = false; };
+    if (n.length < 2) return mal("Escribe tu nombre.");
     if (!/^[a-z0-9._-]{3,30}$/.test(u)) return mal(MSG.usuario_invalido);
     if (c.length < 10) return mal(MSG.clave_corta);
     if (c !== $("#aC2").value) return mal("Las contraseñas no coinciden.");
     $("#aBtn").disabled = true; err.hidden = true;
     try {
-      await api("activar", { method: "POST", body: { token, usuario: u, clave: c } });
-      limpiar(); YO = await api("yo"); armar(); toast(`Listo, ${nombre.split(" ")[0]}. Tu acceso quedó creado.`);
+      await api("activar", { method: "POST", body: { token, nombre: n, usuario: u, clave: c } });
+      limpiar(); YO = await api("yo"); armar(); toast(`Listo, ${n.split(" ")[0]}. Tu acceso quedó creado.`);
     } catch (x) { mal(msg(x)); $("#aBtn").disabled = false; }
   });
 }

@@ -80,17 +80,18 @@ export async function activar({ env, request }) {
   const inv = await env.DB.prepare("SELECT nombre FROM invitaciones WHERE token = ? AND usada IS NULL AND expira > datetime('now')").bind(resumen).first();
   if (!inv) throw new ErrorHttp(404, "enlace_vencido");
   const usuario = String(b.usuario || "").trim().toLowerCase(), clave = String(b.clave || "");
+  const nombre = texto(b.nombre, 60) || inv.nombre; // el nombre con el que aparece en el panel y en el historial
   if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) throw new ErrorHttp(400, "usuario_invalido");
   if (clave.length < 10 || clave.length > 200) throw new ErrorHttp(400, "clave_corta");
   if (clave.toLowerCase().includes(usuario)) throw new ErrorHttp(400, "clave_con_usuario");
   if (await env.DB.prepare("SELECT 1 FROM admins WHERE usuario = ?").bind(usuario).first()) throw new ErrorHttp(409, "usuario_existe");
   const hash = await cifrarClave(clave);
   const [nuevo] = await env.DB.batch([
-    env.DB.prepare("INSERT INTO admins (usuario, nombre, clave, ultimo_acceso) VALUES (?, ?, ?, datetime('now')) RETURNING id").bind(usuario, inv.nombre, hash),
+    env.DB.prepare("INSERT INTO admins (usuario, nombre, clave, ultimo_acceso) VALUES (?, ?, ?, datetime('now')) RETURNING id").bind(usuario, nombre, hash),
     env.DB.prepare("UPDATE invitaciones SET usada = datetime('now'), admin_id = (SELECT id FROM admins WHERE usuario = ?) WHERE token = ?").bind(usuario, resumen),
   ]);
   const token = await crearSesion(env, "admin", nuevo.results[0].id, HORAS_SESION);
-  return json({ ok: true, nombre: inv.nombre }, 200, { "set-cookie": sesionCookie(token) });
+  return json({ ok: true, nombre }, 200, { "set-cookie": sesionCookie(token) });
 }
 
 /* ---------- Resumen ---------- */
