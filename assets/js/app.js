@@ -262,8 +262,9 @@ function renderLayout() {
           <h2>Ayuda</h2>
           <a class="js-wa" href="#" target="_blank" rel="noopener">WhatsApp: ${waPretty()}</a>
           <a href="mailto:${C.email}">${esc(C.email)}</a>
-          <a href="ayuda.html#terminos">Términos y condiciones</a>
-          <a href="ayuda.html#privacidad">Políticas de privacidad</a>
+          <a href="terminos.html">Términos y condiciones</a>
+          <a href="privacidad.html">Política de privacidad</a>
+          <a href="datos.html">Uso de datos</a>
           <a href="ayuda.html#reclamaciones">Libro de reclamaciones</a>
         </div>
       </div>
@@ -364,6 +365,7 @@ function coOptHTML(value, icon, title, lines) {
 function fillConfig() {
   const v = {
     store: C.store, email: C.email, city: C.city, hours: C.hours, whatsapp: waPretty(), tagline: C.tagline,
+    titular: C.titular, ruc: C.ruc, domicilioLegal: C.domicilioLegal,
     envio: money(C.envio), envioGratisDesde: money(C.envioGratisDesde), entrega: C.entrega, pagos: PAGOS, recojo: C.recojo ? C.recojo + (C.recojoRef ? ` (${C.recojoRef})` : "") : "Dirección por confirmar",
     diasCambio: C.diasCambio,
     packDiscount: Math.round(PACK.discount * 100) + "%",

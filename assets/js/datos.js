@@ -10,7 +10,11 @@ window.CONFIG = {
   store: "MAISON",
   tagline: "Dos mundos · Una sola esencia",
   email: "maison.pe.dandy@gmail.com",
-  city: "Chimbote, Perú",
+  city: "Nuevo Chimbote, Perú",
+  // Responsable de la tienda (aparece en Términos, Privacidad, Uso de datos y Libro de Reclamaciones)
+  titular: "Daniel Samir Zolorzano Chavez",
+  ruc: "10764152285",
+  domicilioLegal: "Urb. Bellamar 2da. Etapa, Mz. T5 Lote 4, Nuevo Chimbote, Santa, Áncash",
   hours: "Atención 24 horas",
   envio: 10,                 // envío a domicilio (S/)
   envioGratisDesde: 200,     // envío gratis desde este monto

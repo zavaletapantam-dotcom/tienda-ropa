@@ -45,3 +45,10 @@ Hacerlo con el Gmail de la tienda: **maison.pe.dandy@gmail.com**.
 
 Opcional: en **IAM y administración**, agregar a **zavaletapantam@gmail.com** como **Editor**.
 Si Google pide verificar que maison.pe es de la tienda, se agrega un registro TXT en el DNS de Cloudflare.
+
+## Pendientes
+- **Visto bueno del dueño** a Términos y condiciones, Política de privacidad y Uso de datos (publicados el 10/11/2026 en maison.pe/terminos, /privacidad y /datos).
+- **Registro del banco de datos de clientes** ante la Autoridad Nacional de Protección de Datos Personales (Ministerio de Justicia). Lo hace el dueño. Con el código de inscripción, se agrega en la Política de privacidad, punto 1.
+- **Ruleta de descuentos:** antes de lanzarla, confirmar con un contador si una promoción que depende del azar necesita autorización del Ministerio del Interior. Si se aprueba, se redactan sus condiciones y se menciona en Términos (punto 9).
+- **Libro de Reclamaciones virtual** con formulario y número correlativo, conectado al panel (rama `panel-admin`). Hasta entonces, los reclamos se reciben por correo (Ayuda → Libro de reclamaciones).
+- **Copia automática del reclamo al correo del cliente:** requiere el plan Workers Paid de Cloudflare (US$5 al mes).
