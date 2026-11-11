@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>App de Google para las cuentas de clientes · MAISON</title>
+<link rel="stylesheet" href="../registro-datos-personales/estilo.css">
+<style>
+  .paso{border:1px solid #DCE3E2;border-radius:8px;padding:14px 16px 6px;margin:0 0 12px;break-inside:avoid}
+  .paso h2{margin:0 0 8px;display:flex;align-items:center;gap:10px;font-size:15.5pt}
+  .paso h2::before{content:"";width:16px;height:16px;border:1.5px solid #014D4E;border-radius:3px;flex:none}
+  .paso ul{list-style:none;padding:0}
+  .paso li{padding-left:16px;position:relative}
+  .paso li::before{content:"";position:absolute;left:2px;top:.62em;width:5px;height:5px;border-radius:50%;background:#014D4E}
+  code{font-family:Consolas,"Courier New",monospace;background:#EEF4F3;padding:1px 6px;border-radius:4px;font-size:10pt;word-break:break-all}
+  .ojo{background:#FFF4DD;border-left-color:#B7791F}
+</style>
+</head>
+<body>
+<header class="doc">
+  <div class="marca">MAISON</div>
+  <h1>App de Google para las cuentas de clientes</h1>
+  <p>Paso a paso para el dueño · Permite que los clientes creen su cuenta en maison.pe y entren con su Gmail</p>
+</header>
+
+<div class="caja"><b>Antes de empezar:</b> hazlo desde una computadora y con el Gmail de la tienda, <b>maison.pe.dandy@gmail.com</b>. Toma unos 15 minutos. Marca cada recuadro cuando termines ese paso.</div>
+
+<section class="paso">
+  <h2>1. Crear el proyecto</h2>
+  <ul>
+    <li>Entra a <code>console.cloud.google.com</code> y acepta los términos.</li>
+    <li>Arriba, en <b>Seleccionar proyecto</b>, toca <b>Proyecto nuevo</b>.</li>
+    <li>Nombre del proyecto: <b>MAISON</b>. Toca <b>Crear</b> y déjalo seleccionado.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>2. Configurar el inicio de sesión</h2>
+  <ul>
+    <li>En el menú, entra a <b>Google Auth Platform</b> y toca <b>Comenzar</b>.</li>
+    <li>Nombre de la app: <b>MAISON</b></li>
+    <li>Correo de asistencia: <b>maison.pe.dandy@gmail.com</b></li>
+    <li>Público: <b>Externo</b></li>
+    <li>Información de contacto: <b>maison.pe.dandy@gmail.com</b></li>
+    <li>Acepta la política y toca <b>Crear</b>.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>3. Desarrollo de la marca</h2>
+  <ul>
+    <li>Página principal de la aplicación: <code>https://maison.pe</code></li>
+    <li>Política de privacidad: <code>https://maison.pe/privacidad</code></li>
+    <li>Condiciones del servicio: <code>https://maison.pe/terminos</code></li>
+    <li>Dominio autorizado: <code>maison.pe</code></li>
+    <li><b>No subas logo por ahora:</b> si lo subes, Google lo revisa y puede demorar varios días.</li>
+    <li>Toca <b>Guardar</b>.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>4. Acceso a los datos</h2>
+  <ul>
+    <li>Toca <b>Agregar o quitar permisos</b> y marca solo estos tres:</li>
+    <li><code>openid</code></li>
+    <li><code>.../auth/userinfo.email</code></li>
+    <li><code>.../auth/userinfo.profile</code></li>
+    <li>Toca <b>Actualizar</b> y luego <b>Guardar</b>.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>5. Crear el cliente</h2>
+  <ul>
+    <li>Entra a <b>Clientes</b> y toca <b>Crear cliente</b>.</li>
+    <li>Tipo de aplicación: <b>Aplicación web</b>. Nombre: <b>MAISON web</b>.</li>
+    <li>Orígenes de JavaScript autorizados: <code>https://maison.pe</code></li>
+    <li>URI de redireccionamiento autorizados: <code>https://maison.pe/api/auth/google/callback</code></li>
+    <li>Toca <b>Crear</b>. Copia las direcciones tal cual: un solo carácter distinto hace que no funcione.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>6. Copiar las dos claves</h2>
+  <ul>
+    <li>Al crear el cliente, Google muestra el <b>ID de cliente</b> y el <b>Secreto de cliente</b>. Descarga el archivo o cópialos en un lugar seguro.</li>
+    <li>Si cierras esa ventana, los encuentras otra vez en <b>Clientes</b>, tocando <b>MAISON web</b>.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>7. Publicar la app</h2>
+  <ul>
+    <li>Entra a <b>Público</b>, toca <b>Publicar app</b> y confirma.</li>
+    <li>Si se queda en "Prueba", solo podrán entrar 100 correos agregados a mano.</li>
+  </ul>
+</section>
+
+<section class="paso">
+  <h2>8. Dar acceso al encargado de la página (opcional)</h2>
+  <ul>
+    <li>En <b>IAM y administración</b>, toca <b>Otorgar acceso</b>.</li>
+    <li>Agrega a <b>zavaletapantam@gmail.com</b> con el rol <b>Editor</b>, para que pueda hacer ajustes sin pedirte tu cuenta.</li>
+  </ul>
+</section>
+
+<div class="caja ojo">
+  <b>Cómo pasar las claves</b>
+  <ul style="margin-top:6px">
+    <li><b>ID de cliente</b> (termina en <code>.apps.googleusercontent.com</code>): no es secreto. Pásalo al encargado de la página.</li>
+    <li><b>Secreto de cliente</b>: es como una contraseña. No lo mandes por grupos ni lo pegues en ningún chat. Pásalo en privado a la persona que lo guardará en Cloudflare.</li>
+    <li>Si Google te pide <b>verificar que maison.pe es de la tienda</b>, te dará un código: pásalo al encargado para agregarlo en el DNS.</li>
+  </ul>
+</div>
+
+<footer class="pie">MAISON · Daniel Samir Zolorzano Chavez · RUC 10764152285 · maison.pe · Esta app solo sirve para que los clientes creen su cuenta; el panel de la tienda no la usa.</footer>
+</body></html>
