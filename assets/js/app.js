@@ -228,7 +228,7 @@ function renderLayout() {
   const top = `
   ${SPRITE}
   <div class="topbar" aria-hidden="true"><div class="topbar__track">${[
-    "Envío a domicilio o recojo en tienda", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Badass y Martir Atelier",
+    C.recojoActivo ? "Envío a domicilio o recojo en tienda" : "Envío a domicilio y a provincia", `Envío gratis desde ${money(C.envioGratisDesde)}`, "Badass y Martir Atelier",
     "Atención personalizada por WhatsApp", `Cambios hasta ${C.diasCambio} días después`,
   ].map(t => `<span>${t}</span>`).join("").repeat(2)}</div></div>
   <header class="header" id="header">
@@ -344,7 +344,7 @@ function renderLayout() {
       <div class="cart__foot" id="cartFoot">
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
         <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
-        <p class="cart__note">En el siguiente paso eliges <b>envío a domicilio</b> (${C.distritos.map(esc).join(" y ")}), <b>recojo en tienda</b> o <b>envío a provincia</b> por ${esc(C.courier)}.</p>
+        <p class="cart__note">En el siguiente paso eliges <b>envío a domicilio</b> (${C.distritos.map(esc).join(" y ")})${C.recojoActivo ? ", <b>recojo en tienda</b>" : ""} o <b>envío a provincia</b> por ${esc(C.courier)}.</p>
         <p class="cart__warn" id="cartWarn" hidden>Quita las prendas agotadas para continuar</p>
         <button type="button" class="btn-wa" id="cartNext">${I.wa}Comprar con un asesor</button>
         <div class="cart__links"><button type="button" data-cart-close>Seguir comprando</button><button type="button" id="cartClear">${I.trash}Vaciar carrito</button></div>
@@ -354,7 +354,7 @@ function renderLayout() {
         <h3>¿Cómo quieres recibir tu pedido?</h3>
         <div class="co__opts" role="radiogroup" aria-label="Forma de entrega">
           ${coOptHTML("domicilio", I.truck, "Envío a domicilio", [`Solo ${C.distritos.map(esc).join(" y ")}`, envioTxt(), `Llega en ${C.entrega}`])}
-          ${coOptHTML("recojo", I.store, "Recojo en tienda", ["Sin costo", esc(C.recojo || "Dirección por confirmar") + (C.recojoRef ? ` (${esc(C.recojoRef)})` : "")])}
+          ${!C.recojoActivo ? "" : coOptHTML("recojo", I.store, "Recojo en tienda", ["Sin costo", esc(C.recojo || "Dirección por confirmar") + (C.recojoRef ? ` (${esc(C.recojoRef)})` : "")])}
           ${coOptHTML("provincia", I.box, "Envío a provincia", [`A todo el Perú por ${esc(C.courier)}`, `Recoges tu pedido en la agencia ${esc(C.courier)} que elijas`, esc(C.provinciaCosto)])}
         </div>
         <p class="co__hint" id="coHint">Elige una opción para continuar</p>
@@ -442,6 +442,9 @@ function fillConfig() {
   };
   $$("[data-c]").forEach(el => { if (el.dataset.c in v) el.textContent = v[el.dataset.c]; });
   $$(".js-wa").forEach(a => { if (!a.dataset.msg) a.href = waLink(generalMsg()); });
+  // Recojo en tienda: textos fijos de las páginas que se muestran u ocultan según CONFIG.recojoActivo
+  $$("[data-recojo]").forEach(el => (el.hidden = !C.recojoActivo));
+  $$("[data-sin-recojo]").forEach(el => (el.hidden = !!C.recojoActivo));
   $$("[data-logo]").forEach(el => (el.innerHTML = logoSVG(el.dataset.logo, el.dataset.logoClass || "")));
 }
 
@@ -531,7 +534,7 @@ function arrowsHTML(forId) {
 function perksHTML() {
   const items = [
     [I.truck, "Envío a domicilio", `${envioTxt()}`],
-    [I.pin, "Recojo en tienda", "Sin costo adicional"],
+    C.recojoActivo ? [I.pin, "Recojo en tienda", "Sin costo adicional"] : [I.box, "Envío a provincia", `A todo el Perú por ${C.courier}`],
     [I.clock, "Entrega rápida", `De ${C.entrega} como máximo`],
     [I.swap, "Cambios", `Hasta ${C.diasCambio} días después de tu compra`],
     [I.card, "Pagos", "Débito, Yape, Plin y transferencia"],
@@ -1535,14 +1538,14 @@ function initProducto() {
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
         <div class="pdp__trust">
-          <div>${I.truck}<span><b>Envío a domicilio</b> en ${C.distritos.map(esc).join(" y ")}: ${envioTxt()}. Llega en ${C.entrega}. También puedes <b>recoger en tienda</b> o pedir <b>envío a provincia</b> por ${esc(C.courier)}.</span></div>
+          <div>${I.truck}<span><b>Envío a domicilio</b> en ${C.distritos.map(esc).join(" y ")}: ${envioTxt()}. Llega en ${C.entrega}. También puedes ${C.recojoActivo ? "<b>recoger en tienda</b> o " : ""}pedir <b>envío a provincia</b> por ${esc(C.courier)}.</span></div>
           <div>${I.swap}<span><b>Cambios</b> hasta ${C.diasCambio} días después de recibir tu pedido</span></div>
           <div>${I.card}<span><b>Paga como prefieras:</b> ${PAGOS.charAt(0).toLowerCase() + PAGOS.slice(1)}</span></div>
         </div>
         <div class="acc">
           <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd>${p.material ? `<dt>Material</dt><dd>${esc(p.material)}</dd>` : ""}<dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
-          <details><summary>Envíos y cambios</summary><div class="acc__body">Envío a domicilio: ${envioTxt()}, en ${C.entrega} como máximo. Recojo en tienda sin costo. Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
+          <details><summary>Envíos y cambios</summary><div class="acc__body">Envío a domicilio: ${envioTxt()}, en ${C.entrega} como máximo.${C.recojoActivo ? " Recojo en tienda sin costo." : ""} Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
       </div>
     </div>
@@ -1772,7 +1775,7 @@ function initContacto() {
   $("#contactCards").innerHTML = `
     <a class="c-card c-card--wa js-wa" href="#" target="_blank" rel="noopener">${I.wa}<span><small>WhatsApp</small><b>${waPretty()}</b></span><span class="copy">Escribir</span></a>
     <div class="c-card">${I.mail}<span><small>Correo</small><b>${esc(C.email)}</b></span><button type="button" class="copy" data-copy="${esc(C.email)}">Copiar</button></div>
-    <div class="c-card">${I.pin}<span><small>Tienda (recojo)</small><b>${esc(C.recojo || C.city)}</b>${C.recojoRef ? `<small>${esc(C.recojoRef)} · ${esc(C.city)}</small>` : ""}</span></div>
+    ${!C.recojoActivo ? "" : `<div class="c-card">${I.pin}<span><small>Tienda (recojo)</small><b>${esc(C.recojo || C.city)}</b>${C.recojoRef ? `<small>${esc(C.recojoRef)} · ${esc(C.city)}</small>` : ""}</span></div>`}
     <div class="c-card">${I.clock}<span><small>Horario</small><b>${esc(C.hours)}</b></span></div>`;
   $("#contactSocial").innerHTML = socialLinks();
   $$("[data-copy]").forEach(b => b.addEventListener("click", async () => {
@@ -1800,7 +1803,7 @@ function initContacto() {
   $$("#contactForm input, #contactForm textarea").forEach(f => f.addEventListener("input", () => f.closest(".field").classList.remove("err")));
 
   const faqs = [
-    ["¿Cuánto cuesta el envío?", `El envío a domicilio cuesta ${money(C.envio)} y es gratis en compras desde ${money(C.envioGratisDesde)}. También puedes recoger tu pedido en tienda sin costo.`],
+    ["¿Cuánto cuesta el envío?", `El envío a domicilio cuesta ${money(C.envio)} y es gratis en compras desde ${money(C.envioGratisDesde)}.${C.recojoActivo ? " También puedes recoger tu pedido en tienda sin costo." : ` También enviamos a todo el Perú por ${C.courier}.`}`],
     ["¿Cuánto demora mi pedido?", `Con envío a domicilio, tu pedido se entrega de ${C.entrega} como máximo.`],
     ["¿Qué diferencia hay entre Badass y Martir Atelier?", "Badass es el lado urbano, cómodo y expresivo: Bassic (lo básico, siempre) y Bleesst (el lado más atrevido). Martir Atelier es el lado refinado y estructurado, con la colección Maison × Uomo Cattivo. Una misma persona puede ser ambos: combina prendas de los dos mundos."],
     ["¿Cómo sé cuál es mi talla?", "Cada producto tiene su guía de tallas con medidas en centímetros. Si tienes dudas, escríbenos por WhatsApp con tu altura y peso y te recomendamos la mejor talla."],
