@@ -1812,6 +1812,103 @@ function initContacto() {
 }
 
 /* =========================================================
+   PÁGINA: MI CUENTA (historial, promociones, cerrar sesión y eliminar cuenta)
+   ========================================================= */
+const ESTADO_PEDIDO = { pendiente: "En confirmación", procede: "Confirmado", cancelado: "Cancelado" };
+function cuentaApi(method = "GET", body) {
+  return fetch("/api/cuenta", {
+    method, credentials: "same-origin", cache: "no-store",
+    headers: { "x-maison": "1", ...(body ? { "content-type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(async r => ({ ok: r.ok, status: r.status, j: await r.json().catch(() => ({})) }), () => ({ ok: false, status: 0, j: {} }));
+}
+/* Confirmación propia (misma ventana con fondo borroso que la de cuenta) */
+function confirmarCuenta({ titulo, texto, ok }) {
+  return new Promise(resolve => {
+    const d = document.createElement("div");
+    d.className = "acc-modal";
+    d.innerHTML = `<div class="acc-modal__bg" data-x></div><div class="acc-modal__box acc-modal__box--sm" role="dialog" aria-modal="true" aria-label="${esc(titulo)}">
+      <button type="button" class="acc-modal__x" data-x aria-label="Cerrar">${I.close}</button>
+      <h2>${esc(titulo)}</h2><p class="acc-modal__lead">${esc(texto)}</p>
+      <button type="button" class="acct-peligro" data-ok>${esc(ok)}</button><button type="button" class="acc-skip" data-x>Cancelar</button></div>`;
+    document.body.append(d);
+    requestAnimationFrame(() => { d.classList.add("open"); bloquearScroll(true); });
+    const fin = v => { d.classList.remove("open"); bloquearScroll(false); removeEventListener("keydown", tecla); setTimeout(() => d.remove(), 400); resolve(v); };
+    const tecla = e => { if (e.key === "Escape") fin(false); };
+    addEventListener("keydown", tecla);
+    $$("[data-x]", d).forEach(b => b.addEventListener("click", () => fin(false)));
+    $("[data-ok]", d).addEventListener("click", () => fin(true));
+  });
+}
+async function initMiCuenta() {
+  const root = $("#cuenta"); if (!root) return;
+  const sinCuenta = (titulo, texto) => {
+    $("#acctTitulo").textContent = "Mi cuenta";
+    root.innerHTML = `<div class="acct-vacio">
+      <div class="acct-vacio__mark">${logoSVG("mark", "logo-ink")}</div>
+      <h2>${titulo || (SES.google ? "Tu cuenta MAISON" : "Muy pronto")}</h2>
+      <p>${texto || (SES.google ? "Crea tu cuenta con Google: guarda tu historial y recibe descuentos según tus compras." : "Muy pronto podrás crear tu cuenta y ver aquí tu historial de compras.")}</p>
+      ${SES.google ? `<button type="button" class="btn btn--dark" id="acctCrear">Crear cuenta o iniciar sesión <span>→</span></button>` : `<a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a>`}
+    </div>`;
+    $("#acctCrear")?.addEventListener("click", () => abrirCuentaModal());
+  };
+  if (!SES.cliente) return sinCuenta();
+  const r = await cuentaApi();
+  if (!r.ok) { SES.cliente = null; mostrarCuenta(); return sinCuenta(); }
+  const { cliente: c, compras, pedidos } = r.j;
+  const nombre = c.nombre || c.email, primero = nombre.split(" ")[0];
+  const desde = new Date(c.desde).toLocaleDateString("es-PE", { timeZone: "America/Lima", month: "long", year: "numeric" });
+  const fecha = iso => new Date(iso).toLocaleDateString("es-PE", { timeZone: "America/Lima", day: "numeric", month: "long", year: "numeric" });
+  const imgItem = i => { const p = findProduct(i.slug); return p ? pic(colorImgs(p, i.color)[0], "64px", { alt: i.nombre }) : ""; };
+  $("#acctTitulo").textContent = `Hola, ${primero}`;
+  root.innerHTML = `<div class="acct">
+    <aside class="acct__perfil">
+      <div class="acct__foto">${c.foto ? `<img src="${esc(c.foto)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(primero[0].toUpperCase())}</span>`}</div>
+      <h2>${esc(nombre)}</h2>
+      <p class="acct__mail">${esc(c.email)}</p>
+      <p class="acct__desde">Cliente desde ${esc(desde)}</p>
+      <div class="acct__stats"><div><b>${money(compras.total)}</b><span>En compras</span></div><div><b>${compras.pedidos}</b><span>${compras.pedidos === 1 ? "Pedido confirmado" : "Pedidos confirmados"}</span></div></div>
+      <label class="acct__switch"><input type="checkbox" id="acctPromos"${c.promos ? " checked" : ""}><span class="acct__sw" aria-hidden="true"></span><span>Recibir promociones</span></label>
+      <button type="button" class="btn btn--outline acct__salir" id="acctSalir">Cerrar sesión</button>
+      <button type="button" class="acct__borrar" id="acctBorrar">Eliminar mi cuenta</button>
+    </aside>
+    <section class="acct__hist">
+      <h2>Mis pedidos</h2>
+      ${pedidos.length ? pedidos.map(p => `<article class="acct__ped">
+        <header><b>${esc(p.codigo)}</b><span>${fecha(p.fecha)}</span><span class="acct__est acct__est--${p.estado}">${ESTADO_PEDIDO[p.estado] || p.estado}</span></header>
+        <ul>${p.items.map(i => `<li>${imgItem(i)}<span><b>${esc(i.nombre)}</b>${esc(i.color)} · Talla ${esc(i.talla)} × ${i.cantidad}</span><em>${i.precio == null ? "A consultar" : money(i.precio * i.cantidad)}</em></li>`).join("")}</ul>
+        <footer>${p.descuento ? `<span>Descuento −${money(p.descuento)}</span>` : ""}${p.envio ? `<span>Envío ${money(p.envio)}</span>` : ""}<span>Total <b>${money(p.total)}</b>${p.consultar ? " + a consultar" : ""}</span></footer>
+      </article>`).join("") : `<div class="acct-vacio acct-vacio--sm"><h3>Todavía no tienes pedidos</h3><p>Cuando hagas un pedido con tu cuenta abierta, aparecerá aquí.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`}
+    </section>
+  </div>`;
+
+  $("#acctPromos").addEventListener("change", async e => {
+    const quiere = e.target.checked;
+    const x = await cuentaApi("PATCH", { promos: quiere });
+    if (!x.ok) { e.target.checked = !quiere; return toast("No se pudo guardar. Inténtalo de nuevo"); }
+    if (SES.cliente) SES.cliente.promos = quiere;
+    toast(quiere ? "Listo. Te avisaremos de nuestras promociones" : "Listo. Ya no recibirás promociones");
+  });
+  $("#acctSalir").addEventListener("click", async () => {
+    await fetch("/api/auth/salir", { method: "POST", credentials: "same-origin" }).catch(() => {});
+    SES.cliente = null; mostrarCuenta(); sinCuenta(); toast("Cerraste tu sesión");
+  });
+  $("#acctBorrar").addEventListener("click", async () => {
+    const ok = await confirmarCuenta({
+      titulo: "¿Eliminar tu cuenta?",
+      texto: "Se borrarán tu nombre, tu correo, tu foto y todo tu historial de compras. Esta acción no se puede deshacer.",
+      ok: "Sí, eliminar mi cuenta",
+    });
+    if (!ok) return;
+    const x = await cuentaApi("DELETE");
+    if (!x.ok) return toast("No se pudo eliminar. Inténtalo de nuevo");
+    SES.cliente = null; mostrarCuenta();
+    sinCuenta("Tu cuenta fue eliminada", "Borramos tus datos y tu historial. Puedes seguir comprando por WhatsApp cuando quieras.");
+    scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
+
+/* =========================================================
    PÁGINA: LIBRO DE RECLAMACIONES (la hoja llega al panel, sección Reclamos)
    ========================================================= */
 function initLibro() {
@@ -1878,7 +1975,7 @@ function initAyuda() {
 (async () => {
   if (PAGE === "intro") cargarVivo(); else await cargarVivo();
   renderLayout();
-  ({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda, libro: initLibro }[PAGE] || (() => {}))();
+  ({ intro: initIntro, coleccion: initColeccion, tienda: initTienda, producto: initProducto, pack: initPack, contacto: initContacto, ayuda: initAyuda, libro: initLibro, cuenta: initMiCuenta }[PAGE] || (() => {}))();
   $$("[data-perks]").forEach(el => (el.innerHTML = perksHTML()));
   fillConfig();
   initHeader();

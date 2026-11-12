@@ -14,7 +14,7 @@ migrations_dir = "migrations"
 # GOOGLE_CLIENT_ID: el "ID de cliente" de la app de Google del dueño (no es secreto).
 # GOOGLE_CLIENT_SECRET va como secreto en Cloudflare, nunca en este archivo.
 [vars]
-GOOGLE_CLIENT_ID = ""
+GOOGLE_CLIENT_ID = "1053867715282-uh06qgadoborab0oobnmvbsp67l50qfp.apps.googleusercontent.com"
 
 # Vistas previas (npm run publicar -- --prueba): usan una base de prueba, nunca la real
 [env.preview]

@@ -1340,3 +1340,57 @@ img.fade.ok{opacity:1}
   .topbar,.header,.drawer,.footer,.tabbar,.wa-float,.page-hero,.libro__form,#lPrint,.toast{display:none!important}
   .libro__ok{border:0;background:#fff;padding:0}
 }
+
+/* Mi cuenta */
+.acct-cargando{padding:40px 0;text-align:center;color:var(--muted)}
+.acct-vacio{max-width:520px;margin:0 auto;text-align:center;padding:20px 0 10px}
+.acct-vacio__mark{width:60px;margin:0 auto 16px}
+.acct-vacio__mark svg{width:100%;height:auto;display:block}
+.acct-vacio h2,.acct-vacio h3{font-family:var(--serif);font-weight:600;color:var(--ink);font-size:clamp(28px,3vw,36px);line-height:1.1}
+.acct-vacio h3{font-size:26px}
+.acct-vacio p{margin:10px 0 22px;line-height:1.6;font-size:15px}
+.acct-vacio--sm{padding:30px 0}
+.acct{display:grid;grid-template-columns:320px minmax(0,1fr);gap:clamp(24px,4vw,56px);align-items:start}
+.acct__perfil{border:1px solid var(--line);padding:28px 24px;text-align:center;position:sticky;top:100px}
+.acct__foto{width:84px;height:84px;border-radius:50%;overflow:hidden;margin:0 auto 14px;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:32px;font-weight:600}
+.acct__foto img{width:100%;height:100%;object-fit:cover}
+.acct__perfil h2{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--ink);line-height:1.15}
+.acct__mail{margin-top:4px;font-size:14px;word-break:break-word}
+.acct__desde{margin-top:2px;font-size:13px;color:var(--muted-2)}
+.acct__stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
+.acct__stats div{background:var(--mist-2);padding:14px 10px}
+.acct__stats b{display:block;font-size:20px;font-weight:600;color:var(--ink)}
+.acct__stats span{font-size:12.5px;color:var(--muted)}
+.acct__switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:15px;color:var(--ink);font-weight:500;cursor:pointer;flex-direction:row-reverse}
+.acct__switch input{position:absolute;opacity:0;pointer-events:none}
+.acct__sw{width:46px;height:26px;border-radius:13px;background:#C9D2D0;position:relative;transition:background .2s;flex:none}
+.acct__sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s var(--ease);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.acct__switch input:checked + .acct__sw{background:var(--teal)}
+.acct__switch input:checked + .acct__sw::after{transform:translateX(20px)}
+.acct__switch input:focus-visible + .acct__sw{outline:2px solid var(--teal);outline-offset:2px}
+.acct__salir{width:100%;margin-top:20px}
+.acct__borrar{margin-top:14px;font-size:13.5px;color:#B4462F;text-decoration:underline;text-underline-offset:3px;padding:6px}
+.acct__hist > h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,3vw,36px);color:var(--ink);margin-bottom:18px}
+.acct__ped{border:1px solid var(--line);margin-bottom:14px}
+.acct__ped header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--mist-2)}
+.acct__ped header b{font-size:15px;letter-spacing:1px;color:var(--ink)}
+.acct__ped header span{font-size:14px}
+.acct__est{margin-left:auto;padding:5px 12px;font-size:12.5px!important;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.acct__est--pendiente{background:#FFF2D2;color:#8A5A00}
+.acct__est--procede{background:#E1EFEC;color:var(--teal)}
+.acct__est--cancelado{background:#ECEEEE;color:var(--muted)}
+.acct__ped ul{list-style:none;padding:6px 18px}
+.acct__ped li{display:grid;grid-template-columns:52px 1fr auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--mist-2)}
+.acct__ped li:last-child{border-bottom:0}
+.acct__ped li img{width:52px;height:65px;object-fit:cover}
+.acct__ped li b{display:block;color:var(--ink);font-weight:500;font-size:14.5px}
+.acct__ped li span{font-size:13.5px}
+.acct__ped li em{font-style:normal;font-weight:600;color:var(--ink);white-space:nowrap}
+.acct__ped footer{display:flex;justify-content:flex-end;gap:20px;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);font-size:14px}
+.acct__ped footer b{font-size:17px;color:var(--ink)}
+.acct-peligro{display:block;width:100%;margin-top:8px;padding:15px;background:#B4462F;color:#fff;font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+.acct-peligro:hover{background:#933823}
+@media (max-width:900px){
+  .acct{grid-template-columns:1fr}
+  .acct__perfil{position:static}
+}
