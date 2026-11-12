@@ -37,22 +37,34 @@ export async function volver({ env, url, request }) {
   const destino = volverSeguro(datos && datos.v);
   const limpiar = borrarCookie(COOKIE.oauth);
   const error = motivo => redir(`${destino}#cuenta=${motivo}`, [limpiar]);
-  if (!datos || !datos.e || url.searchParams.get("state") !== datos.e) return error("error");
-  if (url.searchParams.get("error")) return error("cancelado");
+  if (!datos || !datos.e || url.searchParams.get("state") !== datos.e) {
+    await anotar(env, "estado", { cookie: !!datos, state: !!url.searchParams.get("state") });
+    return error("error");
+  }
+  if (url.searchParams.get("error")) {
+    await anotar(env, "google", { error: url.searchParams.get("error") });
+    return error("cancelado");
+  }
   const code = url.searchParams.get("code");
-  if (!code) return error("error");
+  if (!code) { await anotar(env, "sin_codigo", {}); return error("error"); }
 
   // Cambia el código por la identidad del cliente (directo con Google, con el secreto de la app)
   const r = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, redirect_uri: callback(url), grant_type: "authorization_code" }),
+    body: new URLSearchParams({ code, client_id: env.GOOGLE_CLIENT_ID, client_secret: String(env.GOOGLE_CLIENT_SECRET || "").trim(), redirect_uri: callback(url), grant_type: "authorization_code" }),
   });
-  if (!r.ok) return error("error");
+  if (!r.ok) {
+    const b = await r.json().catch(() => ({}));
+    await anotar(env, "token", { status: r.status, error: b.error, detalle: b.error_description, largo_secreto: String(env.GOOGLE_CLIENT_SECRET || "").trim().length });
+    return error("error");
+  }
   const t = await r.json();
   const id = leerIdToken(t.id_token);
   const ahora = Date.now() / 1000;
-  if (!id || !["accounts.google.com", "https://accounts.google.com"].includes(id.iss) || id.aud !== env.GOOGLE_CLIENT_ID || !(id.exp > ahora) || !id.sub || !id.email || id.email_verified === false)
+  if (!id || !["accounts.google.com", "https://accounts.google.com"].includes(id.iss) || id.aud !== env.GOOGLE_CLIENT_ID || !(id.exp > ahora) || !id.sub || !id.email || id.email_verified === false) {
+    await anotar(env, "id_token", { leido: !!id, iss: id && id.iss, aud_ok: !!id && id.aud === env.GOOGLE_CLIENT_ID, vigente: !!id && id.exp > ahora, verificado: id && id.email_verified });
     return error("error");
+  }
 
   const nombre = String(id.name || id.given_name || "").slice(0, 120) || null, foto = String(id.picture || "").slice(0, 500) || null;
   const existe = await env.DB.prepare("SELECT id FROM clientes WHERE google_id = ?").bind(id.sub).first();
@@ -69,6 +81,15 @@ export async function volver({ env, url, request }) {
   }
   const token = await crearSesion(env, "cliente", clienteId, DIAS_SESION * 24);
   return redir(`${destino}#cuenta=${existe ? "hola" : "lista"}`, [limpiar, cookie(COOKIE.cliente, token, { maxAge: DIAS_SESION * 86400 })]);
+}
+
+/* Guarda el último motivo por el que falló un inicio de sesión (sin datos secretos) para poder revisarlo */
+async function anotar(env, paso, detalle) {
+  console.error("google:", paso, JSON.stringify(detalle));
+  try {
+    await env.DB.prepare("INSERT INTO ajustes (clave, valor) VALUES ('oauth_ultimo_error', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor")
+      .bind(JSON.stringify({ fecha: new Date().toISOString(), paso, ...detalle })).run();
+  } catch (_) {}
 }
 
 function leerIdToken(jwt) {
