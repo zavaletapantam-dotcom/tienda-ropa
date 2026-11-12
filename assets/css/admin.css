@@ -297,6 +297,23 @@ a.kpi:hover{border-color:var(--teal)}
 .dlg__body .vm-tot{margin:18px 0 0}
 .alert ul{margin:10px 0 0}
 .dlg__body .alert li{background:rgba(255,255,255,.65)}
+/* Editar pedido */
+.edl{display:grid;grid-template-columns:minmax(150px,1.6fr) minmax(104px,1fr) 84px 72px 118px 88px 40px;grid-template-areas:"prd color talla cant precio imp x" ". stk stk stk stk stk .";gap:6px 10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--mist-2)}
+.edl--head{grid-template-areas:"prd color talla cant precio imp x";padding:0 0 8px;font-size:13.5px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line)}
+.edl__prd{grid-area:prd;min-width:0}.edl__color{grid-area:color}.edl__talla{grid-area:talla}.edl__cant{grid-area:cant}.edl__precio{grid-area:precio}.edl__imp{grid-area:imp;text-align:right;font-weight:600;white-space:nowrap}.edl__x{grid-area:x}
+.edl__stk{grid-area:stk;font-size:13.5px;color:var(--muted)}
+.edl .sel,.edl .inp{width:100%;height:44px}
+.edl__cant .inp{text-align:center}
+.add--2{grid-template-columns:minmax(0,1fr) auto;margin-top:14px}
+.ed-tot{display:grid;gap:10px;margin:18px 0 16px;margin-left:auto;width:min(360px,100%);padding:16px;background:var(--mist-2);border-radius:10px}
+.ed-tot__f{display:grid;grid-template-columns:1fr 150px;align-items:center;gap:12px;font-size:15.5px}
+.ed-tot__f > span,.ed-tot__f > label:first-child{color:var(--muted);font-weight:500}
+.ed-tot__f b{text-align:right;font-weight:600}
+.ed-tot__f .inp{width:100%;height:44px;text-align:right}
+.ed-tot__f--total{padding-top:10px;border-top:1px solid var(--line);font-size:18px}
+.ed-tot__f--total span{color:var(--ink)!important;font-weight:600}
+.ed-tot__nota{font-size:13.5px;color:var(--muted);text-align:right;margin-top:-4px}
+.lnk-btn{color:var(--teal);font-weight:600;text-decoration:underline;font-size:inherit}
 
 .toast{position:fixed;left:50%;bottom:26px;z-index:110;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:13px 20px;border-radius:10px;font-size:15px;font-weight:500;opacity:0;transition:.3s var(--ease);pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
 .toast.show{opacity:1;transform:translate(-50%,0)}
@@ -341,12 +358,19 @@ a.kpi:hover{border-color:var(--teal)}
   .chart{gap:4px}
   .chart__col em{display:none}
   .ped__acts{width:100%}
+  .ped__acts{flex-wrap:wrap}
   .ped__acts .btn{flex:1}
+  .ped__acts .btn--pri{flex-basis:100%}
   .tbl{font-size:14px}
   .dlg__box{padding:22px}
   .frm__2,.frm__3,.opcs{grid-template-columns:1fr}
   .add{grid-template-columns:1fr}
   .stk__grid--sin .stk__h:first-child{display:block}
+  .edl--head{display:none}
+  .edl{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-areas:"prd prd x" "color talla cant" "precio precio imp" "stk stk stk"}
+  .edl__x{justify-self:end}
+  .edl [data-l]::before{content:attr(data-l);display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .ed-tot{width:100%}
   .prow{grid-template-columns:repeat(2,minmax(0,1fr))}
   .mg{white-space:normal}
   .stk__grid{grid-template-columns:repeat(var(--n),minmax(0,1fr));overflow:visible}

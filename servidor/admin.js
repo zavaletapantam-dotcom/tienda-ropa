@@ -3,7 +3,7 @@
    ========================================================= */
 import {
   ErrorHttp, json, leerJson, texto, cifrarClave, verificarClave, sha256, crearSesion, leerSesion, cerrarSesion,
-  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE,
+  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE, config,
 } from "./util.js";
 
 const HORAS_SESION = 12;
@@ -148,8 +148,8 @@ export async function resumen({ env, request }) {
 
 const PEDIDO_SQL = `SELECT p.id, p.codigo, p.creado, p.origen, p.estado, p.procesado, a.nombre AS procesado_por, p.cliente_id,
     COALESCE(p.nombre, c.nombre) AS nombre, c.email, p.celular, p.entrega, p.distrito, p.direccion, p.referencia, p.destino, p.agencia,
-    p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente, p.origen_stock
-  FROM pedidos p LEFT JOIN clientes c ON c.id = p.cliente_id LEFT JOIN admins a ON a.id = p.procesado_por`;
+    p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente, p.origen_stock, p.editado, e.nombre AS editado_por
+  FROM pedidos p LEFT JOIN clientes c ON c.id = p.cliente_id LEFT JOIN admins a ON a.id = p.procesado_por LEFT JOIN admins e ON e.id = p.editado_por`;
 async function conItems(env, pedidos) {
   if (!pedidos.length) return [];
   const ids = pedidos.map(p => p.id);
@@ -161,6 +161,7 @@ async function conItems(env, pedidos) {
     cliente: { registrado: p.cliente_id != null, nombre: p.nombre, email: p.email, celular: p.celular },
     entrega: { tipo: p.entrega, distrito: p.distrito, direccion: p.direccion, referencia: p.referencia, destino: p.destino, agencia: p.agencia },
     subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total, consultar: !!p.precio_pendiente, origen_stock: p.origen_stock,
+    editado: iso(p.editado), editado_por: p.editado_por,
     items: items.filter(i => i.pedido_id === p.id).map(({ pedido_id, ...i }) => i),
   }));
 }
@@ -220,6 +221,58 @@ export async function procesarPedido({ env, request, params }) {
     throw e;
   }
   if (!res[1].meta.changes) throw new ErrorHttp(409, "ya_procesado");
+  const [pedido] = await conItems(env, (await env.DB.prepare(`${PEDIDO_SQL} WHERE p.id = ?`).bind(p.id).all()).results);
+  return json({ ok: true, pedido });
+}
+
+/* POST /api/admin/pedidos/:codigo/editar { items: [{ slug, color, talla, cantidad, precio }], descuento, envio, envio_manual }
+   Solo pedidos POR CONFIRMAR: el stock todavía no se tocó, así que editar no mueve stock (se descuenta al confirmar).
+   precio vacío = precio actual de la tienda · envío: se recalcula con las reglas de la tienda, salvo que se escriba a mano. */
+export async function editarPedido({ env, request, params }) {
+  const a = await adminDe(env, request);
+  const b = await leerJson(request, 60000);
+  const p = await env.DB.prepare("SELECT id, estado, entrega FROM pedidos WHERE codigo = ?").bind(params[0]).first();
+  if (!p) throw new ErrorHttp(404, "no_existe");
+  if (p.estado !== "pendiente") throw new ErrorHttp(409, "ya_procesado", { estado: p.estado });
+  const lista = Array.isArray(b.items) ? b.items : [];
+  if (!lista.length || lista.length > 40) throw new ErrorHttp(400, "sin_prendas");
+  const vacio = v => v == null || v === "";
+  for (const i of lista) {
+    const ok = [i.slug, i.color, i.talla].every(x => typeof x === "string" && x) && Number.isInteger(+i.cantidad) && +i.cantidad >= 1 && +i.cantidad <= 20
+      && (vacio(i.precio) || (+i.precio >= 0 && +i.precio < 100000));
+    if (!ok) throw new ErrorHttp(400, "datos_invalidos");
+  }
+  const claves = [...new Set(lista.map(claveDe))], filas = await variantesDe(env, claves);
+  if (filas.length !== claves.length) throw new ErrorHttp(400, "prenda_no_existe");
+  const items = lista.map(i => {
+    const f = filas.find(x => claveDe(x) === claveDe(i));
+    return { slug: f.slug, nombre: f.nombre, color: f.color, talla: f.talla, cantidad: +i.cantidad, precio: vacio(i.precio) ? f.precio : redondear(+i.precio) };
+  });
+  const subtotal = redondear(items.reduce((s, i) => s + (i.precio || 0) * i.cantidad, 0));
+  const descuento = vacio(b.descuento) ? 0 : redondear(+b.descuento);
+  if (!(descuento >= 0 && descuento <= subtotal)) throw new ErrorHttp(400, "descuento_invalido");
+  let envio;
+  if (b.envio_manual === true) {
+    envio = vacio(b.envio) ? null : redondear(+b.envio);
+    if (envio !== null && !(envio >= 0 && envio < 10000)) throw new ErrorHttp(400, "envio_invalido");
+  } else {
+    const cfg = await config(env); // mismas reglas que el carrito: domicilio S/10 (gratis desde S/200), recojo gratis, provincia y sin datos: a coordinar
+    envio = p.entrega === "domicilio" ? (subtotal >= cfg.gratisDesde ? 0 : cfg.envio) : p.entrega === "recojo" ? 0 : null;
+  }
+  const total = redondear(subtotal - descuento + (envio || 0));
+  try {
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM pedido_items WHERE pedido_id = ?").bind(p.id),
+      ...items.map(i => env.DB.prepare("INSERT INTO pedido_items (pedido_id, slug, nombre, color, talla, cantidad, precio) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .bind(p.id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio)),
+      env.DB.prepare(`UPDATE pedidos SET subtotal = ?, descuento = ?, envio = ?, total = ?, precio_pendiente = ?, editado = datetime('now'), editado_por = ?
+          WHERE id = ?`).bind(subtotal, descuento, envio, total, items.some(i => i.precio == null) ? 1 : 0, a.id, p.id),
+    ]);
+  } catch (e) {
+    // Si alguien lo confirmó o canceló justo ahora, la base no deja tocar sus prendas (disparadores items_solo_pendiente_*)
+    if (/PEDIDO_YA_PROCESADO/.test(String(e.message))) throw new ErrorHttp(409, "ya_procesado");
+    throw e;
+  }
   const [pedido] = await conItems(env, (await env.DB.prepare(`${PEDIDO_SQL} WHERE p.id = ?`).bind(p.id).all()).results);
   return json({ ok: true, pedido });
 }
@@ -349,7 +402,7 @@ const redondear = n => Math.round(n * 100) / 100;
 const MOTIVOS_SALIDA = ["merma", "danado", "devolucion", "otro"];
 const claveDe = i => `${i.slug}|${i.color}|${i.talla}`;
 async function variantesDe(env, claves) {
-  return (await env.DB.prepare(`SELECT v.slug, v.color, v.talla, v.stock, v.fisico, p.nombre, p.costo FROM variantes v JOIN productos p ON p.slug = v.slug
+  return (await env.DB.prepare(`SELECT v.slug, v.color, v.talla, v.stock, v.fisico, p.nombre, p.costo, p.precio FROM variantes v JOIN productos p ON p.slug = v.slug
       WHERE v.slug || '|' || v.color || '|' || v.talla IN (${claves.map(() => "?").join(", ")})`).bind(...claves).all()).results;
 }
 function leerItems(b, conPrecio) {

@@ -78,6 +78,7 @@ const I = {
   entrada: svg('<path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 14v6h16v-6"/>'),
   salida: svg('<path d="M12 14V3M7.5 7.5 12 3l4.5 4.5"/><path d="M4 14v6h16v-6"/>'),
   mas: svg('<path d="M12 5v14M5 12h14"/>'),
+  editar: svg('<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>'),
 };
 
 /* ---------- API ---------- */
@@ -124,6 +125,8 @@ const MSG = {
   prenda_no_existe: "Una de las prendas ya no está en la tienda. Recarga la página.",
   stock_invalido: "Revisa las cantidades.",
   datos_invalidos: "Revisa los datos.",
+  descuento_invalido: "El descuento no puede ser mayor que el subtotal.",
+  envio_invalido: "Revisa el monto del envío.",
   error: "No se pudo completar. Inténtalo de nuevo.",
 };
 const msg = e => { const m = MSG[e.codigo] || MSG.error; return typeof m === "function" ? m(e.data || {}) : m; };
@@ -370,7 +373,7 @@ function pedidoHTML(p) {
   const c = p.cliente, g = ganPedido(p);
   return `<article class="ped ped--${p.estado}" data-cod="${p.codigo}">
     <header class="ped__head">
-      <div><span class="ped__cod">${p.codigo}</span><span class="ped__fecha">${fFecha(p.fecha)}</span></div>
+      <div><span class="ped__cod">${p.codigo}</span><span class="ped__fecha">${fFecha(p.fecha)}${p.editado ? ` · Editado por ${esc(p.editado_por || "—")} el ${fFecha(p.editado)}` : ""}</span></div>
       <div class="ped__tags"><span class="chip">${ORIGEN[p.origen] || p.origen}</span>${c.registrado ? `<span class="chip chip--teal">Con cuenta</span>` : ""}<span class="pill pill--${p.estado}">${ESTADO[p.estado]}</span></div>
     </header>
     <div class="ped__body">
@@ -388,7 +391,7 @@ function pedidoHTML(p) {
     <footer class="ped__foot">
       <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${p.descuento ? `<span>Descuento <b>−${money(p.descuento)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}</div>
       ${p.estado === "pendiente"
-        ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`
+        ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn" type="button" data-accion="editar">${I.editar}Editar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`
         : `<p class="ped__done">${ESTADO[p.estado]}${p.origen_stock ? " " + DESDE[p.origen_stock] : ""} por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>`}
     </footer>
   </article>`;
@@ -417,6 +420,7 @@ async function vPedidos(m) {
   $("#pLista").addEventListener("click", async e => {
     const b = e.target.closest("[data-accion]"); if (!b) return;
     const p = lista.find(x => x.codigo === b.closest(".ped").dataset.cod); if (!p) return;
+    if (b.dataset.accion === "editar") { if (await editarPedido(p)) { await cargar().catch(() => {}); badges(); } return; }
     let origen = null;
     if (b.dataset.accion === "procede") {
       // ¿De dónde sale? Almacén: baja el virtual y el físico · Proveedor: solo el virtual
@@ -438,6 +442,124 @@ async function vPedidos(m) {
     }
     await cargar().catch(() => {}); badges();
   });
+}
+/* ---------- Editar un pedido por confirmar: prendas, talla, color, cantidad, precio, descuento y envío ---------- */
+async function editarPedido(p) {
+  try { await cargarInv(); } catch (x) { toast(msg(x)); return false; }
+  const lineas = p.items.map(i => ({ slug: i.slug, nombre: i.nombre, color: i.color, talla: i.talla, cantidad: i.cantidad, precio: i.precio }));
+  const tipo = p.entrega.tipo, num = v => (v === "" || v == null ? null : +v);
+  // Mismas reglas que el carrito: domicilio S/10 (gratis desde S/200), recojo gratis, provincia o sin datos: a coordinar
+  const envioAuto = sub => (tipo === "domicilio" ? (sub >= C.envioGratisDesde ? 0 : C.envio) : tipo === "recojo" ? 0 : null);
+  const sinEnvio = tipo === "provincia" ? `Tarifa ${C.courier}` : "A coordinar";
+  let manual = (p.envio ?? null) !== envioAuto(p.subtotal); // si alguien ya lo escribió a mano, se respeta
+  const subtotal = () => r2(lineas.reduce((s, l) => s + (l.precio || 0) * l.cantidad, 0));
+  const nombreDe = l => (PROD[l.slug] ? PROD[l.slug].name : l.nombre);
+  const coloresDe = slug => (PROD[slug] ? PROD[slug].colors.map(c => c[0]).filter(c => PROD[slug].sizes.some(t => varDe(slug, c, t))) : []);
+  const tallasDe = (slug, color) => (PROD[slug] ? PROD[slug].sizes.filter(t => varDe(slug, color, t)) : []);
+  const opts = (lista, valor) => (lista.length ? lista : [valor]).map(x => `<option value="${esc(x)}"${x === valor ? " selected" : ""}>${esc(x)}</option>`).join("");
+  const stockTxt = l => {
+    const v = varDe(l.slug, l.color, l.talla);
+    if (!v) return `<span class="neg">Esta talla ya no está en la tienda</span>`;
+    const falta = v.stock != null && l.cantidad > v.stock;
+    return `${falta ? `<span class="neg">No alcanza el stock virtual · </span>` : ""}Virtual ${v.stock ?? "sin cargar"} · Físico ${v.fisico ?? "sin cargar"}`;
+  };
+  const filaHTML = (l, i) => `<div class="edl" data-i="${i}">
+      <div class="edl__prd prd"><img src="${imgDe(l.slug, l.color)}" alt="" loading="lazy"><b>${esc(nombreDe(l))}</b></div>
+      <div class="edl__color" data-l="Color"><select class="sel" data-f="color" aria-label="Color de ${esc(nombreDe(l))}">${opts(coloresDe(l.slug), l.color)}</select></div>
+      <div class="edl__talla" data-l="Talla"><select class="sel" data-f="talla" aria-label="Talla de ${esc(nombreDe(l))}">${opts(tallasDe(l.slug, l.color), l.talla)}</select></div>
+      <div class="edl__cant" data-l="Cantidad"><input class="inp" data-f="cantidad" inputmode="numeric" autocomplete="off" value="${l.cantidad}" aria-label="Cantidad de ${esc(nombreDe(l))}"></div>
+      <div class="edl__precio" data-l="Precio"><label class="money"><span>S/</span><input class="inp" data-f="precio" inputmode="decimal" autocomplete="off" value="${l.precio ?? ""}" placeholder="0.00" aria-label="Precio de ${esc(nombreDe(l))}"></label></div>
+      <div class="edl__imp" data-imp>${money((l.precio || 0) * l.cantidad)}</div>
+      <button class="edl__x lin__x" type="button" data-quitar aria-label="Quitar ${esc(nombreDe(l))}">${I.x}</button>
+      <p class="edl__stk" data-stk>${stockTxt(l)}</p>
+    </div>`;
+  const html = `<div class="frm">
+    <p class="frm__lead">El stock no cambia ahora: se descuenta recién cuando confirmas el pedido.</p>
+    <div class="edl edl--head"><span class="edl__prd">Prenda</span><span class="edl__color">Color</span><span class="edl__talla">Talla</span><span class="edl__cant">Cant.</span><span class="edl__precio">Precio</span><span class="edl__imp">Importe</span></div>
+    <div id="edLineas"></div>
+    <div class="add add--2">${selPrendas("edP")}<button class="btn" type="button" id="edAdd">${I.mas}Agregar prenda</button></div>
+    <div class="ed-tot">
+      <div class="ed-tot__f"><span>Subtotal</span><b id="edSub"></b></div>
+      <div class="ed-tot__f"><label for="edDesc">Descuento</label><label class="money"><span>S/</span><input class="inp" id="edDesc" inputmode="decimal" autocomplete="off" value="${p.descuento || ""}" placeholder="0.00"></label></div>
+      <div class="ed-tot__f"><label for="edEnv">Envío</label><label class="money"><span>S/</span><input class="inp" id="edEnv" inputmode="decimal" autocomplete="off" value="${p.envio ?? ""}" placeholder="${esc(sinEnvio)}"></label></div>
+      <p class="ed-tot__nota" id="edEnvNota"></p>
+      <div class="ed-tot__f ed-tot__f--total"><span>Total</span><b id="edTot"></b></div>
+    </div>
+    <div class="alert alert--bad" id="edErr" hidden></div></div>`;
+  const decimal = inp => { const s = inp.value.replace(",", ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); if (s !== inp.value) inp.value = s; return s; };
+  const totales = d => {
+    const sub = subtotal();
+    if (!manual) { const e = envioAuto(sub); $("#edEnv", d).value = e == null ? "" : e; }
+    const env = num($("#edEnv", d).value) || 0;
+    $("#edSub", d).textContent = money(sub);
+    $("#edEnvNota", d).innerHTML = manual
+      ? `Envío escrito a mano. <button type="button" class="lnk-btn" id="edEnvAuto">Calcularlo solo</button>`
+      : tipo === "domicilio" ? `Se calcula solo: S/${C.envio}, gratis desde S/${C.envioGratisDesde}. Puedes escribir otro monto.`
+      : tipo === "recojo" ? "Recojo en tienda: sin costo de envío." : `${esc(sinEnvio)}: escríbelo aquí si ya lo sabes.`;
+    $("#edTot", d).textContent = money(sub - (num($("#edDesc", d).value) || 0) + env);
+  };
+  const pintar = d => { $("#edLineas", d).innerHTML = lineas.length ? lineas.map(filaHTML).join("") : `<p class="vacio">El pedido no tiene prendas. Agrega al menos una.</p>`; totales(d); };
+  const r = await ventana({
+    titulo: `Editar pedido ${p.codigo}`, ancho: true, fijo: true, html,
+    acciones: [{ t: "Volver", v: false }, { t: `${I.check}Guardar cambios`, clase: "btn--pri", v: true, antes: async d => {
+      const err = $("#edErr", d), mal = h => { err.innerHTML = h; err.hidden = false; err.scrollIntoView({ block: "nearest", behavior: "smooth" }); return false; };
+      if (!lineas.length) return mal("El pedido tiene que tener al menos una prenda. Si el cliente ya no quiere nada, mejor cancela el pedido.");
+      const malCant = lineas.find(l => !(l.cantidad >= 1 && l.cantidad <= 20));
+      if (malCant) return mal(`Revisa la cantidad de ${esc(nombreDe(malCant))}: de 1 a 20.`);
+      const sinPrecio = lineas.find(l => l.precio == null);
+      if (sinPrecio) return mal(`Pon el precio de ${esc(nombreDe(sinPrecio))}.`);
+      // La misma prenda, color, talla y precio en dos líneas se junta en una
+      const items = [];
+      for (const l of lineas) {
+        const y = items.find(x => x.slug === l.slug && x.color === l.color && x.talla === l.talla && x.precio === l.precio);
+        if (y) y.cantidad += l.cantidad; else items.push({ slug: l.slug, color: l.color, talla: l.talla, cantidad: l.cantidad, precio: l.precio });
+      }
+      if (items.some(i => i.cantidad > 20)) return mal("Máximo 20 unidades de la misma prenda, color y talla.");
+      const desc = num($("#edDesc", d).value) || 0;
+      if (desc > subtotal()) return mal(MSG.descuento_invalido);
+      const env = $("#edEnv", d).value;
+      try {
+        const res = await api(`pedidos/${p.codigo}/editar`, { method: "POST", body: { items, descuento: desc, envio: env === "" ? null : +env, envio_manual: manual } });
+        toast(`Pedido ${p.codigo} actualizado. Nuevo total: ${money(res.pedido.total)}.`);
+        return true;
+      } catch (x) {
+        if (x.codigo === "ya_procesado") return mal("Este pedido ya fue confirmado o cancelado, así que ya no se puede editar.");
+        return mal(esc(msg(x)));
+      }
+    } }],
+    alAbrir: d => {
+      pintar(d);
+      const L = $("#edLineas", d), linea = el => { const f = el.closest(".edl"); return f ? [f, lineas[+f.dataset.i]] : [null, null]; };
+      L.addEventListener("change", e => {
+        const [f, l] = linea(e.target); if (!l) return;
+        if (e.target.dataset.f === "color") {
+          l.color = e.target.value; const ts = tallasDe(l.slug, l.color); if (!ts.includes(l.talla)) l.talla = ts[0];
+          f.outerHTML = filaHTML(l, +f.dataset.i);
+        }
+        if (e.target.dataset.f === "talla") { l.talla = e.target.value; $("[data-stk]", f).innerHTML = stockTxt(l); }
+      });
+      L.addEventListener("input", e => {
+        const [f, l] = linea(e.target); if (!l) return;
+        if (e.target.dataset.f === "cantidad") { const s = e.target.value.replace(/\D/g, "").slice(0, 2); if (s !== e.target.value) e.target.value = s; l.cantidad = +s || 0; $("[data-stk]", f).innerHTML = stockTxt(l); }
+        if (e.target.dataset.f === "precio") { const s = decimal(e.target); l.precio = s === "" ? null : +s; }
+        $("[data-imp]", f).textContent = money((l.precio || 0) * l.cantidad); totales(d);
+      });
+      L.addEventListener("click", e => { const b = e.target.closest("[data-quitar]"); if (!b) return; lineas.splice(+b.closest(".edl").dataset.i, 1); pintar(d); });
+      $("#edAdd", d).addEventListener("click", () => {
+        const slug = $("#edP", d).value; if (!slug) return toast("Elige la prenda que quieres agregar.");
+        const color = coloresDe(slug)[0], talla = color && tallasDe(slug, color)[0];
+        if (!talla) return toast("Esta prenda todavía no tiene tallas en el panel.");
+        lineas.push({ slug, nombre: PROD[slug].name, color, talla, cantidad: 1, precio: INV[slug].precio });
+        pintar(d); $("#edP", d).value = "";
+        const nueva = $(`.edl[data-i="${lineas.length - 1}"]`, d);
+        if (nueva) { nueva.scrollIntoView({ block: "nearest", behavior: "smooth" }); $("select", nueva).focus(); }
+      });
+      $("#edDesc", d).addEventListener("input", e => { decimal(e.target); totales(d); });
+      $("#edEnv", d).addEventListener("input", e => { decimal(e.target); manual = true; totales(d); });
+      d.addEventListener("click", e => { if (e.target.id === "edEnvAuto") { manual = false; totales(d); } });
+    },
+  });
+  return r === true;
 }
 /* Excel de los pedidos de la pestaña abierta: un pedido por fila y, aparte, cada prenda */
 function excelPedidos(lista) {

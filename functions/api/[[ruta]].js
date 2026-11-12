@@ -26,6 +26,7 @@ const RUTAS = [
   ["GET", "/api/admin/resumen", admin.resumen],
   ["GET", "/api/admin/pedidos", admin.pedidos],
   ["POST", /^\/api\/admin\/pedidos\/(MS[A-Z0-9]{6})$/, admin.procesarPedido],
+  ["POST", /^\/api\/admin\/pedidos\/(MS[A-Z0-9]{6})\/editar$/, admin.editarPedido],
   ["GET", "/api/admin/inventario", admin.inventario],
   ["POST", "/api/admin/stock", admin.guardarStock],
   ["POST", /^\/api\/admin\/productos\/([a-z0-9-]+)$/, admin.guardarProducto],
