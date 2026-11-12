@@ -935,7 +935,7 @@ function mostrarCuenta() {
   const on = SES.google || !!SES.cliente, c = SES.cliente, b = $("#acctBtn");
   if (b) {
     b.hidden = !on; b.classList.toggle("is-in", !!c);
-    b.setAttribute("aria-label", c ? "Mi cuenta" : "Crear cuenta o iniciar sesión");
+    b.setAttribute("aria-label", c ? "Mi cuenta" : "Registrarme o entrar a mi cuenta");
     b.innerHTML = !c ? I.user : c.foto ? `<img src="${esc(c.foto)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc((c.nombre || c.email || "?").trim()[0].toUpperCase())}</span>`;
   }
   $$(".js-acct").forEach(a => (a.hidden = !on));
@@ -986,11 +986,11 @@ function initCuenta() {
     const saludo = r === "lista" ? `¡Bienvenido a MAISON${nombre ? ", " + nombre : ""}!` : `¡Hola de nuevo${nombre ? ", " + nombre : ""}!`;
     if (sesStore.get(PEND_KEY)) {
       $("#accListoT").textContent = saludo;
-      $("#accListoP").textContent = r === "lista" ? "Tu cuenta ya está lista. Sigamos con tu pedido." : "Ya iniciaste sesión. Sigamos con tu pedido.";
+      $("#accListoP").textContent = r === "lista" ? "Tu cuenta ya está lista. Sigamos con tu pedido." : "Ya entraste a tu cuenta. Sigamos con tu pedido.";
       listo.classList.add("open"); listo.setAttribute("aria-hidden", "false"); bloquearScroll(true);
     } else toast(r === "lista" ? `${saludo} Tu cuenta está lista` : saludo);
   } else if (r === "cancelado") toast("No se creó la cuenta. Puedes hacerlo cuando quieras");
-  else toast("No pudimos iniciar sesión con Google. Inténtalo de nuevo");
+  else toast("No pudimos registrarte con Google. Inténtalo de nuevo");
 }
 
 /* ---------- Vista rápida ---------- */
@@ -1848,7 +1848,7 @@ async function initMiCuenta() {
       <div class="acct-vacio__mark">${logoSVG("mark", "logo-ink")}</div>
       <h2>${titulo || (SES.google ? "Tu cuenta MAISON" : "Muy pronto")}</h2>
       <p>${texto || (SES.google ? "Crea tu cuenta con Google: guarda tu historial y recibe descuentos según tus compras." : "Muy pronto podrás crear tu cuenta y ver aquí tu historial de compras.")}</p>
-      ${SES.google ? `<button type="button" class="btn btn--dark" id="acctCrear">Crear cuenta o iniciar sesión <span>→</span></button>` : `<a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a>`}
+      ${SES.google ? `<button type="button" class="btn btn--dark" id="acctCrear">Registrarme o entrar <span>→</span></button>` : `<a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a>`}
     </div>`;
     $("#acctCrear")?.addEventListener("click", () => abrirCuentaModal());
   };
