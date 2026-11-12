@@ -115,11 +115,12 @@ export async function catalogo(env) {
 }
 
 /* Contexto de un cambio de stock: lo lee el disparador que llena el historial (va dentro del mismo batch) */
-export const ctxStock = (env, motivo, { pedido = null, admin = null } = {}) => [
-  env.DB.prepare("INSERT INTO ajustes (clave, valor) VALUES ('ctx_motivo', ?), ('ctx_pedido', ?), ('ctx_admin', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor")
-    .bind(motivo, pedido == null ? null : String(pedido), admin == null ? null : String(admin)),
+export const ctxStock = (env, motivo, { pedido = null, admin = null, costo = null, proveedor = null, nota = null } = {}) => [
+  env.DB.prepare(`INSERT INTO ajustes (clave, valor) VALUES ('ctx_motivo', ?), ('ctx_pedido', ?), ('ctx_admin', ?), ('ctx_costo', ?), ('ctx_proveedor', ?), ('ctx_nota', ?)
+      ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`)
+    .bind(motivo, pedido == null ? null : String(pedido), admin == null ? null : String(admin), costo == null ? null : String(costo), proveedor, nota),
 ];
-export const ctxFin = env => [env.DB.prepare("DELETE FROM ajustes WHERE clave IN ('ctx_motivo', 'ctx_pedido', 'ctx_admin')")];
+export const ctxFin = env => [env.DB.prepare("DELETE FROM ajustes WHERE clave IN ('ctx_motivo', 'ctx_pedido', 'ctx_admin', 'ctx_costo', 'ctx_proveedor', 'ctx_nota')")];
 
 export async function config(env) {
   const r = await env.DB.prepare("SELECT valor FROM ajustes WHERE clave = 'config'").first();

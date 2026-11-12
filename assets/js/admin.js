@@ -73,6 +73,11 @@ const I = {
   mail: svg('<rect x="3" y="5" width="18" height="14" rx="1"/><path d="m3 7 9 6 9-6"/>'),
   print: svg('<path d="M7 9V3h10v6M7 17H4v-7h16v7h-3"/><path d="M7 14h10v7H7z"/>'),
   wa: svg('<path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12Z"/>'),
+  mayorista: svg('<rect x="2.5" y="13" width="8.5" height="8" rx="1"/><rect x="13" y="13" width="8.5" height="8" rx="1"/><rect x="7.75" y="3" width="8.5" height="8" rx="1"/>'),
+  caja: svg('<path d="M2 6h12v11H2zM14 10h4l4 4v3h-8"/><circle cx="6" cy="18.5" r="1.8"/><circle cx="18" cy="18.5" r="1.8"/>'),
+  entrada: svg('<path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 14v6h16v-6"/>'),
+  salida: svg('<path d="M12 14V3M7.5 7.5 12 3l4.5 4.5"/><path d="M4 14v6h16v-6"/>'),
+  mas: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
 /* ---------- API ---------- */
@@ -108,6 +113,17 @@ const MSG = {
   precio_invalido: "Revisa el precio.",
   precio_antes_invalido: "El precio normal debe ser mayor que el precio final.",
   falta_respuesta: "Escribe la respuesta antes de guardar.",
+  sin_stock: "No hay stock virtual suficiente.",
+  sin_stock_fisico: "No hay suficiente en tu almacén.",
+  falta_origen: "Elige de dónde sale la mercadería.",
+  costo_invalido: "Revisa el costo.",
+  precio_mayor_invalido: "Revisa el precio mayorista.",
+  motivo_invalido: "Elige el motivo de la salida.",
+  sin_prendas: "Agrega al menos una prenda con su cantidad.",
+  tipo_invalido: "No se pudo registrar el movimiento.",
+  prenda_no_existe: "Una de las prendas ya no está en la tienda. Recarga la página.",
+  stock_invalido: "Revisa las cantidades.",
+  datos_invalidos: "Revisa los datos.",
   error: "No se pudo completar. Inténtalo de nuevo.",
 };
 const msg = e => { const m = MSG[e.codigo] || MSG.error; return typeof m === "function" ? m(e.data || {}) : m; };
@@ -119,8 +135,9 @@ function toast(t) {
   el.textContent = t; el.classList.add("show");
   clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("show"), 3200);
 }
-/* Ventana propia (nunca alert/confirm). acciones: [{ t, clase, v }] → devuelve el v del botón tocado (o null) */
-function ventana({ titulo, html, acciones = [], ancho = false, alAbrir }) {
+/* Ventana propia (nunca alert/confirm). acciones: [{ t, clase, v, antes }] → devuelve el v del botón tocado (o null)
+   antes(d): se ejecuta al tocar el botón; si devuelve false la ventana sigue abierta · fijo: no se cierra al tocar afuera */
+function ventana({ titulo, html, acciones = [], ancho = false, alAbrir, fijo = false }) {
   return new Promise(resolve => {
     const d = document.createElement("div");
     d.className = "dlg" + (ancho ? " dlg--ancho" : "");
@@ -136,7 +153,7 @@ function ventana({ titulo, html, acciones = [], ancho = false, alAbrir }) {
     };
     const esc_ = e => { if (e.key === "Escape") cerrar(null); };
     addEventListener("keydown", esc_);
-    $(".dlg__bg", d).addEventListener("click", () => cerrar(null));
+    if (!fijo) $(".dlg__bg", d).addEventListener("click", () => cerrar(null));
     $(".dlg__x", d).addEventListener("click", () => cerrar(null));
     $$(".dlg__acts button", d).forEach(b => b.addEventListener("click", async () => {
       const a = acciones[+b.dataset.i];
@@ -222,7 +239,7 @@ async function pantallaActivar(token) {
 /* =========================================================
    ESTRUCTURA Y NAVEGACIÓN
    ========================================================= */
-const SECCIONES = [["resumen", "Resumen"], ["pedidos", "Pedidos"], ["stock", "Stock"], ["productos", "Productos"], ["clientes", "Clientes"], ["reclamos", "Reclamos"]];
+const SECCIONES = [["resumen", "Resumen"], ["pedidos", "Pedidos"], ["mayorista", "Mayorista"], ["stock", "Stock"], ["productos", "Productos"], ["clientes", "Clientes"], ["reclamos", "Reclamos"]];
 let actual = "", sucio = null, badgeT;
 function armar() {
   actual = "";
@@ -285,6 +302,12 @@ async function vResumen(m) {
     ? `<ul class="rank">${lista.map(x => `<li><img src="${imgDe(x.slug, x.color)}" alt="" loading="lazy"><div><b>${esc(x.nombre)}</b>${x.color ? `<span>${esc(x.color)} · Talla ${esc(x.talla)}</span>` : ""}</div><strong>${fn(x)}</strong></li>`).join("")}</ul>`
     : `<p class="empty" style="padding:24px 0">Todavía no hay datos</p>`;
   const pctCarga = r.stock.tallas ? Math.round((r.stock.cargadas / r.stock.tallas) * 100) : 0;
+  // Ganancia del mes (sobre el precio de venta): solo cuenta las ventas cuyas prendas tienen costo
+  const gan = g => {
+    const ganancia = g.ventas_con_costo - g.costo, pct = g.ventas_con_costo ? Math.round((ganancia / g.ventas_con_costo) * 100) : null;
+    return { valor: money(ganancia), sub: !g.n ? "Sin ventas este mes" : `Margen ${pct == null ? "—" : pct + "%"} · ${plural(g.n, "venta", "ventas")}${g.sin_costo ? ` · ${g.sin_costo} sin costo` : ""}`, tono: ganancia < 0 ? "bad" : "" };
+  };
+  const gMin = gan(r.ganancia.minorista), gMay = gan(r.ganancia.mayorista);
   m.innerHTML = `
     <header class="top"><div><h1>Resumen</h1><p class="top__sub">${new Date().toLocaleDateString("es-PE", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" })}</p></div></header>
     <section class="kpis">
@@ -295,6 +318,11 @@ async function vResumen(m) {
       ${kpi("Reclamos por responder", r.reclamos, "", "#reclamos", r.reclamos ? "bad" : "")}
       ${kpi("Clientes con cuenta", r.clientes.n, r.clientes.n ? `${r.clientes.promos} aceptan promociones` : "", "#clientes")}
     </section>
+    <section class="kpis">
+      ${kpi("Ganancia minorista del mes", gMin.valor, gMin.sub, "#pedidos", gMin.tono)}
+      ${kpi("Ganancia mayorista del mes", gMay.valor, gMay.sub, "#mayorista", gMay.tono)}
+      ${kpi("Inventario en tu almacén", money(r.fisico.valor), `${plural(r.fisico.unidades, "unidad", "unidades")} a precio de costo${r.fisico.sin_costo ? ` · ${r.fisico.sin_costo} sin costo` : ""}`, "#stock")}
+    </section>
     <section class="card" style="margin-bottom:18px"><h2>Ventas de los últimos 14 días</h2>
       <div class="chart">${dias.map(d => `<div class="chart__col${d.monto ? "" : " cero"}" title="${fDia(d.d)}: ${money(d.monto)} · ${plural(d.n, "pedido", "pedidos")}">
         <em>${d.monto ? "S/" + Math.round(d.monto) : ""}</em><i style="height:${Math.max(2, (d.monto / max) * 100)}%"></i><span>${d.d.toLocaleDateString("es-PE", { timeZone: TZ, day: "numeric" })}</span></div>`).join("")}</div>
@@ -302,10 +330,10 @@ async function vResumen(m) {
     <div class="grid3" style="margin-bottom:18px">
       <section class="card"><h2>Lo más vendido en 30 días</h2>${rank(r.vendidos, x => plural(x.n, "unidad", "unidades"))}</section>
       <section class="card"><h2>Lo más consultado en 30 días</h2>${rank(r.consultados, x => plural(x.n, "unidad", "unidades"))}</section>
-      <section class="card"><h2>Stock bajo</h2>${rank(r.bajo, x => `<span class="pill ${x.stock ? "pill--pendiente" : "pill--bad"}">${x.stock ? `Quedan ${x.stock}` : "Agotado"}</span>`)}</section>
+      <section class="card"><h2>Stock virtual bajo</h2>${rank(r.bajo, x => `<span class="pill ${x.stock ? "pill--pendiente" : "pill--bad"}">${x.stock ? `Quedan ${x.stock}` : "Agotado"}</span>`)}</section>
     </div>
-    <section class="card"><h2>Stock cargado</h2><div class="meter"><i style="width:${pctCarga}%"></i></div>
-      <div class="cargado"><p><b>${r.stock.cargadas}</b> de ${r.stock.tallas} tallas · <b>${r.stock.unidades}</b> unidades en total</p><a class="btn btn--pri" href="#stock">${I.stock}Cargar stock</a></div>
+    <section class="card"><h2>Stock virtual cargado</h2><div class="meter"><i style="width:${pctCarga}%"></i></div>
+      <div class="cargado"><p><b>${r.stock.cargadas}</b> de ${r.stock.tallas} tallas · <b>${r.stock.unidades}</b> unidades en la tienda</p><a class="btn btn--pri" href="#stock">${I.stock}Cargar stock</a></div>
     </section>`;
 }
 
@@ -314,6 +342,8 @@ async function vResumen(m) {
    ========================================================= */
 const ORIGEN = { carrito: "Carrito", producto: "Producto", pack: "Pack Deluxe" };
 const ESTADO = { pendiente: "Pendiente", procede: "Confirmado", cancelado: "Cancelado" };
+const DESDE = { almacen: "desde tu almacén", proveedor: "desde el proveedor" };
+const ENTREGA = { domicilio: "Envío a domicilio", recojo: "Recojo en tienda", provincia: "Envío a provincia" };
 const ped = { estado: "pendiente", q: "" };
 function entregaTexto(e) {
   if (e.tipo === "domicilio") return `<b>Envío a domicilio</b><br>${esc(e.direccion || "")}${e.distrito ? `, ${esc(e.distrito)}` : ""}${e.referencia ? `<br>Referencia: ${esc(e.referencia)}` : ""}`;
@@ -322,14 +352,22 @@ function entregaTexto(e) {
   return "A coordinar por WhatsApp";
 }
 const waCel = cel => { const d = String(cel || "").replace(/\D/g, ""); return d.length === 9 ? "51" + d : d; };
-function stockCelda(i, estado) {
-  if (i.stock == null) return `<span class="chip">Sin cargar</span>`;
-  if (estado !== "pendiente") return i.stock;
-  if (i.stock < i.cantidad) return `<span class="pill pill--bad">Solo hay ${i.stock}</span>`;
-  return `${i.stock} → <b>${i.stock - i.cantidad}</b>`;
+/* Stock virtual de una prenda del pedido; si está por confirmar, cómo quedaría */
+function stockCelda(v, cant, estado) {
+  if (v == null) return `<span class="chip">Sin cargar</span>`;
+  if (estado !== "pendiente") return v;
+  if (v < cant) return `<span class="pill pill--bad">Solo hay ${v}</span>`;
+  return `${v} → <b>${v - cant}</b>`;
 }
+/* Ganancia de un pedido confirmado: prendas (menos descuento, sin envío) frente a su costo del día */
+function ganPedido(p) {
+  if (p.estado !== "procede" || !p.items.length || p.items.some(i => i.costo == null)) return null;
+  const venta = p.items.reduce((s, i) => s + i.precio * i.cantidad, 0) - (p.descuento || 0), costo = p.items.reduce((s, i) => s + i.costo * i.cantidad, 0);
+  return { venta, costo, g: venta - costo };
+}
+const pctDe = (g, venta) => (venta ? Math.round((g / venta) * 100) : 0);
 function pedidoHTML(p) {
-  const c = p.cliente;
+  const c = p.cliente, g = ganPedido(p);
   return `<article class="ped ped--${p.estado}" data-cod="${p.codigo}">
     <header class="ped__head">
       <div><span class="ped__cod">${p.codigo}</span><span class="ped__fecha">${fFecha(p.fecha)}</span></div>
@@ -343,20 +381,21 @@ function pedidoHTML(p) {
         <h3>Entrega</h3><p>${entregaTexto(p.entrega)}</p>
       </div>
       <div class="wrap-tbl"><table class="tbl">
-        <thead><tr><th>Prenda</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Stock</th></tr></thead>
-        <tbody>${p.items.map(i => `<tr><td><div class="prd"><img src="${imgDe(i.slug, i.color)}" alt="" loading="lazy"><b>${esc(i.nombre)}</b></div></td><td data-l="Color">${esc(i.color)}</td><td data-l="Talla">${esc(i.talla)}</td><td class="num" data-l="Cantidad">${i.cantidad}</td><td class="num" data-l="Precio">${money(i.precio)}</td><td class="num" data-l="Stock">${stockCelda(i, p.estado)}</td></tr>`).join("")}</tbody>
+        <thead><tr><th>Prenda</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Virtual</th><th class="num">Físico</th></tr></thead>
+        <tbody>${p.items.map(i => `<tr><td><div class="prd"><img src="${imgDe(i.slug, i.color)}" alt="" loading="lazy"><b>${esc(i.nombre)}</b></div></td><td data-l="Color">${esc(i.color)}</td><td data-l="Talla">${esc(i.talla)}</td><td class="num" data-l="Cantidad">${i.cantidad}</td><td class="num" data-l="Precio">${money(i.precio)}</td><td class="num" data-l="Virtual">${stockCelda(i.stock, i.cantidad, p.estado)}</td><td class="num" data-l="Físico">${i.fisico == null ? `<span class="chip">Sin cargar</span>` : i.fisico}</td></tr>`).join("")}</tbody>
       </table></div>
     </div>
     <footer class="ped__foot">
-      <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${p.descuento ? `<span>Descuento <b>−${money(p.descuento)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span></div>
+      <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${p.descuento ? `<span>Descuento <b>−${money(p.descuento)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}</div>
       ${p.estado === "pendiente"
         ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`
-        : `<p class="ped__done">${ESTADO[p.estado]} por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>`}
+        : `<p class="ped__done">${ESTADO[p.estado]}${p.origen_stock ? " " + DESDE[p.origen_stock] : ""} por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>`}
     </footer>
   </article>`;
 }
+const listaFaltan = faltan => ((faltan || []).length ? `<ul>${faltan.map(f => `<li><span>${esc(f.nombre)} · ${esc(f.color)} · Talla ${esc(f.talla)}</span><b>Se necesitan ${f.pedido} · hay ${f.stock}</b></li>`).join("")}</ul>` : "");
 async function vPedidos(m) {
-  m.innerHTML = `<header class="top"><h1>Pedidos</h1><div class="top__acts"><button class="btn" type="button" id="pRef">${I.ref}Actualizar</button></div></header>
+  m.innerHTML = `<header class="top"><h1>Pedidos</h1><div class="top__acts"><button class="btn" type="button" id="pExcel">${I.bajar}Descargar Excel</button><button class="btn" type="button" id="pRef">${I.ref}Actualizar</button></div></header>
     <div class="bar"><div class="tabs" id="pTabs"></div><label class="search">${I.buscar}<input class="inp" id="pQ" type="search" placeholder="Buscar código, nombre o celular" value="${esc(ped.q)}"></label></div>
     <div class="peds" id="pLista"><div class="loading">Cargando…</div></div>`;
   let lista = [], t;
@@ -368,27 +407,57 @@ async function vPedidos(m) {
       .map(([k, l]) => `<button type="button" data-e="${k}" class="${ped.estado === k ? "on" : ""}">${l} <b>${n[k] || 0}</b></button>`).join("");
     $("#pLista").innerHTML = lista.length ? lista.map(pedidoHTML).join("")
       : `<div class="empty"><b>${ped.q ? "Sin resultados" : ped.estado === "pendiente" ? "No hay pedidos por confirmar" : "No hay pedidos aquí"}</b>${ped.q ? "Prueba con otro código, nombre o celular." : ""}</div>`;
+    $("#pExcel").disabled = !lista.length;
   };
   await cargar();
   $("#pRef").addEventListener("click", () => cargar().then(badges).catch(e => toast(msg(e))));
+  $("#pExcel").addEventListener("click", () => excelPedidos(lista));
   $("#pTabs").addEventListener("click", e => { const b = e.target.closest("[data-e]"); if (b) { ped.estado = b.dataset.e; cargar().catch(x => toast(msg(x))); } });
   $("#pQ").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { ped.q = e.target.value.trim(); cargar().catch(x => toast(msg(x))); }, 300); });
   $("#pLista").addEventListener("click", async e => {
     const b = e.target.closest("[data-accion]"); if (!b) return;
     const p = lista.find(x => x.codigo === b.closest(".ped").dataset.cod); if (!p) return;
-    const linea = i => `<li><span>${esc(i.nombre)} · ${esc(i.color)} · Talla ${esc(i.talla)} × ${i.cantidad}</span><b>${i.stock == null ? "Sin stock cargado" : `${i.stock} → ${i.stock - i.cantidad}`}</b></li>`;
+    let origen = null;
     if (b.dataset.accion === "procede") {
-      if (!(await confirmar(`¿El pedido ${p.codigo} procede?`, `<p>Se descuenta del stock:</p><ul>${p.items.map(linea).join("")}</ul>`, "Sí, procede"))) return;
+      // ¿De dónde sale? Almacén: baja el virtual y el físico · Proveedor: solo el virtual
+      const linea = i => `<li><span>${esc(i.nombre)} · ${esc(i.color)} · Talla ${esc(i.talla)} × ${i.cantidad}</span><b>Virtual ${i.stock == null ? "sin cargar" : i.stock < i.cantidad ? `solo hay ${i.stock}` : `${i.stock} → ${i.stock - i.cantidad}`} · Físico ${i.fisico == null ? "sin cargar" : i.fisico}</b></li>`;
+      origen = await ventana({
+        titulo: `¿De dónde sale el pedido ${p.codigo}?`, ancho: true,
+        html: `<ul>${p.items.map(linea).join("")}</ul><p><b>Sale de mi almacén:</b> baja el stock virtual y el físico.<br><b>Lo envía el proveedor:</b> solo baja el stock virtual.</p>`,
+        acciones: [{ t: "Volver", v: null }, { t: `${I.caja}Lo envía el proveedor`, clase: "btn--dark", v: "proveedor" }, { t: `${I.stock}Sale de mi almacén`, clase: "btn--pri", v: "almacen" }],
+      });
+      if (!origen) return;
     } else if (!(await confirmar(`¿Cancelar el pedido ${p.codigo}?`, "<p>El stock no cambia.</p>", "Sí, cancelar", "btn--bad"))) return;
     try {
-      await api(`pedidos/${p.codigo}`, { method: "POST", body: { accion: b.dataset.accion } });
-      toast(b.dataset.accion === "procede" ? `Pedido ${p.codigo} confirmado. El stock ya se actualizó en la tienda.` : `Pedido ${p.codigo} cancelado.`);
+      await api(`pedidos/${p.codigo}`, { method: "POST", body: { accion: b.dataset.accion, origen } });
+      toast(b.dataset.accion === "procede" ? `Pedido ${p.codigo} confirmado ${DESDE[origen]}. El stock ya se actualizó.` : `Pedido ${p.codigo} cancelado.`);
     } catch (x) {
-      if (x.codigo === "sin_stock") await avisar("No hay stock suficiente", `<p>El pedido sigue por confirmar y no se descontó nada.</p>${(x.data.faltan || []).length ? `<ul>${x.data.faltan.map(f => `<li><span>${esc(f.nombre)} · ${esc(f.color)} · Talla ${esc(f.talla)}</span><b>Pidió ${f.pedido} · hay ${f.stock}</b></li>`).join("")}</ul>` : ""}`);
+      if (x.codigo === "sin_stock") await avisar("No hay stock virtual suficiente", `<p>El pedido sigue por confirmar y no se descontó nada.</p>${listaFaltan(x.data.faltan)}`);
+      else if (x.codigo === "sin_stock_fisico") await avisar("No hay stock físico suficiente", `<p>El pedido sigue por confirmar y no se descontó nada. Registra una entrada en Stock › Físico o elige «Lo envía el proveedor».</p>${listaFaltan(x.data.faltan)}`);
       else toast(msg(x));
     }
     await cargar().catch(() => {}); badges();
   });
+}
+/* Excel de los pedidos de la pestaña abierta: un pedido por fila y, aparte, cada prenda */
+function excelPedidos(lista) {
+  const pedidos = lista.map(p => {
+    const g = ganPedido(p), u = p.items.reduce((s, i) => s + i.cantidad, 0);
+    return [p.codigo, p.fecha, ESTADO[p.estado], p.cliente.nombre || "", p.cliente.celular || "", p.cliente.email || "", ENTREGA[p.entrega.tipo] || "A coordinar",
+      p.origen_stock ? (p.origen_stock === "almacen" ? "Almacén" : "Proveedor") : "", u, p.subtotal, p.descuento || 0, p.envio, p.total,
+      g ? r2(g.costo) : null, g ? r2(g.g) : null, g && g.venta ? g.g / g.venta : null];
+  });
+  const prendas = lista.flatMap(p => p.items.map(i => [p.codigo, p.fecha, ESTADO[p.estado], i.nombre, i.color, i.talla, i.cantidad, i.precio, r2(i.precio * i.cantidad), i.costo, i.costo == null ? null : r2(i.costo * i.cantidad)]));
+  const suma = (filas, col) => r2(filas.reduce((s, f) => s + (f[col] || 0), 0));
+  excel(`pedidos-${ped.estado}`, [
+    { nombre: "Pedidos", columnas: [{ t: "Código", ancho: 11 }, { t: "Fecha", ancho: 17, f: "d" }, { t: "Estado", ancho: 12 }, { t: "Cliente", ancho: 26 }, { t: "Celular", ancho: 13 }, { t: "Correo", ancho: 28 }, { t: "Entrega", ancho: 18 },
+      { t: "Sale de", ancho: 11 }, { t: "Unidades", ancho: 10, f: "n" }, { t: "Subtotal (S/)", ancho: 13, f: "s" }, { t: "Descuento (S/)", ancho: 14, f: "s" }, { t: "Envío (S/)", ancho: 11, f: "s" }, { t: "Total (S/)", ancho: 12, f: "s" },
+      { t: "Costo de prendas (S/)", ancho: 19, f: "s" }, { t: "Ganancia (S/)", ancho: 14, f: "s" }, { t: "Margen", ancho: 9, f: "p" }],
+      filas: pedidos, total: ["Total", null, null, null, null, null, null, null, suma(pedidos, 8), suma(pedidos, 9), suma(pedidos, 10), suma(pedidos, 11), suma(pedidos, 12), suma(pedidos, 13), suma(pedidos, 14), null] },
+    { nombre: "Prendas", columnas: [{ t: "Código", ancho: 11 }, { t: "Fecha", ancho: 17, f: "d" }, { t: "Estado", ancho: 12 }, { t: "Prenda", ancho: 34 }, { t: "Color", ancho: 16 }, { t: "Talla", ancho: 8 },
+      { t: "Cantidad", ancho: 10, f: "n" }, { t: "Precio (S/)", ancho: 12, f: "s" }, { t: "Venta (S/)", ancho: 12, f: "s" }, { t: "Costo unitario (S/)", ancho: 17, f: "s" }, { t: "Costo total (S/)", ancho: 15, f: "s" }],
+      filas: prendas, total: ["Total", null, null, null, null, null, suma(prendas, 6), null, suma(prendas, 8), null, suma(prendas, 10)] },
+  ]);
 }
 
 /* =========================================================
@@ -410,33 +479,133 @@ const filtroCat = (sel, linea, valor) => `<select class="sel" id="${sel}"><optio
 const buscaTexto = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 /* =========================================================
-   STOCK por color y talla
+   EXCEL (.xlsx de verdad, sin librerías)
+   hojas: [{ nombre, columnas: [{ t, ancho, f }], filas: [[...]], total: [...] }]
+   f: "s" soles (2 decimales) · "n" entero · "p" porcentaje (0.25 = 25%) · "d" fecha y hora de Perú
    ========================================================= */
-const stkF = { linea: "", cat: "", q: "" };
+const r2 = n => Math.round(n * 100) / 100;
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+/* Zip sin comprimir (así es un .xlsx por dentro) */
+function zipBlob(archivos, tipo) {
+  const enc = new TextEncoder(), loc = [], cen = []; let off = 0;
+  const poner = (dv, campos) => campos.forEach(([o, v, z]) => (z === 4 ? dv.setUint32(o, v, true) : dv.setUint16(o, v, true)));
+  for (const [nombre, texto] of archivos) {
+    const n = enc.encode(nombre), d = enc.encode(texto), crc = crc32(d);
+    const h = new DataView(new ArrayBuffer(30)), c = new DataView(new ArrayBuffer(46));
+    poner(h, [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x800, 2], [12, 0x21, 2], [14, crc, 4], [18, d.length, 4], [22, d.length, 4], [26, n.length, 2]]);
+    poner(c, [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x800, 2], [14, 0x21, 2], [16, crc, 4], [20, d.length, 4], [24, d.length, 4], [28, n.length, 2], [42, off, 4]]);
+    loc.push(h, n, d); cen.push(c, n); off += 30 + n.length + d.length;
+  }
+  const tam = cen.reduce((s, x) => s + x.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  poner(e, [[0, 0x06054b50, 4], [8, archivos.length, 2], [10, archivos.length, 2], [12, tam, 4], [16, off, 4]]);
+  return new Blob([...loc, ...cen, e], { type: tipo });
+}
+const xe = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
+const colX = i => { let s = ""; for (i++; i; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + ((i - 1) % 26)) + s; return s; };
+const ESTILO = { s: 2, n: 3, p: 4, d: 9 }; // posiciones en cellXfs (+4 = la misma en negrita, para totales)
+function hojaXML({ columnas, filas, total }) {
+  const celda = (v, ci, ri, neg) => {
+    if (v == null || v === "") return "";
+    const r = colX(ci) + ri, f = columnas[ci].f;
+    if (f === "d" && typeof v === "string") { const t = Date.parse(v); if (!isNaN(t)) return `<c r="${r}" s="9"><v>${(t - 5 * 3600e3) / 864e5 + 25569}</v></c>`; }
+    if (f && f !== "d" && typeof v === "number" && isFinite(v)) return `<c r="${r}" s="${ESTILO[f] + (neg ? 4 : 0)}"><v>${v}</v></c>`;
+    return `<c r="${r}" t="inlineStr"${neg ? ` s="5"` : ""}><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+  };
+  const fila = (vals, ri, neg) => `<row r="${ri}">${vals.map((v, ci) => celda(v, ci, ri, neg)).join("")}</row>`;
+  const cab = `<row r="1">${columnas.map((c, ci) => `<c r="${colX(ci)}1" t="inlineStr" s="1"><is><t>${xe(c.t)}</t></is></c>`).join("")}</row>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">`
+    + `<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`
+    + `<cols>${columnas.map((c, i) => `<col min="${i + 1}" max="${i + 1}" width="${c.ancho || 14}" customWidth="1"/>`).join("")}</cols>`
+    + `<sheetData>${cab}${filas.map((f, i) => fila(f, i + 2)).join("")}${total ? fila(total, filas.length + 2, true) : ""}</sheetData></worksheet>`;
+}
+function excel(archivo, hojas) {
+  const X = "http://schemas.openxmlformats.org/spreadsheetml/2006/main", R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships", P = "http://schemas.openxmlformats.org/package/2006/relationships";
+  const cab = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`;
+  // 0 normal · 1 encabezado · 2 soles · 3 entero · 4 % · 5 texto negrita · 6 soles negrita · 7 entero negrita · 8 % negrita · 9 fecha
+  const xfs = [[0, 0, 0], [0, 1, 2], [4, 0, 0], [3, 0, 0], [164, 0, 0], [0, 1, 0], [4, 1, 0], [3, 1, 0], [164, 1, 0], [165, 0, 0]];
+  const estilos = `${cab}<styleSheet xmlns="${X}"><numFmts count="2"><numFmt numFmtId="164" formatCode="0.0%"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy hh:mm"/></numFmts>`
+    + `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>`
+    + `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDDE8E7"/><bgColor indexed="64"/></patternFill></fill></fills>`
+    + `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>`
+    + `<cellXfs count="${xfs.length}">${xfs.map(([nf, fo, fi]) => `<xf numFmtId="${nf}" fontId="${fo}" fillId="${fi}" borderId="0" xfId="0"${nf ? ` applyNumberFormat="1"` : ""}${fo ? ` applyFont="1"` : ""}${fi ? ` applyFill="1"` : ""}/>`).join("")}</cellXfs>`
+    + `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const archivos = [
+    ["[Content_Types].xml", `${cab}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>`
+      + `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>`
+      + `${hojas.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],
+    ["_rels/.rels", `${cab}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ["xl/workbook.xml", `${cab}<workbook xmlns="${X}" xmlns:r="${R}"><sheets>${hojas.map((h, i) => `<sheet name="${xe(h.nombre.replace(/[\\/?*[\]:]/g, " ").slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`],
+    ["xl/_rels/workbook.xml.rels", `${cab}<Relationships xmlns="${P}">${hojas.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${hojas.length + 1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`],
+    ["xl/styles.xml", estilos],
+    ...hojas.map((h, i) => [`xl/worksheets/sheet${i + 1}.xml`, hojaXML(h)]),
+  ];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(zipBlob(archivos, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+  a.download = `${archivo}-${diaLima(new Date())}.xlsx`; document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("Excel descargado.");
+}
+
+/* =========================================================
+   STOCK: virtual (lo que ve la tienda) y físico (tu almacén, solo panel)
+   ========================================================= */
+const stkF = { linea: "", cat: "", q: "", modo: "virtual" };
+const CAMPO = { virtual: "stock", fisico: "fisico" };
+const varDe = (slug, color, talla) => (INV[slug] && INV[slug].vars[color + "|" + talla]) || null;
 async function vStock(m) {
   await cargarInv();
-  const cambios = new Map(); // "slug|color|talla" → nuevo stock (número o null = sin cargar)
+  const cambios = new Map(); // "slug|color|talla" → nuevo valor del stock abierto (número o null = sin cargar)
   sucio = () => cambios.size > 0;
-  m.innerHTML = `<header class="top"><h1>Stock</h1><div class="top__acts"><button class="btn" type="button" id="sHist">${I.hist}Historial</button></div></header>
+  m.innerHTML = `<header class="top"><h1>Stock</h1><div class="top__acts" id="sActs"></div></header>
     ${desfase()}
+    <div class="bar"><div class="tabs" id="sModo"></div><p class="bar__nota" id="sNota"></p></div>
+    <section class="kpis" id="sKpis"></section>
     <div class="bar">${filtroLinea("sLinea", stkF.linea)}<span id="sCatW">${filtroCat("sCat", stkF.linea, stkF.cat)}</span><label class="search">${I.buscar}<input class="inp" id="sQ" type="search" placeholder="Buscar prenda o color" value="${esc(stkF.q)}"></label></div>
     <div id="sLista"></div>
     <div class="savebar" id="saveBar"><b id="sN"></b><div style="display:flex;gap:10px"><button class="btn btn--ghost" type="button" id="sDesc">Descartar</button><button class="btn btn--pri" type="button" id="sGuardar">${I.check}Guardar cambios</button></div></div>`;
-  const orig = k => { const [s, c, t] = k.split("|"); const v = INV[s] && INV[s].vars[c + "|" + t]; return v ? v.stock : null; };
+  const fis = () => stkF.modo === "fisico";
+  const orig = k => { const [s, c, t] = k.split("|"); const v = varDe(s, c, t); return v ? v[CAMPO[stkF.modo]] : null; };
   const valor = k => (cambios.has(k) ? cambios.get(k) : orig(k));
   const total = p => p.colors.reduce((n, [c]) => n + p.sizes.reduce((x, t) => x + (valor(`${p.slug}|${c}|${t}`) || 0), 0), 0);
+  const kpis = () => {
+    let u = 0, val = 0, agot = 0, sinCargar = 0; const sinCosto = new Set();
+    PRODUCTS.forEach(p => { const d = INV[p.slug]; if (!d) return; p.colors.forEach(([c]) => p.sizes.forEach(t => {
+      const v = d.vars[c + "|" + t]; if (!v) return; const x = v[CAMPO[stkF.modo]];
+      if (x == null) { sinCargar++; return; }
+      u += x; if (x === 0) agot++;
+      if (fis() && x > 0) { if (d.costo == null) sinCosto.add(p.slug); else val += x * d.costo; }
+    })); });
+    $("#sKpis").innerHTML = fis()
+      ? `<div class="kpi"><span>Unidades en tu almacén</span><b>${u}</b></div>
+         <div class="kpi"><span>Valor del inventario</span><b>${money(val)}</b><em>A precio de costo</em></div>
+         <a class="kpi${sinCosto.size ? " kpi--warn" : ""}" href="#productos"><span>Prendas sin costo</span><b>${sinCosto.size}</b><em>${sinCosto.size ? "Ponles costo en Productos" : "Todas tienen costo"}</em></a>`
+      : `<div class="kpi"><span>Unidades en la tienda</span><b>${u}</b></div>
+         <div class="kpi${agot ? " kpi--warn" : ""}"><span>Tallas agotadas</span><b>${agot}</b></div>
+         <div class="kpi"><span>Tallas sin cargar</span><b>${sinCargar}</b><em>Se venden sin límite</em></div>`;
+  };
+  const cabeza = () => {
+    $("#sModo").innerHTML = [["virtual", "Stock virtual"], ["fisico", "Stock físico"]].map(([k, l]) => `<button type="button" data-m="${k}" class="${stkF.modo === k ? "on" : ""}">${l}</button>`).join("");
+    $("#sNota").textContent = fis() ? "Tu almacén. Solo lo ves tú. Baja cuando un pedido o una venta por mayor sale de tu almacén." : "Lo que la tienda muestra disponible. Baja cuando confirmas un pedido.";
+    $("#sActs").innerHTML = `<button class="btn" type="button" data-a="hist">${I.hist}Historial</button>` + (fis()
+      ? `<button class="btn" type="button" data-a="excel">${I.bajar}Descargar Excel</button><button class="btn" type="button" data-a="salida">${I.salida}Registrar salida</button><button class="btn btn--pri" type="button" data-a="entrada">${I.entrada}Registrar entrada</button>`
+      : "");
+    kpis();
+  };
+  const valorProd = p => (INV[p.slug].costo == null ? "" : `Costo ${money(INV[p.slug].costo)} · Valor <b>${money(total(p) * INV[p.slug].costo)}</b>`);
   const pintar = () => {
     const q = buscaTexto(stkF.q);
     const lista = PRODUCTS.filter(p => INV[p.slug] && (!stkF.linea || p.linea === stkF.linea) && (!stkF.cat || p.cat === stkF.cat) &&
       (!q || buscaTexto(p.name + " " + p.colors.map(c => c[0]).join(" ")).includes(q)));
     $("#sLista").innerHTML = lista.length ? lista.map(p => `<section class="stk" data-slug="${p.slug}">
         <div class="stk__head"><img src="${imgDe(p.slug)}" alt="" loading="lazy"><div class="stk__name"><h3>${esc(p.name)}</h3><p>${esc(lineName(p.linea))} · ${esc(catName(p.cat))}</p></div>
+          ${fis() ? (INV[p.slug].costo == null ? `<a class="chip chip--warn" href="#productos">Sin costo</a>` : `<span class="stk__val" data-val>${valorProd(p)}</span>`) : ""}
           <div class="stk__tot"><b data-tot>${total(p)}</b><span>unidades</span></div><button class="btn btn--sm" type="button" data-hist="${p.slug}">${I.hist}Historial</button></div>
         <div class="stk__grid" style="--n:${p.sizes.length}">
           <div class="stk__h">Color</div>${p.sizes.map(t => `<div class="stk__h">${esc(t)}</div>`).join("")}
           ${p.colors.map(([c, hex]) => `<div class="stk__c"><i style="background:${hex}"></i>${esc(c)}</div>${p.sizes.map(t => {
             const k = `${p.slug}|${c}|${t}`, v = valor(k);
-            return INV[p.slug].vars[c + "|" + t]
+            return varDe(p.slug, c, t)
               ? `<input data-k="${esc(k)}" inputmode="numeric" autocomplete="off" value="${v ?? ""}" placeholder="—" class="${cambios.has(k) ? "chg" : v === 0 ? "cero" : ""}" aria-label="${esc(p.name)}, ${esc(c)}, talla ${esc(t)}">`
               : `<input disabled placeholder="—" aria-label="Talla aún no disponible">`;
           }).join("")}`).join("")}
@@ -444,8 +613,22 @@ async function vStock(m) {
       : `<div class="empty"><b>Sin resultados</b>Prueba con otro filtro.</div>`;
   };
   const barra = () => { $("#saveBar").classList.toggle("show", cambios.size > 0); $("#sN").textContent = `${plural(cambios.size, "cambio", "cambios")} sin guardar`; };
-  pintar(); barra();
+  const recargar = async () => { cambios.clear(); await cargarInv(); cabeza(); pintar(); barra(); };
+  const descartar = async t => !cambios.size || confirmar("Tienes cambios sin guardar", `<p>Si ${t} ahora, se pierden los cambios que no guardaste.</p>`, "Seguir sin guardar", "btn--bad");
+  cabeza(); pintar(); barra();
 
+  $("#sModo").addEventListener("click", async e => {
+    const b = e.target.closest("[data-m]"); if (!b || b.dataset.m === stkF.modo) return;
+    if (!(await descartar("cambias de stock"))) return;
+    cambios.clear(); stkF.modo = b.dataset.m; cabeza(); pintar(); barra();
+  });
+  $("#sActs").addEventListener("click", async e => {
+    const a = e.target.closest("[data-a]"); if (!a) return;
+    if (a.dataset.a === "hist") return historial("", stkF.modo);
+    if (a.dataset.a === "excel") return excelInventario();
+    if (!(await descartar("registras una " + a.dataset.a))) return;
+    if (await movFisico(a.dataset.a)) await recargar().catch(x => toast(msg(x)));
+  });
   $("#sLinea").addEventListener("change", e => { stkF.linea = e.target.value; stkF.cat = ""; $("#sCatW").innerHTML = filtroCat("sCat", stkF.linea, ""); pintar(); });
   $("#sCatW").addEventListener("change", e => { stkF.cat = e.target.value; pintar(); });
   let t; $("#sQ").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { stkF.q = e.target.value.trim(); pintar(); }, 200); });
@@ -456,7 +639,9 @@ async function vStock(m) {
     const nuevo = limpio === "" ? null : +limpio;
     if (nuevo === orig(k)) cambios.delete(k); else cambios.set(k, nuevo);
     inp.classList.toggle("chg", cambios.has(k)); inp.classList.toggle("cero", !cambios.has(k) && nuevo === 0);
-    const sec = inp.closest(".stk"); $("[data-tot]", sec).textContent = total(PROD[sec.dataset.slug]);
+    const sec = inp.closest(".stk"), p = PROD[sec.dataset.slug];
+    $("[data-tot]", sec).textContent = total(p);
+    const vl = $("[data-val]", sec); if (vl) vl.innerHTML = valorProd(p);
     barra();
   });
   // Enter pasa a la siguiente casilla
@@ -466,54 +651,205 @@ async function vStock(m) {
     if (all[i + 1]) { all[i + 1].focus(); all[i + 1].select(); }
   });
   $("#sLista").addEventListener("focusin", e => { if (e.target.dataset.k) e.target.select(); });
-  $("#sLista").addEventListener("click", e => { const b = e.target.closest("[data-hist]"); if (b) historial(b.dataset.hist); });
-  $("#sHist").addEventListener("click", () => historial(""));
+  $("#sLista").addEventListener("click", e => { const b = e.target.closest("[data-hist]"); if (b) historial(b.dataset.hist, stkF.modo); });
   $("#sDesc").addEventListener("click", () => { cambios.clear(); pintar(); barra(); });
   $("#sGuardar").addEventListener("click", async () => {
-    const lista = [...cambios].map(([k, stock]) => { const [slug, color, talla] = k.split("|"); return { slug, color, talla, stock }; });
+    const campo = CAMPO[stkF.modo];
+    const lista = [...cambios].map(([k, v]) => { const [slug, color, talla] = k.split("|"); return { slug, color, talla, [campo]: v }; });
     $("#sGuardar").disabled = true;
     try {
       await api("stock", { method: "POST", body: { cambios: lista } });
-      cambios.clear(); await cargarInv(); pintar(); barra();
-      toast(`Stock guardado (${plural(lista.length, "talla", "tallas")}). Ya se ve en la tienda.`);
+      await recargar();
+      toast(fis() ? `Stock físico guardado (${plural(lista.length, "talla", "tallas")}). Queda en el historial como conteo.` : `Stock virtual guardado (${plural(lista.length, "talla", "tallas")}). Ya se ve en la tienda.`);
     } catch (x) { toast(msg(x)); }
     $("#sGuardar").disabled = false;
   });
 }
-const MOTIVO = { ajuste: "Ajuste de stock", venta: "Venta", directo: "Cambio directo" };
-async function historial(slug) {
-  const r = await api("movimientos" + (slug ? `?slug=${encodeURIComponent(slug)}` : "")).catch(e => (toast(msg(e)), null));
-  if (!r) return;
-  const filas = r.movimientos.map(x => `<tr><td>${fFecha(x.fecha)}</td>${slug ? "" : `<td>${esc(x.nombre || x.slug)}</td>`}<td>${esc(x.color)}</td><td>${esc(x.talla)}</td>
-    <td class="num">${x.antes ?? "—"} → <b>${x.despues ?? "—"}</b></td><td>${MOTIVO[x.motivo] || esc(x.motivo)}${x.pedido ? ` ${esc(x.pedido)}` : ""}</td><td>${esc(x.admin || "—")}</td></tr>`).join("");
-  ventana({
-    titulo: slug ? `Historial · ${PROD[slug] ? PROD[slug].name : slug}` : "Historial de stock", ancho: true,
-    html: filas ? `<div class="wrap-tbl"><table class="tbl"><thead><tr><th>Fecha</th>${slug ? "" : "<th>Prenda</th>"}<th>Color</th><th>Talla</th><th class="num">Stock</th><th>Motivo</th><th>Quién</th></tr></thead><tbody>${filas}</tbody></table></div>`
-      : `<p class="empty" style="padding:30px 0">Todavía no hay movimientos</p>`,
+
+/* ---------- Entradas y salidas del almacén ---------- */
+const SALIDA = { merma: "Merma", danado: "Prenda dañada", devolucion: "Devolución al proveedor", otro: "Otro" };
+function selPrendas(id) {
+  const g = {}; PRODUCTS.filter(p => INV[p.slug]).forEach(p => (g[lineName(p.linea) || "Otras"] ||= []).push(p));
+  return `<select class="sel" id="${id}"><option value="">Elige la prenda</option>${Object.entries(g).map(([l, ps]) => `<optgroup label="${esc(l)}">${ps.map(p => `<option value="${p.slug}">${esc(p.name)}</option>`).join("")}</optgroup>`).join("")}</select>`;
+}
+/* Guarda solo el costo de una prenda (el resto queda igual) */
+async function guardarCosto(slug, costo) {
+  const d = INV[slug];
+  await api(`productos/${slug}`, { method: "POST", body: { precio: d.precio, precio_antes: d.precio_antes, costo, precio_mayor: d.precio_mayor, estado: d.estado, todos: false } });
+}
+async function movFisico(tipo) {
+  const entrada = tipo === "entrada";
+  let provs = [], slug = "";
+  if (entrada) { try { provs = [...new Set((await api("movimientos?tipo=fisico")).movimientos.map(x => x.proveedor).filter(Boolean))]; } catch (_) {} }
+  const grilla = () => {
+    const p = PROD[slug];
+    if (!p) return `<p class="vacio">Elige una prenda para poner las cantidades por color y talla.</p>`;
+    return `<div class="stk__grid" style="--n:${p.sizes.length}"><div class="stk__h">Color</div>${p.sizes.map(t => `<div class="stk__h">${esc(t)}</div>`).join("")}
+      ${p.colors.map(([c, hex]) => `<div class="stk__c"><i style="background:${hex}"></i>${esc(c)}</div>${p.sizes.map(t => {
+        const v = varDe(slug, c, t);
+        return v ? `<label class="cel"><input data-c="${esc(c)}" data-t="${esc(t)}" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="${esc(c)}, talla ${esc(t)}"><em>Hay ${v.fisico ?? 0}</em></label>`
+          : `<input disabled placeholder="—" aria-label="Talla aún no disponible">`;
+      }).join("")}`).join("")}</div>`;
+  };
+  const html = `<div class="frm">
+    <p class="frm__lead">${entrada ? "Prendas que llegan a tu almacén (compra al proveedor)." : "Prendas que salen de tu almacén sin venderse."}</p>
+    <div class="f"><label for="mvP">Prenda</label>${selPrendas("mvP")}</div>
+    <div class="f"><label>Cantidades</label><div id="mvG">${grilla()}</div></div>
+    ${entrada ? `<div class="frm__2">
+        <div class="f"><label for="mvCosto">Costo por prenda</label><label class="money"><span>S/</span><input class="inp" id="mvCosto" inputmode="decimal" autocomplete="off" placeholder="0.00"></label></div>
+        <div class="f"><label for="mvProv">Proveedor</label><input class="inp" id="mvProv" maxlength="120" list="mvProvs" autocomplete="off" placeholder="Opcional"><datalist id="mvProvs">${provs.map(x => `<option value="${esc(x)}">`).join("")}</datalist></div>
+      </div>
+      <label class="chk" id="mvUsarW" hidden><input type="checkbox" id="mvUsar"><span id="mvUsarT"></span></label>`
+    : `<div class="f"><label for="mvMot">Motivo</label><select class="sel" id="mvMot">${Object.entries(SALIDA).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>`}
+    <div class="f"><label for="mvNota">Nota</label><input class="inp" id="mvNota" maxlength="300" autocomplete="off" placeholder="Opcional"></div>
+    <div class="alert alert--bad" id="mvErr" hidden></div></div>`;
+  const costoActual = () => (INV[slug] ? INV[slug].costo : null);
+  const revisarCosto = d => {
+    const v = $("#mvCosto", d).value, c = costoActual(), w = $("#mvUsarW", d);
+    w.hidden = !slug || v === "" || +v === c;
+    if (!w.hidden) { $("#mvUsarT", d).textContent = c == null ? `Guardar S/${(+v).toFixed(2)} como costo de esta prenda` : `Cambiar el costo de esta prenda de ${money(c)} a S/${(+v).toFixed(2)}`; }
+  };
+  const r = await ventana({
+    titulo: entrada ? "Registrar entrada" : "Registrar salida", ancho: true, fijo: true, html,
+    acciones: [{ t: "Volver", v: false }, { t: entrada ? `${I.entrada}Registrar entrada` : `${I.salida}Registrar salida`, clase: entrada ? "btn--pri" : "btn--dark", v: true, antes: async d => {
+      const err = $("#mvErr", d), mal = h => { err.innerHTML = h; err.hidden = false; err.scrollIntoView({ block: "nearest", behavior: "smooth" }); return false; };
+      if (!slug) return mal("Elige la prenda.");
+      const items = $$("#mvG input[data-t]", d).filter(i => +i.value > 0).map(i => ({ slug, color: i.dataset.c, talla: i.dataset.t, cantidad: +i.value }));
+      if (!items.length) return mal("Pon la cantidad en al menos una talla.");
+      const body = { tipo, items, nota: $("#mvNota", d).value.trim() };
+      if (entrada) { const c = $("#mvCosto", d).value; body.costo_unitario = c === "" ? null : +c; body.proveedor = $("#mvProv", d).value.trim(); }
+      else body.motivo = $("#mvMot", d).value;
+      try {
+        const res = await api("fisico", { method: "POST", body });
+        let extra = "";
+        if (entrada && !$("#mvUsarW", d).hidden && $("#mvUsar", d).checked) {
+          try { await guardarCosto(slug, body.costo_unitario); extra = " y el costo de la prenda"; } catch (_) { extra = ", pero no se pudo cambiar el costo de la prenda"; }
+        }
+        toast(entrada ? `Entrada registrada: ${plural(res.unidades, "unidad", "unidades")} más en tu almacén${extra}.` : `Salida registrada: ${plural(res.unidades, "unidad", "unidades")} menos en tu almacén.`);
+        return true;
+      } catch (x) {
+        if (x.codigo === "sin_stock_fisico") return mal(`No hay tantas en tu almacén.${listaFaltan(x.data.faltan)}`);
+        return mal(esc(msg(x)));
+      }
+    } }],
+    alAbrir: d => {
+      $("#mvP", d).addEventListener("change", e => {
+        slug = e.target.value; $("#mvG", d).innerHTML = grilla();
+        if (entrada) { const c = costoActual(); $("#mvCosto", d).value = c == null ? "" : c; $("#mvUsar", d).checked = c == null; revisarCosto(d); }
+        const i = $("#mvG input:not(:disabled)", d); if (i) i.focus();
+      });
+      $("#mvG", d).addEventListener("input", e => { const i = e.target; if (!i.dataset.t) return; const s = i.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4); if (s !== i.value) i.value = s; });
+      if (entrada) $("#mvCosto", d).addEventListener("input", e => {
+        const s = e.target.value.replace(",", ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); if (s !== e.target.value) e.target.value = s;
+        revisarCosto(d);
+      });
+      setTimeout(() => $("#mvP", d).focus(), 80);
+    },
   });
+  return r === true;
+}
+
+/* ---------- Historial (kardex) del stock virtual y físico ---------- */
+const MOTIVO = { ajuste: "Ajuste a mano", conteo: "Conteo", venta: "Pedido", venta_mayor: "Venta por mayor", entrada: "Entrada", merma: "Merma", danado: "Prenda dañada", devolucion: "Devolución al proveedor", otro: "Otro", directo: "Cambio directo" };
+const TIPO_STK = { virtual: "Virtual", fisico: "Físico" };
+async function historial(slug, tipo = "") {
+  let filtro = tipo;
+  const cargar = async () => (await api(`movimientos?tipo=${filtro}${slug ? `&slug=${encodeURIComponent(slug)}` : ""}`)).movimientos;
+  let movs = await cargar().catch(e => (toast(msg(e)), null));
+  if (!movs) return;
+  const detalle = x => [x.pedido ? `${x.pedido}${x.origen_stock ? ` (${x.origen_stock === "almacen" ? "almacén" : "proveedor"})` : ""}` : "",
+    x.costo_unitario != null ? `Costo ${money(x.costo_unitario)}` : "", x.proveedor, x.nota].filter(Boolean).map(esc).join(" · ");
+  const tabla = () => (movs.length
+    ? `<div class="wrap-tbl"><table class="tbl"><thead><tr><th>Fecha</th>${slug ? "" : "<th>Prenda</th>"}<th>Color</th><th>Talla</th><th>Stock</th><th class="num">Cantidad</th><th>Motivo</th><th>Quién</th></tr></thead><tbody>${movs.map(x => {
+        const dif = (x.despues ?? 0) - (x.antes ?? 0);
+        return `<tr><td>${fFecha(x.fecha)}</td>${slug ? "" : `<td>${esc(x.nombre || x.slug)}</td>`}<td>${esc(x.color)}</td><td>${esc(x.talla)}</td>
+          <td><span class="chip${x.tipo === "fisico" ? " chip--teal" : ""}">${TIPO_STK[x.tipo] || x.tipo}</span></td>
+          <td class="num">${x.antes ?? "—"} → <b>${x.despues ?? "—"}</b>${x.despues != null && dif ? ` <span class="dif ${dif > 0 ? "mas" : "menos"}">${dif > 0 ? "+" : "−"}${Math.abs(dif)}</span>` : ""}</td>
+          <td>${MOTIVO[x.motivo] || esc(x.motivo)}${detalle(x) ? `<small class="sub">${detalle(x)}</small>` : ""}</td><td>${esc(x.admin || "—")}</td></tr>`;
+      }).join("")}</tbody></table></div>`
+    : `<p class="vacio">Todavía no hay movimientos</p>`);
+  await ventana({
+    titulo: slug ? `Historial · ${PROD[slug] ? PROD[slug].name : slug}` : "Historial de stock", ancho: true,
+    html: `<div class="bar"><div class="tabs tabs--sm" id="hTipo">${[["", "Todo"], ["virtual", "Virtual"], ["fisico", "Físico"]].map(([k, l]) => `<button type="button" data-t="${k}" class="${filtro === k ? "on" : ""}">${l}</button>`).join("")}</div></div><div id="hTabla">${tabla()}</div>`,
+    acciones: [{ t: `${I.bajar}Descargar Excel`, antes: async () => { if (movs.length) excelMovs(movs, slug); else toast("No hay movimientos para descargar."); return false; } }, { t: "Cerrar", clase: "btn--pri", v: null }],
+    alAbrir: d => $("#hTipo", d).addEventListener("click", async e => {
+      const b = e.target.closest("[data-t]"); if (!b || b.dataset.t === filtro) return;
+      filtro = b.dataset.t; $$("#hTipo button", d).forEach(x => x.classList.toggle("on", x.dataset.t === filtro));
+      try { movs = await cargar(); $("#hTabla", d).innerHTML = tabla(); } catch (x) { toast(msg(x)); }
+    }),
+  });
+}
+function excelMovs(movs, slug) {
+  excel(slug ? `historial-${slug}` : "historial-stock", [{
+    nombre: "Movimientos",
+    columnas: [{ t: "Fecha", ancho: 17, f: "d" }, { t: "Stock", ancho: 9 }, { t: "Prenda", ancho: 34 }, { t: "Color", ancho: 16 }, { t: "Talla", ancho: 8 },
+      { t: "Antes", ancho: 8, f: "n" }, { t: "Después", ancho: 9, f: "n" }, { t: "Cantidad", ancho: 10, f: "n" }, { t: "Motivo", ancho: 22 }, { t: "Pedido", ancho: 11 },
+      { t: "Costo unitario (S/)", ancho: 17, f: "s" }, { t: "Valor (S/)", ancho: 12, f: "s" }, { t: "Proveedor", ancho: 22 }, { t: "Nota", ancho: 30 }, { t: "Quién", ancho: 16 }],
+    filas: movs.map(x => {
+      const dif = x.antes == null && x.despues == null ? null : (x.despues ?? 0) - (x.antes ?? 0);
+      return [x.fecha, TIPO_STK[x.tipo] || x.tipo, x.nombre || x.slug, x.color, x.talla, x.antes, x.despues, dif, MOTIVO[x.motivo] || x.motivo, x.pedido || "",
+        x.costo_unitario, x.costo_unitario != null && dif != null ? r2(x.costo_unitario * dif) : null, x.proveedor || "", x.nota || "", x.admin || ""];
+    }),
+  }]);
+}
+/* Excel del inventario: cada talla con su físico, virtual y valor; y un resumen por prenda con sus márgenes */
+function excelInventario() {
+  const tallas = [], prendas = [];
+  PRODUCTS.forEach(p => {
+    const d = INV[p.slug]; if (!d) return;
+    let uf = 0, uv = 0;
+    p.colors.forEach(([c]) => p.sizes.forEach(t => {
+      const v = d.vars[c + "|" + t]; if (!v) return;
+      uf += v.fisico || 0; uv += v.stock || 0;
+      tallas.push([p.name, lineName(p.linea), catName(p.cat), c, t, v.fisico, v.stock, d.costo, v.fisico != null && d.costo != null ? r2(v.fisico * d.costo) : null, v.fisico_actualizado]);
+    }));
+    const mMin = margen(d.precio, d.costo), mMay = margen(d.precio_mayor, d.costo);
+    prendas.push([p.name, lineName(p.linea), uf, uv, d.costo, d.costo != null ? r2(uf * d.costo) : null, d.precio, mMin ? r2(mMin.s) : null, mMin ? mMin.s / d.precio : null,
+      d.precio_mayor, mMay ? r2(mMay.s) : null, mMay ? mMay.s / d.precio_mayor : null]);
+  });
+  const suma = (filas, col) => r2(filas.reduce((s, f) => s + (f[col] || 0), 0));
+  excel("inventario-maison", [
+    { nombre: "Inventario por talla", columnas: [{ t: "Prenda", ancho: 34 }, { t: "Línea", ancho: 18 }, { t: "Categoría", ancho: 16 }, { t: "Color", ancho: 16 }, { t: "Talla", ancho: 8 },
+      { t: "Stock físico", ancho: 12, f: "n" }, { t: "Stock virtual", ancho: 13, f: "n" }, { t: "Costo unitario (S/)", ancho: 17, f: "s" }, { t: "Valor a costo (S/)", ancho: 17, f: "s" }, { t: "Último cambio del físico", ancho: 21, f: "d" }],
+      filas: tallas, total: ["Total", null, null, null, null, suma(tallas, 5), suma(tallas, 6), null, suma(tallas, 8), null] },
+    { nombre: "Por prenda", columnas: [{ t: "Prenda", ancho: 34 }, { t: "Línea", ancho: 18 }, { t: "Stock físico", ancho: 12, f: "n" }, { t: "Stock virtual", ancho: 13, f: "n" },
+      { t: "Costo unitario (S/)", ancho: 17, f: "s" }, { t: "Valor a costo (S/)", ancho: 17, f: "s" }, { t: "Precio tienda (S/)", ancho: 16, f: "s" }, { t: "Ganancia tienda (S/)", ancho: 18, f: "s" }, { t: "Margen tienda", ancho: 13, f: "p" },
+      { t: "Precio mayorista (S/)", ancho: 19, f: "s" }, { t: "Ganancia mayorista (S/)", ancho: 21, f: "s" }, { t: "Margen mayorista", ancho: 16, f: "p" }],
+      filas: prendas, total: ["Total", null, suma(prendas, 2), suma(prendas, 3), null, suma(prendas, 5), null, null, null, null, null, null] },
+  ]);
 }
 
 /* =========================================================
-   PRODUCTOS: precio normal, descuento, precio final y estado
+   PRODUCTOS: precio normal, descuento, precio final, costo, precio mayorista y estado
    ========================================================= */
 const prF = { linea: "", q: "" };
+/* Ganancia sobre el precio de venta, en soles y en % */
+const margen = (precio, costo) => (precio == null || costo == null || !(precio > 0) ? null : { s: precio - costo, p: Math.round(((precio - costo) / precio) * 100) });
+function margenHTML(precio, costo) {
+  const g = margen(precio, costo);
+  if (!g) return `<em class="mg mg--nada">${costo == null ? "Sin costo" : "—"}</em>`;
+  return g.s < 0 ? `<em class="mg mg--bad">Pierdes ${money(-g.s)} · ${g.p}%</em>` : `<em class="mg">Ganas ${money(g.s)} · ${g.p}%</em>`;
+}
 async function vProductos(m) {
   await cargarInv();
   const pend = new Set();
   sucio = () => pend.size > 0;
   m.innerHTML = `<header class="top"><h1>Productos</h1></header>
     ${desfase()}
-    <div class="bar">${filtroLinea("prLinea", prF.linea)}<label class="search">${I.buscar}<input class="inp" id="prQ" type="search" placeholder="Buscar prenda" value="${esc(prF.q)}"></label></div>
+    <div class="bar">${filtroLinea("prLinea", prF.linea)}<label class="search">${I.buscar}<input class="inp" id="prQ" type="search" placeholder="Buscar prenda" value="${esc(prF.q)}"></label><p class="bar__nota">El costo y el precio mayorista solo los ves tú.</p></div>
     <div class="prods" id="prLista"></div>`;
-  const datosDe = slug => { const d = INV[slug]; const normal = d.precio_antes ?? d.precio; return { normal, final: d.precio, pct: d.precio_antes ? Math.round((1 - d.precio / d.precio_antes) * 100) : 0, estado: d.estado }; };
+  const datosDe = slug => { const d = INV[slug]; const normal = d.precio_antes ?? d.precio; return { normal, final: d.precio, pct: d.precio_antes ? Math.round((1 - d.precio / d.precio_antes) * 100) : 0, estado: d.estado, costo: d.costo, mayor: d.precio_mayor }; };
   const num = v => (v === "" || v == null ? null : +v);
+  const dinero = (f, valor, etiqueta, p) => `<label class="money"><span>S/</span><input class="inp" data-f="${f}" inputmode="decimal" autocomplete="off" value="${valor ?? ""}" aria-label="${etiqueta} de ${esc(p.name)}"></label>`;
   const fila = p => {
     const d = datosDe(p.slug);
     return `<div class="prow${d.estado === "oculto" ? " prow--oculto" : ""}" data-slug="${p.slug}">
       <div class="prd"><img src="${imgDe(p.slug)}" alt="" loading="lazy"><div><b>${esc(p.name)}</b><small>${esc(lineName(p.linea))} · ${esc(catName(p.cat))}</small></div></div>
-      <div data-l="Precio normal"><label class="money"><span>S/</span><input class="inp" data-f="normal" inputmode="decimal" value="${d.normal ?? ""}" aria-label="Precio normal de ${esc(p.name)}"></label></div>
-      <div data-l="Descuento"><label class="pct"><input class="inp" data-f="pct" inputmode="numeric" value="${d.pct}" aria-label="Descuento de ${esc(p.name)}"><span>%</span></label></div>
-      <div data-l="Precio final"><label class="money"><span>S/</span><input class="inp" data-f="final" inputmode="decimal" value="${d.final ?? ""}" aria-label="Precio final de ${esc(p.name)}"></label></div>
+      <div data-l="Precio normal">${dinero("normal", d.normal, "Precio normal", p)}</div>
+      <div data-l="Descuento"><label class="pct"><input class="inp" data-f="pct" inputmode="numeric" autocomplete="off" value="${d.pct}" aria-label="Descuento de ${esc(p.name)}"><span>%</span></label></div>
+      <div data-l="Precio final">${dinero("final", d.final, "Precio final", p)}<span data-mg="min">${margenHTML(d.final, d.costo)}</span></div>
+      <div data-l="Costo">${dinero("costo", d.costo, "Costo", p)}</div>
+      <div data-l="Precio mayorista">${dinero("mayor", d.mayor, "Precio mayorista", p)}<span data-mg="may">${d.mayor == null ? `<em class="mg mg--nada">Sin precio</em>` : margenHTML(d.mayor, d.costo)}</span></div>
       <div class="prow__estado" data-l="Estado"><select class="sel" data-f="estado" aria-label="Estado de ${esc(p.name)}">
         ${[["activo", "A la venta"], ["agotado", "Agotado"], ["oculto", "Oculto"]].map(([v, t]) => `<option value="${v}"${d.estado === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="prow__acts">${p.base ? `<label class="chk"><input type="checkbox" data-f="todos">Todos los colores</label>` : ""}<button class="btn btn--pri btn--sm" type="button" data-guardar disabled>Guardar</button></div>
@@ -524,13 +860,15 @@ async function vProductos(m) {
     const lista = PRODUCTS.filter(p => INV[p.slug] && (!prF.linea || p.linea === prF.linea) && (!q || buscaTexto(p.name).includes(q)));
     pend.clear();
     $("#prLista").innerHTML = lista.length
-      ? `<div class="prow prow--head"><span>Producto</span><span>Precio normal</span><span>Descuento</span><span>Precio final</span><span>Estado</span><span></span></div>${lista.map(fila).join("")}`
+      ? `<div class="prow prow--head"><span>Producto</span><span>Precio normal</span><span>Descuento</span><span>Precio final</span><span>Costo</span><span>Precio mayorista</span><span>Estado</span><span></span></div>${lista.map(fila).join("")}`
       : `<div class="empty"><b>Sin resultados</b>Prueba con otro filtro.</div>`;
   };
-  const leer = row => { const g = f => $(`[data-f="${f}"]`, row); return { normal: num(g("normal").value), pct: num(g("pct").value) || 0, final: num(g("final").value), estado: g("estado").value, todos: !!(g("todos") && g("todos").checked) }; };
+  const leer = row => { const g = f => $(`[data-f="${f}"]`, row); return { normal: num(g("normal").value), pct: num(g("pct").value) || 0, final: num(g("final").value), costo: num(g("costo").value), mayor: num(g("mayor").value), estado: g("estado").value, todos: !!(g("todos") && g("todos").checked) }; };
   const marcar = row => {
     const v = leer(row), d = datosDe(row.dataset.slug);
-    const cambio = v.normal !== d.normal || v.final !== d.final || v.estado !== d.estado;
+    $('[data-mg="min"]', row).innerHTML = margenHTML(v.final, v.costo);
+    $('[data-mg="may"]', row).innerHTML = v.mayor == null ? `<em class="mg mg--nada">Sin precio</em>` : margenHTML(v.mayor, v.costo);
+    const cambio = v.normal !== d.normal || v.final !== d.final || v.estado !== d.estado || v.costo !== d.costo || v.mayor !== d.mayor;
     row.classList.toggle("chg", cambio); $("[data-guardar]", row).disabled = !cambio;
     if (cambio) pend.add(row.dataset.slug); else pend.delete(row.dataset.slug);
   };
@@ -540,7 +878,7 @@ async function vProductos(m) {
   // El precio final se calcula con el % (y el % con el precio final), siempre a soles enteros
   $("#prLista").addEventListener("input", e => {
     const inp = e.target, f = inp.dataset.f, row = inp.closest(".prow"); if (!f || !row) return;
-    if (f === "normal" || f === "final") { const s = inp.value.replace(",", ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); if (s !== inp.value) inp.value = s; }
+    if (["normal", "final", "costo", "mayor"].includes(f)) { const s = inp.value.replace(",", ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); if (s !== inp.value) inp.value = s; }
     if (f === "pct") { const s = inp.value.replace(/\D/g, "").slice(0, 2); if (s !== inp.value) inp.value = s; }
     const v = leer(row), g = x => $(`[data-f="${x}"]`, row);
     if ((f === "normal" || f === "pct") && v.normal != null) g("final").value = Math.round(v.normal * (1 - v.pct / 100));
@@ -550,17 +888,178 @@ async function vProductos(m) {
   $("#prLista").addEventListener("change", e => { const row = e.target.closest(".prow"); if (row && e.target.dataset.f) marcar(row); });
   $("#prLista").addEventListener("click", async e => {
     const b = e.target.closest("[data-guardar]"); if (!b) return;
-    const row = b.closest(".prow"), slug = row.dataset.slug, v = leer(row);
+    const row = b.closest(".prow"), slug = row.dataset.slug, v = leer(row), d = datosDe(slug);
     if (v.final == null || !(v.final > 0)) return toast("Escribe el precio final.");
     if (v.normal != null && v.normal < v.final) return toast("El precio normal no puede ser menor que el precio final.");
+    if (v.mayor != null && !(v.mayor > 0)) return toast("Revisa el precio mayorista.");
+    const enTienda = v.normal !== d.normal || v.final !== d.final || v.estado !== d.estado;
     b.disabled = true;
     try {
-      const r = await api(`productos/${slug}`, { method: "POST", body: { precio: v.final, precio_antes: v.normal != null && v.normal > v.final ? v.normal : null, estado: v.estado, todos: v.todos } });
+      const r = await api(`productos/${slug}`, { method: "POST", body: { precio: v.final, precio_antes: v.normal != null && v.normal > v.final ? v.normal : null, costo: v.costo, precio_mayor: v.mayor, estado: v.estado, todos: v.todos } });
       await cargarInv();
       if (v.todos) pintar(); else { pend.delete(slug); row.outerHTML = fila(PROD[slug]); }
-      toast(`${PROD[slug].name}: guardado${v.todos ? ` en ${r.cambiados} colores` : ""}. Ya se ve en la tienda.`);
+      toast(`${PROD[slug].name}: guardado${v.todos ? ` en ${r.cambiados} colores` : ""}.${enTienda ? " Ya se ve en la tienda." : ""}`);
     } catch (x) { toast(msg(x)); b.disabled = false; }
   });
+}
+
+/* =========================================================
+   MAYORISTA: ventas por mayor registradas a mano, con su ganancia
+   ========================================================= */
+const ORIGEN_STK = { almacen: "Tu almacén", proveedor: "Proveedor" };
+function cuentaVenta(v) {
+  const venta = v.items.reduce((s, i) => s + i.precio * i.cantidad, 0), u = v.items.reduce((s, i) => s + i.cantidad, 0);
+  if (v.items.some(i => i.costo == null)) return { venta, u, costo: null, g: null };
+  const costo = v.items.reduce((s, i) => s + i.costo * i.cantidad, 0);
+  return { venta, u, costo, g: venta - costo };
+}
+const ganHTML = (g, venta) => (g == null ? `<span class="chip">Sin costo</span>` : `<b class="${g < 0 ? "neg" : "pos"}">${money(g)}</b> <span class="muted">· ${pctDe(g, venta)}%</span>`);
+async function vMayorista(m) {
+  const [r] = await Promise.all([api("mayor"), cargarInv()]);
+  const mes = diaLima(new Date()).slice(0, 7), delMes = r.ventas.filter(v => diaLima(new Date(v.fecha)).slice(0, 7) === mes);
+  const t = delMes.reduce((a, v) => { const c = cuentaVenta(v); a.venta += c.venta; a.u += c.u; if (c.g == null) a.sc++; else { a.g += c.g; a.vc += c.venta; } return a; }, { venta: 0, u: 0, g: 0, vc: 0, sc: 0 });
+  m.innerHTML = `<header class="top"><div><h1>Mayorista</h1><p class="top__sub">Ventas por mayor que registras aquí. Bajan el stock igual que un pedido confirmado.</p></div>
+      <div class="top__acts"><button class="btn" type="button" id="mxExcel"${r.ventas.length ? "" : " disabled"}>${I.bajar}Descargar Excel</button><button class="btn btn--pri" type="button" id="mxNueva">${I.mas}Nueva venta</button></div></header>
+    <section class="kpis">
+      <div class="kpi"><span>Vendido este mes</span><b>${money(t.venta)}</b><em>${plural(delMes.length, "venta", "ventas")} · ${plural(t.u, "unidad", "unidades")}</em></div>
+      <div class="kpi${t.g < 0 ? " kpi--bad" : ""}"><span>Ganancia del mes</span><b>${money(t.g)}</b><em>Margen ${t.vc ? pctDe(t.g, t.vc) + "%" : "—"}${t.sc ? ` · ${t.sc} sin costo` : ""}</em></div>
+    </section>
+    <div class="card wrap-tbl" id="mxLista"></div>`;
+  $("#mxLista").innerHTML = r.ventas.length
+    ? `<table class="tbl tbl--click"><thead><tr><th>Código</th><th>Fecha</th><th>Cliente</th><th>Sale de</th><th class="num">Unidades</th><th class="num">Total</th><th class="num">Ganancia</th></tr></thead><tbody>${r.ventas.map(v => {
+        const c = cuentaVenta(v);
+        return `<tr data-cod="${v.codigo}" tabindex="0"><td><b>${v.codigo}</b></td><td>${fFecha(v.fecha)}</td><td>${esc(v.cliente || "—")}</td><td>${ORIGEN_STK[v.origen_stock] || "—"}</td><td class="num">${c.u}</td><td class="num"><b>${money(v.total)}</b></td><td class="num">${ganHTML(c.g, c.venta)}</td></tr>`;
+      }).join("")}</tbody></table>`
+    : `<div class="empty"><b>Todavía no hay ventas por mayor</b>Registra la primera con «Nueva venta».</div>`;
+  $("#mxNueva").addEventListener("click", async () => { if (await nuevaVentaMayor()) vMayorista(m).catch(x => toast(msg(x))); });
+  $("#mxExcel").addEventListener("click", () => excelMayor(r.ventas));
+  const abrir = e => { const tr = e.target.closest("[data-cod]"); if (tr) verVentaMayor(r.ventas.find(v => v.codigo === tr.dataset.cod)); };
+  $("#mxLista").addEventListener("click", abrir);
+  $("#mxLista").addEventListener("keydown", e => { if (e.key === "Enter") abrir(e); });
+}
+function verVentaMayor(v) {
+  const c = cuentaVenta(v), fila = (t, x) => (x == null || x === "" ? "" : `<dt>${t}</dt><dd>${x}</dd>`);
+  ventana({
+    titulo: `Venta ${v.codigo}`, ancho: true,
+    html: `<div class="hoja"><dl>${fila("Fecha", fFecha(v.fecha))}${fila("Cliente", esc(v.cliente))}${fila("Celular", v.celular ? `<a class="lnk" href="https://wa.me/${waCel(v.celular)}" target="_blank" rel="noopener">${I.wa}${esc(v.celular)}</a>` : "")}
+      ${fila("DNI o RUC", esc(v.documento || ""))}${fila("Sale de", ORIGEN_STK[v.origen_stock])}${fila("Registró", esc(v.admin || "—"))}${fila("Nota", esc(v.nota || ""))}</dl></div>
+      <div class="wrap-tbl" style="margin-top:18px"><table class="tbl"><thead><tr><th>Prenda</th><th>Color</th><th>Talla</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Costo</th><th class="num">Ganancia</th></tr></thead>
+      <tbody>${v.items.map(i => `<tr><td><div class="prd"><img src="${imgDe(i.slug, i.color)}" alt="" loading="lazy"><b>${esc(i.nombre)}</b></div></td><td>${esc(i.color)}</td><td>${esc(i.talla)}</td><td class="num">${i.cantidad}</td><td class="num">${money(i.precio)}</td><td class="num">${i.costo == null ? "—" : money(i.costo)}</td>
+        <td class="num">${i.costo == null ? "—" : ganHTML((i.precio - i.costo) * i.cantidad, i.precio * i.cantidad)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="vm-tot"><span>Unidades <b>${c.u}</b></span><span>Total <b>${money(v.total)}</b></span>${c.g == null ? `<span>Ganancia <b>sin costo</b></span>` : `<span>Costo <b>${money(c.costo)}</b></span><span>Ganancia ${ganHTML(c.g, c.venta)}</span>`}</div>`,
+    acciones: [{ t: "Cerrar", clase: "btn--pri", v: null }],
+  });
+}
+async function nuevaVentaMayor() {
+  const lineas = []; // { slug, color, precio, cant: { talla: n } }
+  const unid = l => Object.values(l.cant).reduce((a, b) => a + b, 0);
+  const lineaHTML = (l, i) => {
+    const p = PROD[l.slug];
+    return `<div class="lin" data-i="${i}">
+      <div class="lin__head"><img src="${imgDe(l.slug, l.color)}" alt=""><div class="lin__name"><b>${esc(p.name)}</b><span><i style="background:${colorHex(l.slug, l.color)}"></i>${esc(l.color)}</span></div>
+        <div class="lin__precio"><span>Precio por prenda</span><label class="money"><span>S/</span><input class="inp" data-precio inputmode="decimal" autocomplete="off" value="${l.precio ?? ""}" placeholder="0.00" aria-label="Precio por prenda"></label></div>
+        <button class="lin__x" type="button" data-quitar aria-label="Quitar ${esc(p.name)}">${I.x}</button></div>
+      <div class="stk__grid stk__grid--sin" style="--n:${p.sizes.length}">${p.sizes.map(t => `<div class="stk__h">${esc(t)}</div>`).join("")}${p.sizes.map(t => {
+        const v = varDe(l.slug, l.color, t);
+        return v ? `<label class="cel"><input data-t="${esc(t)}" inputmode="numeric" autocomplete="off" placeholder="0" value="${l.cant[t] || ""}" aria-label="Talla ${esc(t)}"><em>Virtual ${v.stock ?? "—"}<br>Físico ${v.fisico ?? 0}</em></label>`
+          : `<input disabled placeholder="—" aria-label="Talla aún no disponible">`;
+      }).join("")}</div>
+      <p class="lin__sub" data-sub>${subLinea(l)}</p></div>`;
+  };
+  const subLinea = l => {
+    const n = unid(l), c = INV[l.slug].costo; if (!n) return "Pon las cantidades por talla.";
+    const venta = n * (l.precio || 0), base = `${plural(n, "unidad", "unidades")} · <b>${money(venta)}</b>`;
+    if (!(l.precio > 0)) return `${base} · Falta el precio`;
+    return c == null ? `${base} · Sin costo` : `${base} · Ganancia ${ganHTML((l.precio - c) * n, venta)}`;
+  };
+  const totales = d => {
+    let u = 0, venta = 0, costo = 0, sinC = false;
+    lineas.forEach(l => { const n = unid(l), c = INV[l.slug].costo; u += n; venta += n * (l.precio || 0); if (c == null) { if (n) sinC = true; } else costo += n * c; });
+    $("#vmTot", d).innerHTML = `<span>Unidades <b>${u}</b></span><span>Total <b>${money(venta)}</b></span>${sinC ? `<span>Ganancia <b>falta el costo de alguna prenda</b></span>` : `<span>Costo <b>${money(costo)}</b></span><span>Ganancia ${ganHTML(venta - costo, venta)}</span>`}`;
+  };
+  const pintarLineas = d => { $("#vmLineas", d).innerHTML = lineas.map(lineaHTML).join(""); totales(d); };
+  const html = `<div class="frm">
+    <div class="frm__3">
+      <div class="f"><label for="vmCli">Cliente</label><input class="inp" id="vmCli" maxlength="120" autocomplete="off" placeholder="Nombre o razón social"></div>
+      <div class="f"><label for="vmCel">Celular</label><input class="inp" id="vmCel" maxlength="30" inputmode="tel" autocomplete="off" placeholder="Opcional"></div>
+      <div class="f"><label for="vmDoc">DNI o RUC</label><input class="inp" id="vmDoc" maxlength="20" inputmode="numeric" autocomplete="off" placeholder="Opcional"></div>
+    </div>
+    <div class="f"><span class="f__t">¿De dónde sale la mercadería?</span><div class="opcs">
+      <label class="opc"><input type="radio" name="vmO" value="almacen"><span><b>Sale de mi almacén</b><em>Baja el stock virtual y el físico</em></span></label>
+      <label class="opc"><input type="radio" name="vmO" value="proveedor"><span><b>Lo envía el proveedor</b><em>Solo baja el stock virtual</em></span></label>
+    </div></div>
+    <div class="f"><span class="f__t">Prendas</span><div class="add">${selPrendas("vmP")}<select class="sel" id="vmC" disabled><option value="">Color</option></select><button class="btn" type="button" id="vmAdd">${I.mas}Agregar</button></div>
+      <div id="vmLineas"></div></div>
+    <div class="f"><label for="vmNota">Nota</label><input class="inp" id="vmNota" maxlength="300" autocomplete="off" placeholder="Opcional"></div>
+    <div class="vm-tot" id="vmTot"></div>
+    <div class="alert alert--bad" id="vmErr" hidden></div></div>`;
+  const r = await ventana({
+    titulo: "Nueva venta por mayor", ancho: true, fijo: true, html,
+    acciones: [{ t: "Volver", v: false }, { t: `${I.check}Registrar venta`, clase: "btn--pri", v: true, antes: async d => {
+      const err = $("#vmErr", d), mal = h => { err.innerHTML = h; err.hidden = false; err.scrollIntoView({ block: "nearest", behavior: "smooth" }); return false; };
+      const cliente = $("#vmCli", d).value.trim(), origen = ($('input[name="vmO"]:checked', d) || {}).value;
+      if (!cliente) return mal("Escribe el nombre del cliente.");
+      if (!origen) return mal("Elige de dónde sale la mercadería.");
+      const conCant = lineas.filter(l => unid(l) > 0);
+      if (!conCant.length) return mal("Agrega al menos una prenda con su cantidad.");
+      const sinPrecio = conCant.find(l => !(l.precio > 0));
+      if (sinPrecio) return mal(`Pon el precio de ${esc(PROD[sinPrecio.slug].name)} · ${esc(sinPrecio.color)}.`);
+      const items = conCant.flatMap(l => Object.entries(l.cant).filter(([, n]) => n > 0).map(([talla, cantidad]) => ({ slug: l.slug, color: l.color, talla, cantidad, precio: l.precio })));
+      try {
+        const res = await api("mayor", { method: "POST", body: { cliente, celular: $("#vmCel", d).value.trim(), documento: $("#vmDoc", d).value.trim(), nota: $("#vmNota", d).value.trim(), origen, items } });
+        toast(`Venta ${res.codigo} registrada por ${money(res.total)}. El stock ya se actualizó.`);
+        return true;
+      } catch (x) {
+        if (x.codigo === "sin_stock") return mal(`No hay stock virtual suficiente. No se registró nada.${listaFaltan(x.data.faltan)}`);
+        if (x.codigo === "sin_stock_fisico") return mal(`No hay suficiente en tu almacén. No se registró nada. Elige «Lo envía el proveedor» o registra una entrada.${listaFaltan(x.data.faltan)}`);
+        return mal(esc(msg(x)));
+      }
+    } }],
+    alAbrir: d => {
+      totales(d);
+      $("#vmP", d).addEventListener("change", e => {
+        const p = PROD[e.target.value], sel = $("#vmC", d);
+        sel.innerHTML = p ? p.colors.map(([c]) => `<option value="${esc(c)}">${esc(c)}</option>`).join("") : `<option value="">Color</option>`;
+        sel.disabled = !p || p.colors.length < 2;
+      });
+      $("#vmAdd", d).addEventListener("click", () => {
+        const slug = $("#vmP", d).value, color = $("#vmC", d).value;
+        if (!slug || !color) return toast("Elige la prenda y el color.");
+        const ya = lineas.findIndex(l => l.slug === slug && l.color === color);
+        if (ya < 0) { lineas.push({ slug, color, precio: INV[slug].precio_mayor ?? null, cant: {} }); pintarLineas(d); }
+        const lin = $(`.lin[data-i="${ya < 0 ? lineas.length - 1 : ya}"]`, d), i = lin && $("input[data-t]", lin);
+        if (i) { lin.scrollIntoView({ block: "nearest", behavior: "smooth" }); i.focus(); }
+      });
+      $("#vmLineas", d).addEventListener("input", e => {
+        const inp = e.target, lin = inp.closest(".lin"); if (!lin) return;
+        const l = lineas[+lin.dataset.i];
+        if (inp.dataset.t) { const s = inp.value.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 4); if (s !== inp.value) inp.value = s; if (+s) l.cant[inp.dataset.t] = +s; else delete l.cant[inp.dataset.t]; }
+        if ("precio" in inp.dataset) { const s = inp.value.replace(",", ".").replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1"); if (s !== inp.value) inp.value = s; l.precio = s === "" ? null : +s; }
+        $("[data-sub]", lin).innerHTML = subLinea(l); totales(d);
+      });
+      $("#vmLineas", d).addEventListener("click", e => { const b = e.target.closest("[data-quitar]"); if (!b) return; lineas.splice(+b.closest(".lin").dataset.i, 1); pintarLineas(d); });
+      setTimeout(() => $("#vmCli", d).focus(), 80);
+    },
+  });
+  return r === true;
+}
+/* Excel de ventas por mayor: cada prenda con su precio, costo y ganancia; y un resumen por venta */
+function excelMayor(ventas) {
+  const lineas = ventas.flatMap(v => v.items.map(i => {
+    const venta = r2(i.precio * i.cantidad), costo = i.costo == null ? null : r2(i.costo * i.cantidad);
+    return [v.codigo, v.fecha, v.cliente || "", v.documento || "", ORIGEN_STK[v.origen_stock] || "", i.nombre, i.color, i.talla, i.cantidad, i.precio, venta, i.costo, costo,
+      costo == null ? null : r2(venta - costo), costo == null || !venta ? null : (venta - costo) / venta];
+  }));
+  const resumen = ventas.map(v => { const c = cuentaVenta(v); return [v.codigo, v.fecha, v.cliente || "", v.celular || "", v.documento || "", ORIGEN_STK[v.origen_stock] || "", c.u, v.total, c.costo == null ? null : r2(c.costo), c.g == null ? null : r2(c.g), c.g == null || !c.venta ? null : c.g / c.venta, v.admin || "", v.nota || ""]; });
+  const suma = (filas, col) => r2(filas.reduce((s, f) => s + (f[col] || 0), 0));
+  excel("ventas-por-mayor", [
+    { nombre: "Ventas por mayor", columnas: [{ t: "Código", ancho: 11 }, { t: "Fecha", ancho: 17, f: "d" }, { t: "Cliente", ancho: 26 }, { t: "Celular", ancho: 13 }, { t: "DNI o RUC", ancho: 13 }, { t: "Sale de", ancho: 12 },
+      { t: "Unidades", ancho: 10, f: "n" }, { t: "Total (S/)", ancho: 12, f: "s" }, { t: "Costo (S/)", ancho: 12, f: "s" }, { t: "Ganancia (S/)", ancho: 14, f: "s" }, { t: "Margen", ancho: 9, f: "p" }, { t: "Registró", ancho: 16 }, { t: "Nota", ancho: 30 }],
+      filas: resumen, total: ["Total", null, null, null, null, null, suma(resumen, 6), suma(resumen, 7), suma(resumen, 8), suma(resumen, 9), null, null, null] },
+    { nombre: "Prendas", columnas: [{ t: "Código", ancho: 11 }, { t: "Fecha", ancho: 17, f: "d" }, { t: "Cliente", ancho: 26 }, { t: "DNI o RUC", ancho: 13 }, { t: "Sale de", ancho: 12 }, { t: "Prenda", ancho: 34 }, { t: "Color", ancho: 16 }, { t: "Talla", ancho: 8 },
+      { t: "Cantidad", ancho: 10, f: "n" }, { t: "Precio (S/)", ancho: 12, f: "s" }, { t: "Venta (S/)", ancho: 12, f: "s" }, { t: "Costo unitario (S/)", ancho: 17, f: "s" }, { t: "Costo total (S/)", ancho: 15, f: "s" }, { t: "Ganancia (S/)", ancho: 14, f: "s" }, { t: "Margen", ancho: 9, f: "p" }],
+      filas: lineas, total: ["Total", null, null, null, null, null, null, null, suma(lineas, 8), null, suma(lineas, 10), null, suma(lineas, 12), suma(lineas, 13), null] },
+  ]);
 }
 
 /* =========================================================
@@ -671,7 +1170,7 @@ function imprimir(x, respuesta) {
 /* =========================================================
    ARRANQUE
    ========================================================= */
-const VISTAS = { resumen: vResumen, pedidos: vPedidos, stock: vStock, productos: vProductos, clientes: vClientes, reclamos: vReclamos };
+const VISTAS = { resumen: vResumen, pedidos: vPedidos, mayorista: vMayorista, stock: vStock, productos: vProductos, clientes: vClientes, reclamos: vReclamos };
 (async () => {
   const act = location.hash.match(/^#activar=([\w-]+)/);
   if (act) return pantallaActivar(act[1]);
