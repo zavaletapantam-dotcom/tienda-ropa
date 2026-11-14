@@ -100,6 +100,15 @@ function aplicarCatalogo(c) {
     p.price = d.precio; p.old = d.antes;
     if (!p.old) p.deal = false;
     p.stock = d.stock || {};
+    // Colores apagados en el panel: no se muestran. Si se apagan todos, la prenda no se ve.
+    if (d.ocultos && d.ocultos.length) {
+      const fuera = new Set(d.ocultos);
+      p.colors = p.colors.filter(([col]) => !fuera.has(col));
+      if (!p.colors.length) { PRODUCTS.splice(i, 1); continue; }
+      // Si ya estaba en un carrito o en un enlace guardado, ese color figura como agotado
+      fuera.forEach(col => { p.stock[col] = Object.fromEntries(p.sizes.map(t => [t, 0])); });
+      if (p.colors[0][2]) p.imgs = p.colors[0][2];
+    }
     p.agotado = d.estado === "agotado" || p.colors.every(([col]) => p.sizes.every(t => stockDe(p, col, t) === 0));
   }
 }

@@ -101,7 +101,7 @@ export async function resumen({ env, request }) {
   await adminDe(env, request);
   const venta = cond => `SELECT COALESCE(SUM(total), 0) AS monto, COUNT(*) AS n FROM pedidos WHERE estado = 'procede' AND ${cond}`;
   const MES = "strftime('%Y-%m', 'now', '-5 hours')";
-  const [hoy, semana, mes, pend, rec, cli, top, cons, bajo, dias, stock, fisico, menor, mayor] = await env.DB.batch([
+  const [hoy, semana, mes, pend, rec, cli, top, cons, bajo, stock, fisico, menor, mayor] = await env.DB.batch([
     env.DB.prepare(venta(`date(procesado, '-5 hours') = ${HOY}`)),
     env.DB.prepare(venta(`date(procesado, '-5 hours') >= date('now', '-5 hours', '-6 days')`)),
     env.DB.prepare(venta(`strftime('%Y-%m', procesado, '-5 hours') = strftime('%Y-%m', 'now', '-5 hours')`)),
@@ -113,9 +113,9 @@ export async function resumen({ env, request }) {
     env.DB.prepare(`SELECT i.slug, i.nombre, SUM(i.cantidad) AS n, COUNT(DISTINCT p.id) AS pedidos FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id
         WHERE p.creado >= datetime('now', '-30 days') GROUP BY i.slug ORDER BY n DESC LIMIT 6`),
     env.DB.prepare(`SELECT v.slug, p.nombre, v.color, v.talla, v.stock FROM variantes v JOIN productos p ON p.slug = v.slug
-        WHERE v.stock IS NOT NULL AND v.stock <= 2 AND p.estado <> 'oculto' ORDER BY v.stock, p.orden, v.orden LIMIT 12`),
-    env.DB.prepare(`SELECT date(procesado, '-5 hours') AS dia, SUM(total) AS monto, COUNT(*) AS n FROM pedidos
-        WHERE estado = 'procede' AND procesado >= datetime('now', '-15 days') GROUP BY dia`),
+        WHERE v.stock IS NOT NULL AND v.stock <= 2 AND p.estado <> 'oculto'
+          AND NOT EXISTS (SELECT 1 FROM colores_ocultos o WHERE o.slug = v.slug AND o.color = v.color)
+        ORDER BY v.stock, p.orden, v.orden LIMIT 12`),
     env.DB.prepare("SELECT COUNT(*) AS tallas, COUNT(stock) AS cargadas, COALESCE(SUM(stock), 0) AS unidades FROM variantes"),
     // Inventario físico: unidades, valor (unidades × costo) y prendas con stock físico pero sin costo
     env.DB.prepare(`SELECT COUNT(v.fisico) AS cargadas, COALESCE(SUM(v.fisico), 0) AS unidades, COALESCE(SUM(v.fisico * p.costo), 0) AS valor,
@@ -139,9 +139,28 @@ export async function resumen({ env, request }) {
     ok: true,
     ventas: { hoy: uno(hoy), semana: uno(semana), mes: uno(mes) },
     pendientes: uno(pend), reclamos: uno(rec).n, clientes: uno(cli),
-    vendidos: top.results, consultados: cons.results, bajo: bajo.results, dias: dias.results, stock: uno(stock),
+    vendidos: top.results, consultados: cons.results, bajo: bajo.results, stock: uno(stock),
     fisico: uno(fisico), ganancia: { minorista: uno(menor), mayorista: uno(mayor) },
   });
+}
+
+/* GET /api/admin/ventas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD → ventas por día (hora de Perú) en ese rango, ambos días incluidos:
+   pedidos confirmados de la tienda y ventas por mayor, por separado */
+export async function ventasDias({ env, request }) {
+  await adminDe(env, request);
+  const u = new URL(request.url), desde = u.searchParams.get("desde") || "", hasta = u.searchParams.get("hasta") || "";
+  const fecha = /^\d{4}-\d{2}-\d{2}$/;
+  if (!fecha.test(desde) || !fecha.test(hasta) || desde > hasta) throw new ErrorHttp(400, "datos_invalidos");
+  if ((Date.parse(hasta) - Date.parse(desde)) / 86400e3 > 400) throw new ErrorHttp(400, "datos_invalidos");
+  // Límites en UTC (Perú = UTC−5) para que la búsqueda use el índice de la fecha
+  const ini = `datetime(?, '+5 hours')`, fin = `datetime(?, '+1 day', '+5 hours')`;
+  const [tienda, mayor] = await env.DB.batch([
+    env.DB.prepare(`SELECT date(procesado, '-5 hours') AS dia, SUM(total) AS monto, COUNT(*) AS n FROM pedidos
+        WHERE estado = 'procede' AND procesado >= ${ini} AND procesado < ${fin} GROUP BY dia`).bind(desde, hasta),
+    env.DB.prepare(`SELECT date(fecha, '-5 hours') AS dia, SUM(total) AS monto, COUNT(*) AS n FROM ventas_mayor
+        WHERE fecha >= ${ini} AND fecha < ${fin} GROUP BY dia`).bind(desde, hasta),
+  ]);
+  return json({ ok: true, desde, hasta, tienda: tienda.results, mayor: mayor.results });
 }
 
 /* ---------- Pedidos ---------- */
@@ -282,13 +301,32 @@ export async function editarPedido({ env, request, params }) {
 /* GET /api/admin/inventario → todos los productos con su stock por color y talla */
 export async function inventario({ env, request }) {
   await adminDe(env, request);
-  const [prod, vars] = await env.DB.batch([
+  const [prod, vars, ocu] = await env.DB.batch([
     env.DB.prepare("SELECT slug, nombre, base, estilo, linea, cat, orden, precio, precio_antes, costo, precio_mayor, estado, actualizado FROM productos ORDER BY orden"),
     env.DB.prepare("SELECT slug, color, talla, stock, fisico, actualizado, fisico_actualizado FROM variantes ORDER BY slug, orden"),
+    env.DB.prepare("SELECT slug, color FROM colores_ocultos"),
   ]);
-  const porSlug = {};
+  const porSlug = {}, ocultos = {};
   for (const v of vars.results) (porSlug[v.slug] ||= []).push({ color: v.color, talla: v.talla, stock: v.stock, fisico: v.fisico, actualizado: iso(v.actualizado), fisico_actualizado: iso(v.fisico_actualizado) });
-  return json({ ok: true, productos: prod.results.map(p => ({ ...p, actualizado: iso(p.actualizado), variantes: porSlug[p.slug] || [] })) });
+  for (const o of ocu.results) (ocultos[o.slug] ||= []).push(o.color);
+  return json({ ok: true, productos: prod.results.map(p => ({ ...p, actualizado: iso(p.actualizado), variantes: porSlug[p.slug] || [], ocultos: ocultos[p.slug] || [] })) });
+}
+
+/* POST /api/admin/colores { slug, color, visible } → enciende (true) o apaga (false) un color en la tienda.
+   Apagado: el color no se ve ni se puede pedir en la página. Su stock no se toca y vuelve igual al encenderlo. */
+export async function colorVisible({ env, request }) {
+  const a = await adminDe(env, request);
+  const b = await leerJson(request);
+  if (![b.slug, b.color].every(x => typeof x === "string" && x) || typeof b.visible !== "boolean") throw new ErrorHttp(400, "datos_invalidos");
+  const existe = await env.DB.prepare("SELECT 1 AS si FROM variantes WHERE slug = ? AND color = ? LIMIT 1").bind(b.slug, b.color).first();
+  if (!existe) throw new ErrorHttp(404, "prenda_no_existe");
+  const [, lista] = await env.DB.batch([
+    b.visible
+      ? env.DB.prepare("DELETE FROM colores_ocultos WHERE slug = ? AND color = ?").bind(b.slug, b.color)
+      : env.DB.prepare("INSERT INTO colores_ocultos (slug, color, admin_id) VALUES (?, ?, ?) ON CONFLICT(slug, color) DO NOTHING").bind(b.slug, b.color, a.id),
+    env.DB.prepare("SELECT color FROM colores_ocultos WHERE slug = ?").bind(b.slug),
+  ]);
+  return json({ ok: true, visible: b.visible, ocultos: lista.results.map(r => r.color) });
 }
 
 /* POST /api/admin/stock { cambios: [{ slug, color, talla, stock?, fisico? }] } — número de 0 a 99999, o null para "sin cargar"

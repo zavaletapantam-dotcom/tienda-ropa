@@ -297,10 +297,6 @@ async function badges() {
 async function vResumen(m) {
   const r = await api("resumen");
   const kpi = (t, v, sub, href, tono) => `<${href ? `a href="${href}"` : "div"} class="kpi${tono ? " kpi--" + tono : ""}"><span>${t}</span><b>${v}</b>${sub ? `<em>${sub}</em>` : ""}</${href ? "a" : "div"}>`;
-  // Últimos 14 días (hora de Perú), con o sin ventas
-  const porDia = Object.fromEntries(r.dias.map(d => [d.dia, d]));
-  const dias = [...Array(14)].map((_, i) => { const d = new Date(Date.now() - (13 - i) * 86400e3); const k = diaLima(d); return { k, d, ...(porDia[k] || { monto: 0, n: 0 }) }; });
-  const max = Math.max(1, ...dias.map(d => d.monto));
   const rank = (lista, fn) => lista.length
     ? `<ul class="rank">${lista.map(x => `<li><img src="${imgDe(x.slug, x.color)}" alt="" loading="lazy"><div><b>${esc(x.nombre)}</b>${x.color ? `<span>${esc(x.color)} · Talla ${esc(x.talla)}</span>` : ""}</div><strong>${fn(x)}</strong></li>`).join("")}</ul>`
     : `<p class="empty" style="padding:24px 0">Todavía no hay datos</p>`;
@@ -326,9 +322,9 @@ async function vResumen(m) {
       ${kpi("Ganancia mayorista del mes", gMay.valor, gMay.sub, "#mayorista", gMay.tono)}
       ${kpi("Inventario en tu almacén", money(r.fisico.valor), `${plural(r.fisico.unidades, "unidad", "unidades")} a precio de costo${r.fisico.sin_costo ? ` · ${r.fisico.sin_costo} sin costo` : ""}`, "#stock")}
     </section>
-    <section class="card" style="margin-bottom:18px"><h2>Ventas de los últimos 14 días</h2>
-      <div class="chart">${dias.map(d => `<div class="chart__col${d.monto ? "" : " cero"}" title="${fDia(d.d)}: ${money(d.monto)} · ${plural(d.n, "pedido", "pedidos")}">
-        <em>${d.monto ? "S/" + Math.round(d.monto) : ""}</em><i style="height:${Math.max(2, (d.monto / max) * 100)}%"></i><span>${d.d.toLocaleDateString("es-PE", { timeZone: TZ, day: "numeric" })}</span></div>`).join("")}</div>
+    <section class="card ventas" id="vCard">
+      <div class="ventas__cal"><div class="cal" id="vCal"></div><div class="atajos" id="vAtajos"></div></div>
+      <div class="ventas__dat"><div class="ventas__head" id="vHead"></div><div class="chart" id="vChart"></div></div>
     </section>
     <div class="grid3" style="margin-bottom:18px">
       <section class="card"><h2>Lo más vendido en 30 días</h2>${rank(r.vendidos, x => plural(x.n, "unidad", "unidades"))}</section>
@@ -338,6 +334,141 @@ async function vResumen(m) {
     <section class="card"><h2>Stock virtual cargado</h2><div class="meter"><i style="width:${pctCarga}%"></i></div>
       <div class="cargado"><p><b>${r.stock.cargadas}</b> de ${r.stock.tallas} tallas · <b>${r.stock.unidades}</b> unidades en la tienda</p><a class="btn btn--pri" href="#stock">${I.stock}Cargar stock</a></div>
     </section>`;
+  ventasRango();
+}
+
+/* ---------- Ventas por rango de fechas: calendario + gráfica ----------
+   Un clic marca el inicio y otro clic el fin (o se arrastra de un día a otro). Fechas en hora de Perú, como "AAAA-MM-DD". */
+const fD = s => new Date(s + "T12:00:00Z");
+const sumarDias = (s, n) => { const d = fD(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const entreDias = (a, b) => Math.round((fD(b) - fD(a)) / 86400e3);
+const fCorta = (s, o = {}) => fD(s).toLocaleDateString("es-PE", { timeZone: "UTC", day: "numeric", month: "short", ...o }).replace(".", "");
+const finMes = ym => sumarDias(sumarDias(ym + "-01", 32).slice(0, 7) + "-01", -1);
+const VR = { desde: null, hasta: null, mes: null, atajo: "14" }; // se recuerda al cambiar de sección
+const conVenta = new Map(); // "AAAA-MM" → Set de días con ventas (puntitos del calendario)
+function atajosVentas(hoy) {
+  const mes = hoy.slice(0, 7), pasado = sumarDias(mes + "-01", -1).slice(0, 7);
+  return [["7", "7 días", sumarDias(hoy, -6), hoy], ["14", "14 días", sumarDias(hoy, -13), hoy], ["30", "30 días", sumarDias(hoy, -29), hoy],
+    ["mes", "Este mes", mes + "-01", hoy], ["pasado", "Mes pasado", pasado + "-01", finMes(pasado)]];
+}
+function ventasRango() {
+  const cal = $("#vCal"); if (!cal) return;
+  const hoy = diaLima(new Date()), ATAJOS = atajosVentas(hoy);
+  if (!VR.desde) { const a = ATAJOS.find(x => x[0] === VR.atajo) || ATAJOS[1]; VR.desde = a[2]; VR.hasta = a[3]; }
+  if (!VR.mes) VR.mes = VR.hasta.slice(0, 7);
+  let ancla = null, sobre = null, arrastrando = false, pide = 0;
+
+  const pintarAtajos = () => {
+    $("#vAtajos").innerHTML = ATAJOS.map(([k, t, a, b]) => `<button type="button" data-a="${k}" class="${VR.desde === a && VR.hasta === b ? "on" : ""}">${t}</button>`).join("");
+  };
+  // Calendario del mes visible
+  const pintarMes = () => {
+    const ym = VR.mes, ini = ym + "-01", fin = finMes(ym), hueco = (fD(ini).getUTCDay() + 6) % 7, marcas = conVenta.get(ym);
+    const titulo = fD(ini).toLocaleDateString("es-PE", { timeZone: "UTC", month: "long", year: "numeric" });
+    let dias = "";
+    for (let s = ini; s <= fin; s = sumarDias(s, 1))
+      dias += `<button type="button" class="cal__d${s === hoy ? " hoy" : ""}${marcas && marcas.has(s) ? " con" : ""}" data-d="${s}"${s > hoy ? " disabled" : ""} aria-label="${fCorta(s, { year: "numeric" })}"><span>${+s.slice(8)}</span></button>`;
+    cal.innerHTML = `<div class="cal__head"><button type="button" class="cal__nav" data-m="-1" aria-label="Mes anterior">${svg('<path d="m15 6-6 6 6 6"/>')}</button>
+      <b>${titulo}</b><button type="button" class="cal__nav" data-m="1" aria-label="Mes siguiente"${ym >= hoy.slice(0, 7) ? " disabled" : ""}>${svg('<path d="m9 6 6 6-6 6"/>')}</button></div>
+      <div class="cal__grid">${["L", "M", "M", "J", "V", "S", "D"].map(d => `<span class="cal__dow">${d}</span>`).join("")}${'<i></i>'.repeat(hueco)}${dias}</div>
+      <p class="cal__ayuda" id="vAyuda"></p>`;
+    pintarRango();
+    if (!marcas) puntitos(ym);
+  };
+  // Marca el rango elegido (o el que se está eligiendo) sin redibujar el mes
+  const pintarRango = () => {
+    const [a, b] = ancla ? [ancla, sobre || ancla].sort() : [VR.desde, VR.hasta];
+    $$(".cal__d", cal).forEach(el => {
+      const d = el.dataset.d;
+      el.classList.toggle("ini", d === a); el.classList.toggle("fin", d === b); el.classList.toggle("en", d > a && d < b);
+    });
+    const ay = $("#vAyuda");
+    if (ay) ay.textContent = ancla ? "Ahora elige el día final (o vuelve a tocar el mismo día para ver solo ese)." : "Toca un día de inicio y luego el día final, o arrastra de uno a otro.";
+    cal.classList.toggle("eligiendo", !!ancla);
+  };
+  const puntitos = async ym => {
+    try {
+      const r = await api(`ventas?desde=${ym}-01&hasta=${finMes(ym) > hoy ? hoy : finMes(ym)}`);
+      conVenta.set(ym, new Set([...r.tienda, ...r.mayor].filter(x => x.monto > 0 || x.n > 0).map(x => x.dia)));
+      if (VR.mes === ym && $("#vCal") === cal) $$(".cal__d", cal).forEach(el => el.classList.toggle("con", conVenta.get(ym).has(el.dataset.d)));
+    } catch (_) {}
+  };
+  const fijar = (a, b) => {
+    [VR.desde, VR.hasta] = [a, b].sort(); ancla = sobre = null; arrastrando = false;
+    VR.atajo = (ATAJOS.find(x => x[2] === VR.desde && x[3] === VR.hasta) || [""])[0];
+    pintarRango(); pintarAtajos(); cargar();
+  };
+
+  // Gráfica y totales del rango
+  const cargar = async () => {
+    const n = ++pide, ch = $("#vChart");
+    ch.classList.add("cargando");
+    let r;
+    try { r = await api(`ventas?desde=${VR.desde}&hasta=${VR.hasta}`); }
+    catch (e) { if (n === pide) { ch.classList.remove("cargando"); toast(msg(e)); } return; }
+    if (n !== pide || $("#vChart") !== ch) return;
+    ch.classList.remove("cargando");
+    const T = Object.fromEntries(r.tienda.map(x => [x.dia, x])), M = Object.fromEntries(r.mayor.map(x => [x.dia, x]));
+    // Agrupa por día (hasta 2 meses), por semana (hasta 6 meses) o por mes
+    const total = entreDias(VR.desde, VR.hasta) + 1, modo = total <= 62 ? "dia" : total <= 186 ? "semana" : "mes";
+    const grupos = [];
+    for (let s = VR.desde, i = 0; s <= VR.hasta; s = sumarDias(s, 1), i++) {
+      const k = modo === "dia" ? s : modo === "semana" ? Math.floor(i / 7) : s.slice(0, 7);
+      let g = grupos[grupos.length - 1];
+      if (!g || g.k !== k) grupos.push(g = { k, desde: s, hasta: s, t: 0, tn: 0, m: 0, mn: 0 });
+      g.hasta = s;
+      if (T[s]) { g.t += T[s].monto; g.tn += T[s].n; }
+      if (M[s]) { g.m += M[s].monto; g.mn += M[s].n; }
+    }
+    const sum = (f) => grupos.reduce((a, g) => a + g[f], 0), st = sum("t"), stn = sum("tn"), sm = sum("m"), smn = sum("mn");
+    const rango = VR.desde === VR.hasta ? fCorta(VR.desde, { weekday: "long", year: "numeric" })
+      : `${fCorta(VR.desde, VR.desde.slice(0, 4) !== VR.hasta.slice(0, 4) ? { year: "numeric" } : {})} – ${fCorta(VR.hasta, { year: "numeric" })}`;
+    $("#vHead").innerHTML = `<div><span class="ventas__rango">${rango} · ${plural(total, "día", "días")}</span><b class="ventas__total">${money(st + sm)}</b></div>
+      <div class="leyenda"><span><i></i>Tienda <b>${money(st)}</b> · ${plural(stn, "pedido", "pedidos")}</span><span><i class="may"></i>Mayorista <b>${money(sm)}</b> · ${plural(smn, "venta", "ventas")}</span></div>`;
+    // Etiquetas: el número del día si son pocos días; si no, "3 nov" cada tantas columnas según el ancho disponible
+    const corta = modo === "dia" && grupos.length <= 16, max = Math.max(1, ...grupos.map(g => g.t + g.m));
+    const cada = Math.ceil(grupos.length / Math.max(3, Math.floor((ch.clientWidth || 700) / (corta ? 30 : 58))));
+    const etiqueta = g => modo === "mes" ? fD(g.desde).toLocaleDateString("es-PE", { timeZone: "UTC", month: "short" }).replace(".", "")
+      : corta ? String(+g.desde.slice(8)) : fCorta(g.desde);
+    const titulo = g => `${g.desde === g.hasta ? fCorta(g.desde, { weekday: "short", year: "numeric" }) : `${fCorta(g.desde)} – ${fCorta(g.hasta, { year: "numeric" })}`}: ${money(g.t + g.m)}`
+      + ` · Tienda ${money(g.t)} (${plural(g.tn, "pedido", "pedidos")})${g.mn ? ` · Mayorista ${money(g.m)} (${plural(g.mn, "venta", "ventas")})` : ""}`;
+    ch.className = "chart" + (grupos.length > 16 ? " chart--denso" : "") + (grupos.length > 40 ? " chart--muy" : "");
+    ch.style.gridTemplateColumns = `repeat(${grupos.length}, minmax(0, 1fr))`;
+    ch.innerHTML = grupos.map((g, i) => { const v = g.t + g.m;
+      return `<div class="chart__col${v ? "" : " cero"}" title="${esc(titulo(g))}"><em>${v ? "S/" + Math.round(v) : ""}</em>`
+        + `<i style="height:${Math.max(2, (v / max) * 100)}%">${g.m ? `<u style="height:${(g.m / v) * 100}%"></u>` : ""}</i>`
+        + `<span${i % cada ? ' class="oculto"' : ""}>${etiqueta(g)}</span></div>`; }).join("");
+  };
+
+  // Clic en un día: el primero marca el inicio, el segundo el fin. Arrastrar también sirve.
+  cal.addEventListener("pointerdown", e => {
+    const b = e.target.closest(".cal__d"); if (!b || b.disabled || e.button > 0) return;
+    e.preventDefault();
+    if (ancla) return fijar(ancla, b.dataset.d);
+    ancla = sobre = b.dataset.d; arrastrando = true; pintarRango();
+  });
+  cal.addEventListener("pointerover", e => {
+    const b = e.target.closest(".cal__d");
+    if (ancla && b && !b.disabled && b.dataset.d !== sobre) { sobre = b.dataset.d; pintarRango(); }
+  });
+  const soltar = () => { if (arrastrando) { arrastrando = false; if (ancla && sobre && sobre !== ancla) fijar(ancla, sobre); } };
+  const tecla = e => { if (e.key === "Escape" && ancla && $("#vCal") === cal) { ancla = sobre = null; arrastrando = false; pintarRango(); } };
+  addEventListener("pointerup", soltar); addEventListener("keydown", tecla);
+  // Al salir del resumen se quitan los escuchas globales
+  const limpiar = () => { if ($("#vCal") !== cal) { removeEventListener("pointerup", soltar); removeEventListener("keydown", tecla); removeEventListener("hashchange", limpiar); } };
+  addEventListener("hashchange", limpiar);
+  // Teclado: Enter/Espacio sobre un día hace lo mismo que el clic
+  cal.addEventListener("click", e => {
+    const nav = e.target.closest("[data-m]");
+    if (nav) { VR.mes = sumarDias(VR.mes + "-01", nav.dataset.m > 0 ? 32 : -1).slice(0, 7); pintarMes(); return; }
+    const b = e.target.closest(".cal__d");
+    if (b && e.detail === 0) { if (ancla) fijar(ancla, b.dataset.d); else { ancla = sobre = b.dataset.d; pintarRango(); } }
+  });
+  $("#vAtajos").addEventListener("click", e => {
+    const b = e.target.closest("[data-a]"), a = b && ATAJOS.find(x => x[0] === b.dataset.a); if (!a) return;
+    VR.mes = a[3].slice(0, 7); ancla = sobre = null; pintarMes(); fijar(a[2], a[3]);
+  });
+  pintarMes(); pintarAtajos(); cargar();
 }
 
 /* =========================================================
@@ -597,7 +728,19 @@ function desfase() {
   return n ? `<p class="alert alert--warn">Hay ${plural(n, "talla nueva", "tallas nuevas")} de la tienda que todavía no está en el panel. Aparecen solas al publicar.</p>` : "";
 }
 const filtroLinea = (sel, valor) => `<select class="sel" id="${sel}"><option value="">Todas las líneas</option>${Object.values(LINES).map(l => `<option value="${l.slug}"${valor === l.slug ? " selected" : ""}>${esc(l.collab || l.name)}</option>`).join("")}</select>`;
-const filtroCat = (sel, linea, valor) => `<select class="sel" id="${sel}"><option value="">Todas las categorías</option>${CATS.filter(c => (!linea || c.linea === linea) && PRODUCTS.some(p => p.cat === c.slug)).map(c => `<option value="${c.slug}"${valor === c.slug ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
+/* Tipos de prenda de la línea elegida, como botones de un toque (aparecen al elegir una línea) */
+function chipsCat(linea, valor) {
+  const cats = linea ? CATS.filter(c => c.linea === linea && PRODUCTS.some(p => p.cat === c.slug)) : [];
+  const chip = (slug, t) => `<button type="button" data-cat="${slug}" class="${valor === slug ? "on" : ""}" aria-pressed="${valor === slug}">${esc(t)}</button>`;
+  return cats.length > 1 ? chip("", "Todas") + cats.map(c => chip(c.slug, c.name)).join("") : "";
+}
+/* Filtro por tipo de prenda: f = { linea, cat } (stkF o prF) · al tocar un botón se marca y se vuelve a pintar la lista */
+function usarChips(caja, f, pintar) {
+  caja.addEventListener("click", e => {
+    const b = e.target.closest("[data-cat]"); if (!b || b.dataset.cat === f.cat) return;
+    f.cat = b.dataset.cat; caja.innerHTML = chipsCat(f.linea, f.cat); pintar();
+  });
+}
 const buscaTexto = s => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 /* =========================================================
@@ -683,7 +826,8 @@ async function vStock(m) {
     ${desfase()}
     <div class="bar"><div class="tabs" id="sModo"></div><p class="bar__nota" id="sNota"></p></div>
     <section class="kpis" id="sKpis"></section>
-    <div class="bar">${filtroLinea("sLinea", stkF.linea)}<span id="sCatW">${filtroCat("sCat", stkF.linea, stkF.cat)}</span><label class="search">${I.buscar}<input class="inp" id="sQ" type="search" placeholder="Buscar prenda o color" value="${esc(stkF.q)}"></label></div>
+    <div class="bar">${filtroLinea("sLinea", stkF.linea)}<label class="search">${I.buscar}<input class="inp" id="sQ" type="search" placeholder="Buscar prenda o color" value="${esc(stkF.q)}"></label></div>
+    <div class="chips" id="sCats" role="group" aria-label="Tipo de prenda">${chipsCat(stkF.linea, stkF.cat)}</div>
     <div id="sLista"></div>
     <div class="savebar" id="saveBar"><b id="sN"></b><div style="display:flex;gap:10px"><button class="btn btn--ghost" type="button" id="sDesc">Descartar</button><button class="btn btn--pri" type="button" id="sGuardar">${I.check}Guardar cambios</button></div></div>`;
   const fis = () => stkF.modo === "fisico";
@@ -715,23 +859,30 @@ async function vStock(m) {
     kpis();
   };
   const valorProd = p => (INV[p.slug].costo == null ? "" : `Costo ${money(INV[p.slug].costo)} · Valor <b>${money(total(p) * INV[p.slug].costo)}</b>`);
+  // Colores apagados: no se ven en la tienda. El interruptor está en Stock virtual (lo que ve la tienda); en físico solo se avisa.
+  const ocultos = p => new Set(INV[p.slug].ocultos || []);
+  const avisoOcultos = (p, fuera) => (!fuera.size ? "" : `<span class="chip chip--off">${fuera.size >= p.colors.length ? "No se ve en la tienda" : plural(fuera.size, "color oculto", "colores ocultos")}</span>`);
+  const colorCelda = (p, c, hex, off) => `<div class="stk__c${off ? " off" : ""}"><i style="background:${hex}"></i><span class="stk__cn">${esc(c)}${off ? "<small>Oculto en la tienda</small>" : ""}</span>${fis() ? ""
+    : `<label class="sw" title="${off ? "Apagado: no se ve en la tienda. Toca para mostrarlo." : "Encendido: se ve en la tienda. Toca para ocultarlo."}"><input type="checkbox" data-color="${esc(c)}"${off ? "" : " checked"} aria-label="Mostrar ${esc(c)} de ${esc(p.name)} en la tienda"><b aria-hidden="true"></b></label>`}</div>`;
+  const seccion = p => { const fuera = ocultos(p); return `<section class="stk" data-slug="${p.slug}">
+        <div class="stk__head"><img src="${imgDe(p.slug)}" alt="" loading="lazy"><div class="stk__name"><h3>${esc(p.name)}</h3><p>${esc(lineName(p.linea))} · ${esc(catName(p.cat))}</p></div>
+          ${avisoOcultos(p, fuera)}
+          ${fis() ? (INV[p.slug].costo == null ? `<a class="chip chip--warn" href="#productos">Sin costo</a>` : `<span class="stk__val" data-val>${valorProd(p)}</span>`) : ""}
+          <div class="stk__tot"><b data-tot>${total(p)}</b><span>unidades</span></div><button class="btn btn--sm" type="button" data-hist="${p.slug}">${I.hist}Historial</button></div>
+        <div class="stk__grid${fis() ? "" : " stk__grid--sw"}" style="--n:${p.sizes.length}">
+          <div class="stk__h">Color</div>${p.sizes.map(t => `<div class="stk__h">${esc(t)}</div>`).join("")}
+          ${p.colors.map(([c, hex]) => colorCelda(p, c, hex, fuera.has(c)) + p.sizes.map(t => {
+            const k = `${p.slug}|${c}|${t}`, v = valor(k), off = fuera.has(c) ? " off" : "";
+            return varDe(p.slug, c, t)
+              ? `<input data-k="${esc(k)}" inputmode="numeric" autocomplete="off" value="${v ?? ""}" placeholder="—" class="${cambios.has(k) ? "chg" : v === 0 ? "cero" : ""}${off}" aria-label="${esc(p.name)}, ${esc(c)}, talla ${esc(t)}">`
+              : `<input disabled placeholder="—" aria-label="Talla aún no disponible">`;
+          }).join("")).join("")}
+        </div></section>`; };
   const pintar = () => {
     const q = buscaTexto(stkF.q);
     const lista = PRODUCTS.filter(p => INV[p.slug] && (!stkF.linea || p.linea === stkF.linea) && (!stkF.cat || p.cat === stkF.cat) &&
       (!q || buscaTexto(p.name + " " + p.colors.map(c => c[0]).join(" ")).includes(q)));
-    $("#sLista").innerHTML = lista.length ? lista.map(p => `<section class="stk" data-slug="${p.slug}">
-        <div class="stk__head"><img src="${imgDe(p.slug)}" alt="" loading="lazy"><div class="stk__name"><h3>${esc(p.name)}</h3><p>${esc(lineName(p.linea))} · ${esc(catName(p.cat))}</p></div>
-          ${fis() ? (INV[p.slug].costo == null ? `<a class="chip chip--warn" href="#productos">Sin costo</a>` : `<span class="stk__val" data-val>${valorProd(p)}</span>`) : ""}
-          <div class="stk__tot"><b data-tot>${total(p)}</b><span>unidades</span></div><button class="btn btn--sm" type="button" data-hist="${p.slug}">${I.hist}Historial</button></div>
-        <div class="stk__grid" style="--n:${p.sizes.length}">
-          <div class="stk__h">Color</div>${p.sizes.map(t => `<div class="stk__h">${esc(t)}</div>`).join("")}
-          ${p.colors.map(([c, hex]) => `<div class="stk__c"><i style="background:${hex}"></i>${esc(c)}</div>${p.sizes.map(t => {
-            const k = `${p.slug}|${c}|${t}`, v = valor(k);
-            return varDe(p.slug, c, t)
-              ? `<input data-k="${esc(k)}" inputmode="numeric" autocomplete="off" value="${v ?? ""}" placeholder="—" class="${cambios.has(k) ? "chg" : v === 0 ? "cero" : ""}" aria-label="${esc(p.name)}, ${esc(c)}, talla ${esc(t)}">`
-              : `<input disabled placeholder="—" aria-label="Talla aún no disponible">`;
-          }).join("")}`).join("")}
-        </div></section>`).join("")
+    $("#sLista").innerHTML = lista.length ? lista.map(seccion).join("")
       : `<div class="empty"><b>Sin resultados</b>Prueba con otro filtro.</div>`;
   };
   const barra = () => { $("#saveBar").classList.toggle("show", cambios.size > 0); $("#sN").textContent = `${plural(cambios.size, "cambio", "cambios")} sin guardar`; };
@@ -751,8 +902,8 @@ async function vStock(m) {
     if (!(await descartar("registras una " + a.dataset.a))) return;
     if (await movFisico(a.dataset.a)) await recargar().catch(x => toast(msg(x)));
   });
-  $("#sLinea").addEventListener("change", e => { stkF.linea = e.target.value; stkF.cat = ""; $("#sCatW").innerHTML = filtroCat("sCat", stkF.linea, ""); pintar(); });
-  $("#sCatW").addEventListener("change", e => { stkF.cat = e.target.value; pintar(); });
+  $("#sLinea").addEventListener("change", e => { stkF.linea = e.target.value; stkF.cat = ""; $("#sCats").innerHTML = chipsCat(stkF.linea, ""); pintar(); });
+  usarChips($("#sCats"), stkF, pintar);
   let t; $("#sQ").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { stkF.q = e.target.value.trim(); pintar(); }, 200); });
   $("#sLista").addEventListener("input", e => {
     const inp = e.target, k = inp.dataset.k; if (!k) return;
@@ -769,11 +920,26 @@ async function vStock(m) {
   // Enter pasa a la siguiente casilla
   $("#sLista").addEventListener("keydown", e => {
     if (e.key !== "Enter" || !e.target.dataset.k) return;
-    e.preventDefault(); const all = $$("#sLista input:not(:disabled)"), i = all.indexOf(e.target);
+    e.preventDefault(); const all = $$("#sLista input[data-k]:not(:disabled)"), i = all.indexOf(e.target);
     if (all[i + 1]) { all[i + 1].focus(); all[i + 1].select(); }
   });
   $("#sLista").addEventListener("focusin", e => { if (e.target.dataset.k) e.target.select(); });
   $("#sLista").addEventListener("click", e => { const b = e.target.closest("[data-hist]"); if (b) historial(b.dataset.hist, stkF.modo); });
+  // Interruptor de un color: se guarda al instante (no usa "Guardar cambios" y no toca el stock)
+  $("#sLista").addEventListener("change", async e => {
+    const sw = e.target.closest("[data-color]"); if (!sw) return;
+    const sec = sw.closest(".stk"), p = PROD[sec.dataset.slug], color = sw.dataset.color, visible = sw.checked;
+    sw.disabled = true;
+    try {
+      const r = await api("colores", { method: "POST", body: { slug: p.slug, color, visible } });
+      INV[p.slug].ocultos = r.ocultos;
+      const actual = $("#sLista") && $(`.stk[data-slug="${p.slug}"]`, $("#sLista"));
+      if (actual) actual.outerHTML = seccion(p);
+      toast(visible ? `${p.name} · ${color}: ya se ve en la tienda.`
+        : r.ocultos.length >= p.colors.length ? `${p.name}: apagaste todos sus colores, la prenda ya no se ve en la tienda.`
+        : `${p.name} · ${color}: ya no se ve en la tienda. Su stock queda guardado.`);
+    } catch (x) { sw.checked = !visible; sw.disabled = false; toast(msg(x)); }
+  });
   $("#sDesc").addEventListener("click", () => { cambios.clear(); pintar(); barra(); });
   $("#sGuardar").addEventListener("click", async () => {
     const campo = CAMPO[stkF.modo];
@@ -944,7 +1110,7 @@ function excelInventario() {
 /* =========================================================
    PRODUCTOS: precio normal, descuento, precio final, costo, precio mayorista y estado
    ========================================================= */
-const prF = { linea: "", q: "" };
+const prF = { linea: "", cat: "", q: "" };
 /* Ganancia sobre el precio de venta, en soles y en % */
 const margen = (precio, costo) => (precio == null || costo == null || !(precio > 0) ? null : { s: precio - costo, p: Math.round(((precio - costo) / precio) * 100) });
 function margenHTML(precio, costo) {
@@ -959,6 +1125,7 @@ async function vProductos(m) {
   m.innerHTML = `<header class="top"><h1>Productos</h1></header>
     ${desfase()}
     <div class="bar">${filtroLinea("prLinea", prF.linea)}<label class="search">${I.buscar}<input class="inp" id="prQ" type="search" placeholder="Buscar prenda" value="${esc(prF.q)}"></label><p class="bar__nota">El costo y el precio mayorista solo los ves tú.</p></div>
+    <div class="chips" id="prCats" role="group" aria-label="Tipo de prenda">${chipsCat(prF.linea, prF.cat)}</div>
     <div class="prods" id="prLista"></div>`;
   const datosDe = slug => { const d = INV[slug]; const normal = d.precio_antes ?? d.precio; return { normal, final: d.precio, pct: d.precio_antes ? Math.round((1 - d.precio / d.precio_antes) * 100) : 0, estado: d.estado, costo: d.costo, mayor: d.precio_mayor }; };
   const num = v => (v === "" || v == null ? null : +v);
@@ -979,7 +1146,7 @@ async function vProductos(m) {
   };
   const pintar = () => {
     const q = buscaTexto(prF.q);
-    const lista = PRODUCTS.filter(p => INV[p.slug] && (!prF.linea || p.linea === prF.linea) && (!q || buscaTexto(p.name).includes(q)));
+    const lista = PRODUCTS.filter(p => INV[p.slug] && (!prF.linea || p.linea === prF.linea) && (!prF.cat || p.cat === prF.cat) && (!q || buscaTexto(p.name).includes(q)));
     pend.clear();
     $("#prLista").innerHTML = lista.length
       ? `<div class="prow prow--head"><span>Producto</span><span>Precio normal</span><span>Descuento</span><span>Precio final</span><span>Costo</span><span>Precio mayorista</span><span>Estado</span><span></span></div>${lista.map(fila).join("")}`
@@ -995,7 +1162,8 @@ async function vProductos(m) {
     if (cambio) pend.add(row.dataset.slug); else pend.delete(row.dataset.slug);
   };
   pintar();
-  $("#prLinea").addEventListener("change", e => { prF.linea = e.target.value; pintar(); });
+  $("#prLinea").addEventListener("change", e => { prF.linea = e.target.value; prF.cat = ""; $("#prCats").innerHTML = chipsCat(prF.linea, ""); pintar(); });
+  usarChips($("#prCats"), prF, pintar);
   let t; $("#prQ").addEventListener("input", e => { clearTimeout(t); t = setTimeout(() => { prF.q = e.target.value.trim(); pintar(); }, 200); });
   // El precio final se calcula con el % (y el % con el precio final), siempre a soles enteros
   $("#prLista").addEventListener("input", e => {
