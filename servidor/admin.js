@@ -406,7 +406,7 @@ export async function movimientos({ env, request, url }) {
 /* GET /api/admin/clientes → clientes con cuenta, lo que compraron (pedidos que procedieron) y si aceptan promociones */
 export async function clientes({ env, request }) {
   await adminDe(env, request);
-  const r = await env.DB.prepare(`SELECT c.id, c.nombre, c.email, c.promos, c.creado, c.ultimo_acceso,
+  const r = await env.DB.prepare(`SELECT c.id, c.nombre, c.email, c.promos, c.cumple, c.creado, c.ultimo_acceso,
       COUNT(p.id) AS pedidos, COALESCE(SUM(p.total), 0) AS total, MAX(p.procesado) AS ultima_compra
     FROM clientes c LEFT JOIN pedidos p ON p.cliente_id = c.id AND p.estado = 'procede'
     GROUP BY c.id ORDER BY total DESC, c.creado DESC`).all();

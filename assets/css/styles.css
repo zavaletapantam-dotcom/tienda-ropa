@@ -1300,6 +1300,14 @@ img.fade.ok{opacity:1}
 .acc-google:disabled{opacity:.45;cursor:not-allowed}
 .acc-skip{margin-top:14px;font-size:13.5px;font-weight:500;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:6px}
 .acc-modal__box--sm .btn-wa{margin-top:8px}
+/* Cumpleaños (día y mes): en la ventana de registro y en Mi cuenta */
+.cumple-sel{display:grid;grid-template-columns:1fr 1.5fr;gap:8px}
+.cumple-sel select{width:100%;border:1px solid var(--line);background:var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230F0F0F' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;padding:11px 30px 11px 12px;font-size:14px;color:var(--ink);appearance:none;border-radius:0;outline:0;cursor:pointer}
+.cumple-sel select:focus-visible{border-color:var(--ink)}
+.acc-cumple{text-align:left;margin:2px 0 8px}
+.acc-cumple__t{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);font-weight:500;margin-bottom:8px}
+.acc-cumple__t svg{width:18px;height:18px;color:var(--teal);flex:none}
+.acc-cumple__t small{font-weight:400;color:var(--muted);font-size:12.5px}
 
 /* Pie: Libro de Reclamaciones con su ícono */
 .footer a.footer__libro{display:flex;align-items:center;gap:8px}
@@ -1357,6 +1365,20 @@ img.fade.ok{opacity:1}
 .acct__perfil h2{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--ink);line-height:1.15}
 .acct__mail{margin-top:4px;font-size:14px;word-break:break-word}
 .acct__desde{margin-top:2px;font-size:13px;color:var(--muted-2)}
+.acct__cumple{margin-top:20px;padding:18px 16px;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:2px}
+.acct__cumple:empty{display:none}
+.acct__cumple-t{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.acct__cumple-t svg{width:18px;height:18px;color:var(--teal);flex:none}
+.acct__cumple-n{font-family:var(--serif);font-size:48px;line-height:1;font-weight:600;color:var(--teal)}
+.acct__cumple-hoy{font-family:var(--serif);font-size:26px;line-height:1.15;font-weight:600;color:var(--teal)}
+.acct__cumple-sub{font-size:14px;color:var(--ink)}
+.acct__cumple-det{margin-top:4px;font-size:12.5px;color:var(--muted-2)}
+.acct__cumple.is-hoy{background:var(--mist-2);border-color:transparent}
+.acct__cumple--nuevo{align-items:stretch;text-align:left}
+.acct__cumple--nuevo .acct__cumple-t{justify-content:flex-start;text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink);margin-bottom:2px}
+.acct__cumple-txt{font-size:13.5px;line-height:1.5;margin-bottom:12px}
+.acct__cumple-btn{width:100%;margin-top:10px}
+.acct__cumple-nota{margin-top:8px;font-size:12px;color:var(--muted-2);text-align:center}
 .acct__stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0}
 .acct__stats div{background:var(--mist-2);padding:14px 10px}
 .acct__stats b{display:block;font-size:20px;font-weight:600;color:var(--ink)}
@@ -1390,6 +1412,8 @@ img.fade.ok{opacity:1}
 .acct__ped footer b{font-size:17px;color:var(--ink)}
 .acct-peligro{display:block;width:100%;margin-top:8px;padding:15px;background:#B4462F;color:#fff;font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
 .acct-peligro:hover{background:#933823}
+.acct-peligro--ok{background:var(--ink)}
+.acct-peligro--ok:hover{background:var(--teal)}
 @media (max-width:900px){
   .acct{grid-template-columns:1fr}
   .acct__perfil{position:static}

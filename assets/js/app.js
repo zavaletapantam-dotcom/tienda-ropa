@@ -174,6 +174,7 @@ const I = {
   tag: svg('<path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
   spark: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>'),
   clock2: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
+  cake: svg('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M12 13V9.5M12 6.5c.9 0 1.5-.6 1.5-1.4C13.5 4 12 2.5 12 2.5S10.5 4 10.5 5.1c0 .8.6 1.4 1.5 1.4Z"/>'),
   book: svg('<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20v3H6.5M9 7h7M9 11h5"/>'),
   google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.5 5.5 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7Z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24Z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1Z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9Z"/></svg>',
 };
@@ -411,6 +412,10 @@ function renderLayout() {
       </ul>
       <label class="acc-check"><input type="checkbox" id="accAcepto"><span>Acepto los <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a> y la <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></span></label>
       <label class="acc-check"><input type="checkbox" id="accPromos"><span>Quiero recibir promociones</span></label>
+      <div class="acc-cumple">
+        <span class="acc-cumple__t">${I.cake}Tu cumpleaños <small>(opcional)</small></span>
+        ${cumpleSelects("accCumple")}
+      </div>
       <button type="button" class="acc-google" id="accGoogle" disabled>${I.google}<span>Continuar con Google</span></button>
       <button type="button" class="acc-skip" id="accSkip">No, gracias. Ir a WhatsApp</button>
     </div>
@@ -929,6 +934,44 @@ function bloquearScroll(on) {
     s.cssText = scrollLock.css; scrollTo({ top: scrollLock.y, behavior: "instant" }); scrollLock = null;
   }
 }
+/* ---------- Cumpleaños del cliente: solo día y mes ("MM-DD"), nunca el año ---------- */
+function cumpleMeses() { return ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre"]; }
+const cumpleTope = mes => [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1] || 31;
+function cumpleSelects(id) {
+  const dias = Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+  const meses = cumpleMeses().map((m, i) => `<option value="${i + 1}">${m[0].toUpperCase() + m.slice(1)}</option>`).join("");
+  return `<div class="cumple-sel"><select id="${id}D" aria-label="Día de tu cumpleaños"><option value="">Día</option>${dias}</select>
+    <select id="${id}M" aria-label="Mes de tu cumpleaños"><option value="">Mes</option>${meses}</select></div>`;
+}
+/* Al elegir el mes se apagan los días que ese mes no tiene (el 29 de febrero sí vale) */
+function cumpleEnlazar(id) {
+  const d = $(`#${id}D`), m = $(`#${id}M`); if (!d || !m) return;
+  m.addEventListener("change", () => {
+    const tope = cumpleTope(+m.value);
+    [...d.options].forEach(o => { if (o.value) o.disabled = +o.value > tope; });
+    if (+d.value > tope) d.value = "";
+  });
+}
+/* "MM-DD" si eligió los dos · null si dejó los dos vacíos · false si eligió solo uno */
+function cumpleLeer(id) {
+  const d = +($(`#${id}D`) || {}).value || 0, m = +($(`#${id}M`) || {}).value || 0;
+  if (!d && !m) return null;
+  if (!d || !m || d > cumpleTope(m)) return false;
+  return `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+const cumpleTexto = c => `${+c.slice(3)} de ${cumpleMeses()[+c.slice(0, 2) - 1]}`;
+/* Cuánto falta (en hora de Lima): días en total y también en meses + días. En años no bisiestos, el 29 de febrero se celebra el 28. */
+function cumpleFalta(c) {
+  const [y, mo, da] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date()).split("-").map(Number);
+  const hoy = Date.UTC(y, mo - 1, da), cm = +c.slice(0, 2), cd = +c.slice(3);
+  const bis = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+  const en = a => Date.UTC(a, cm - 1, cm === 2 && cd === 29 && !bis(a) ? 28 : cd);
+  let t = en(y); if (t < hoy) t = en(y + 1);
+  const sumarMeses = n => { const f = new Date(Date.UTC(y, mo - 1 + n, 1)); return Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), Math.min(da, new Date(Date.UTC(f.getUTCFullYear(), f.getUTCMonth() + 1, 0)).getUTCDate())); };
+  let meses = 0; while (sumarMeses(meses + 1) <= t) meses++;
+  return { dias: Math.round((t - hoy) / 864e5), meses, resto: Math.round((t - sumarMeses(meses)) / 864e5) };
+}
+
 let accCtx = null;
 function abrirCuentaModal(ctx = {}) {
   const m = $("#accModal"); if (!m) return;
@@ -972,10 +1015,13 @@ function initCuenta() {
     if (accCtx && accCtx.seguir) accCtx.seguir();
   });
   $("#accAcepto").addEventListener("change", e => ($("#accGoogle").disabled = !e.target.checked));
+  cumpleEnlazar("accCumple");
   $("#accGoogle").addEventListener("click", () => {
     if (!$("#accAcepto").checked) return;
+    const cumple = cumpleLeer("accCumple");
+    if (cumple === false) return toast("Completa el día y el mes de tu cumpleaños, o déjalos en blanco");
     if (accCtx && accCtx.url) sesStore.set(PEND_KEY, JSON.stringify({ url: accCtx.url, ped: accCtx.ped || null }));
-    location.href = `/api/auth/google?acepto=1&promos=${$("#accPromos").checked ? 1 : 0}&volver=${encodeURIComponent(location.pathname + location.search)}`;
+    location.href = `/api/auth/google?acepto=1&promos=${$("#accPromos").checked ? 1 : 0}${cumple ? "&cumple=" + cumple : ""}&volver=${encodeURIComponent(location.pathname + location.search)}`;
   });
   $$("[data-acc-x]", listo).forEach(el => el.addEventListener("click", () => { cerrarModal("#accListo"); sesStore.set(PEND_KEY, null); }));
   $("#accSeguir").addEventListener("click", () => {
@@ -1835,14 +1881,14 @@ function cuentaApi(method = "GET", body) {
   }).then(async r => ({ ok: r.ok, status: r.status, j: await r.json().catch(() => ({})) }), () => ({ ok: false, status: 0, j: {} }));
 }
 /* Confirmación propia (misma ventana con fondo borroso que la de cuenta) */
-function confirmarCuenta({ titulo, texto, ok }) {
+function confirmarCuenta({ titulo, texto, ok, peligro = true }) {
   return new Promise(resolve => {
     const d = document.createElement("div");
     d.className = "acc-modal";
     d.innerHTML = `<div class="acc-modal__bg" data-x></div><div class="acc-modal__box acc-modal__box--sm" role="dialog" aria-modal="true" aria-label="${esc(titulo)}">
       <button type="button" class="acc-modal__x" data-x aria-label="Cerrar">${I.close}</button>
       <h2>${esc(titulo)}</h2><p class="acc-modal__lead">${esc(texto)}</p>
-      <button type="button" class="acct-peligro" data-ok>${esc(ok)}</button><button type="button" class="acc-skip" data-x>Cancelar</button></div>`;
+      <button type="button" class="acct-peligro${peligro ? "" : " acct-peligro--ok"}" data-ok>${esc(ok)}</button><button type="button" class="acc-skip" data-x>Cancelar</button></div>`;
     document.body.append(d);
     requestAnimationFrame(() => { d.classList.add("open"); bloquearScroll(true); });
     const fin = v => { d.classList.remove("open"); bloquearScroll(false); removeEventListener("keydown", tecla); setTimeout(() => d.remove(), 400); resolve(v); };
@@ -1879,6 +1925,7 @@ async function initMiCuenta() {
       <h2>${esc(nombre)}</h2>
       <p class="acct__mail">${esc(c.email)}</p>
       <p class="acct__desde">Cliente desde ${esc(desde)}</p>
+      <div class="acct__cumple" id="acctCumple"></div>
       <div class="acct__stats"><div><b>${money(compras.total)}</b><span>En compras</span></div><div><b>${compras.pedidos}</b><span>${compras.pedidos === 1 ? "Pedido confirmado" : "Pedidos confirmados"}</span></div></div>
       <label class="acct__switch"><input type="checkbox" id="acctPromos"${c.promos ? " checked" : ""}><span class="acct__sw" aria-hidden="true"></span><span>Recibir promociones</span></label>
       <button type="button" class="btn btn--outline acct__salir" id="acctSalir">Cerrar sesión</button>
@@ -1893,6 +1940,42 @@ async function initMiCuenta() {
       </article>`).join("") : `<div class="acct-vacio acct-vacio--sm"><h3>Todavía no tienes pedidos</h3><p>Cuando hagas un pedido con tu cuenta abierta, aparecerá aquí.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`}
     </section>
   </div>`;
+
+  // Cumpleaños: cuenta regresiva si ya lo dio; si no, lo puede agregar una vez
+  const pintarCumple = () => {
+    const box = $("#acctCumple");
+    if (c.cumple) {
+      const f = cumpleFalta(c.cumple);
+      const partes = [f.meses && `${f.meses} ${f.meses === 1 ? "mes" : "meses"}`, f.resto && `${f.resto} ${f.resto === 1 ? "día" : "días"}`].filter(Boolean);
+      box.className = "acct__cumple" + (f.dias === 0 ? " is-hoy" : "");
+      box.innerHTML = `<p class="acct__cumple-t">${I.cake}Tu cumpleaños · ${esc(cumpleTexto(c.cumple))}</p>` + (
+        f.dias === 0 ? `<b class="acct__cumple-hoy">¡Feliz cumpleaños, ${esc(primero)}!</b><span class="acct__cumple-sub">Hoy es tu día</span>`
+        : f.dias === 1 ? `<b class="acct__cumple-hoy">¡Mañana es tu día!</b><span class="acct__cumple-sub">Falta 1 día para tu cumpleaños</span>`
+        : `<b class="acct__cumple-n">${f.dias}</b><span class="acct__cumple-sub">días para tu cumpleaños</span>${f.meses ? `<span class="acct__cumple-det">${f.meses === 1 && !f.resto ? "Falta" : "Faltan"} ${partes.join(" y ")}</span>` : ""}`);
+      return;
+    }
+    box.className = "acct__cumple acct__cumple--nuevo";
+    box.innerHTML = `<p class="acct__cumple-t">${I.cake}¿Cuándo es tu cumpleaños?</p>
+      <p class="acct__cumple-txt">Agrégalo y te mostramos cuánto falta para tu día.</p>
+      ${cumpleSelects("acctCumple")}
+      <button type="button" class="btn btn--dark acct__cumple-btn" id="acctCumpleOk">Guardar</button>
+      <p class="acct__cumple-nota">Solo día y mes. Una vez guardado, ya no se puede cambiar.</p>`;
+    cumpleEnlazar("acctCumple");
+    $("#acctCumpleOk").addEventListener("click", async () => {
+      const v = cumpleLeer("acctCumple");
+      if (!v) return toast("Elige el día y el mes de tu cumpleaños");
+      const ok = await confirmarCuenta({ titulo: `¿Tu cumpleaños es el ${cumpleTexto(v)}?`, texto: "Revisa bien la fecha: una vez guardada, ya no se puede cambiar.", ok: "Sí, guardar", peligro: false });
+      if (!ok) return;
+      const x = await cuentaApi("PATCH", { cumple: v });
+      if (x.ok || x.j.error === "cumple_ya_guardado") {
+        if (x.ok) { c.cumple = v; toast("¡Listo! Guardamos tu cumpleaños"); pintarCumple(); }
+        else initMiCuenta();
+        return;
+      }
+      toast("No se pudo guardar. Inténtalo de nuevo");
+    });
+  };
+  pintarCumple();
 
   $("#acctPromos").addEventListener("change", async e => {
     const quiere = e.target.checked;

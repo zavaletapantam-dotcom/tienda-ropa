@@ -22,6 +22,9 @@ const TZ = "America/Lima";
 const fFecha = iso => (iso ? new Date(iso).toLocaleString("es-PE", { timeZone: TZ, day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—");
 const fDia = iso => (iso ? new Date(iso).toLocaleDateString("es-PE", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" }) : "—");
 const diaLima = d => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(d);
+/* Cumpleaños del cliente ("MM-DD", sin año) → "14 de marzo" */
+const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre"];
+const fCumple = c => (c ? `${+c.slice(3)} de ${MESES_LARGO[+c.slice(0, 2) - 1]}` : "");
 /* Libro de Reclamaciones: se responde en 15 días hábiles (lunes a viernes) desde que llegó */
 function venceReclamo(iso) {
   const d = new Date(diaLima(new Date(iso)) + "T12:00:00Z");
@@ -1363,21 +1366,22 @@ async function vClientes(m) {
       <div class="kpi"><span>Clientes con cuenta</span><b>${r.clientes.length}</b></div>
       <div class="kpi"><span>Aceptan promociones</span><b>${r.clientes.filter(c => c.promos).length}</b></div>
       <div class="kpi"><span>Compraron alguna vez</span><b>${r.clientes.filter(c => c.pedidos).length}</b></div>
+      <div class="kpi"><span>Cumplen años este mes</span><b>${r.clientes.filter(c => c.cumple && c.cumple.slice(0, 2) === diaLima(new Date()).slice(5, 7)).length}</b></div>
     </section>
     <div class="bar"><label class="search">${I.buscar}<input class="inp" id="cQ" type="search" placeholder="Buscar nombre o correo"></label></div>
     <div class="card wrap-tbl" id="cLista"></div>`;
   const pintar = () => {
     const s = buscaTexto(q), lista = r.clientes.filter(c => !s || buscaTexto((c.nombre || "") + " " + c.email).includes(s));
-    $("#cLista").innerHTML = lista.length ? `<table class="tbl"><thead><tr><th>Cliente</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Promociones</th><th>Desde</th><th>Última compra</th></tr></thead>
+    $("#cLista").innerHTML = lista.length ? `<table class="tbl"><thead><tr><th>Cliente</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Promociones</th><th>Cumpleaños</th><th>Desde</th><th>Última compra</th></tr></thead>
       <tbody>${lista.map(c => `<tr><td><b>${esc(c.nombre || "Sin nombre")}</b><br><span style="color:var(--muted)">${esc(c.email)}</span></td><td class="num">${c.pedidos}</td><td class="num"><b>${money(c.total)}</b></td>
-        <td><span class="pill ${c.promos ? "pill--procede" : "pill--cancelado"}">${c.promos ? "Sí" : "No"}</span></td><td>${fDia(c.creado)}</td><td>${c.ultima_compra ? fDia(c.ultima_compra) : "—"}</td></tr>`).join("")}</tbody></table>`
+        <td><span class="pill ${c.promos ? "pill--procede" : "pill--cancelado"}">${c.promos ? "Sí" : "No"}</span></td><td>${c.cumple ? fCumple(c.cumple) : "—"}</td><td>${fDia(c.creado)}</td><td>${c.ultima_compra ? fDia(c.ultima_compra) : "—"}</td></tr>`).join("")}</tbody></table>`
       : `<div class="empty"><b>${q ? "Sin resultados" : "Todavía no hay clientes con cuenta"}</b></div>`;
   };
   pintar();
   $("#cQ").addEventListener("input", e => { q = e.target.value.trim(); pintar(); });
   $("#cBajar").addEventListener("click", () => {
-    const filas = [["Nombre", "Correo", "Pedidos confirmados", "Total comprado (S/)", "Acepta promociones", "Cliente desde", "Última compra"],
-      ...r.clientes.map(c => [c.nombre || "", c.email, c.pedidos, Number(c.total).toFixed(2), c.promos ? "Sí" : "No", fDia(c.creado), c.ultima_compra ? fDia(c.ultima_compra) : ""])];
+    const filas = [["Nombre", "Correo", "Pedidos confirmados", "Total comprado (S/)", "Acepta promociones", "Cumpleaños", "Cliente desde", "Última compra"],
+      ...r.clientes.map(c => [c.nombre || "", c.email, c.pedidos, Number(c.total).toFixed(2), c.promos ? "Sí" : "No", fCumple(c.cumple), fDia(c.creado), c.ultima_compra ? fDia(c.ultima_compra) : ""])];
     const csv = filas.map(f => f.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));

@@ -1,7 +1,7 @@
 /* =========================================================
    Rutas públicas de la tienda: catálogo, sesión, pedidos, cuenta del cliente y Libro de Reclamaciones
    ========================================================= */
-import { ErrorHttp, json, leerJson, texto, leerSesion, cerrarSesion, limitar, ipDe, catalogo, config, iso, COOKIE, borrarCookie } from "./util.js";
+import { ErrorHttp, json, leerJson, texto, leerSesion, cerrarSesion, limitar, ipDe, catalogo, config, iso, COOKIE, borrarCookie, cumpleValido } from "./util.js";
 
 const googleListo = env => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 const r2 = n => Math.round(n * 100) / 100;
@@ -93,7 +93,7 @@ async function clienteObligatorio(env, request) {
 export async function cuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
   const [cli, peds, items, tot] = await env.DB.batch([
-    env.DB.prepare("SELECT nombre, email, foto, promos, creado FROM clientes WHERE id = ?").bind(ses.id),
+    env.DB.prepare("SELECT nombre, email, foto, promos, cumple, creado FROM clientes WHERE id = ?").bind(ses.id),
     env.DB.prepare("SELECT id, codigo, creado, estado, origen, subtotal, descuento, envio, total, precio_pendiente FROM pedidos WHERE cliente_id = ? AND estado <> 'cancelado' ORDER BY creado DESC LIMIT 100").bind(ses.id),
     env.DB.prepare("SELECT i.pedido_id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id WHERE p.cliente_id = ? AND p.estado <> 'cancelado' ORDER BY i.id").bind(ses.id),
     env.DB.prepare("SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS n FROM pedidos WHERE cliente_id = ? AND estado = 'procede'").bind(ses.id),
@@ -104,16 +104,24 @@ export async function cuenta({ env, request }) {
   for (const i of items.results) (porPedido[i.pedido_id] ||= []).push({ slug: i.slug, nombre: i.nombre, color: i.color, talla: i.talla, cantidad: i.cantidad, precio: i.precio });
   return json({
     ok: true,
-    cliente: { nombre: c.nombre, email: c.email, foto: c.foto, promos: !!c.promos, desde: iso(c.creado) },
+    cliente: { nombre: c.nombre, email: c.email, foto: c.foto, promos: !!c.promos, cumple: c.cumple || null, desde: iso(c.creado) },
     compras: { total: tot.results[0].total, pedidos: tot.results[0].n },
     pedidos: peds.results.map(p => ({ codigo: p.codigo, fecha: iso(p.creado), estado: p.estado, origen: p.origen, subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total, consultar: !!p.precio_pendiente, items: porPedido[p.id] || [] })),
   });
 }
 
-/* PATCH /api/cuenta → { promos: true | false } */
+/* PATCH /api/cuenta → { promos: true | false } o { cumple: "MM-DD" }
+   El cumpleaños se guarda una sola vez: después ya no se cambia desde la cuenta (así nadie lo mueve para cobrar un regalo dos veces). */
 export async function cambiarCuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
   const b = await leerJson(request);
+  if ("cumple" in b) {
+    const cumple = cumpleValido(b.cumple);
+    if (!cumple) throw new ErrorHttp(400, "cumple_invalido");
+    const r = await env.DB.prepare("UPDATE clientes SET cumple = ?, cumple_fecha = datetime('now') WHERE id = ? AND cumple IS NULL").bind(cumple, ses.id).run();
+    if (!r.meta.changes) throw new ErrorHttp(409, "cumple_ya_guardado");
+    return json({ ok: true, cumple });
+  }
   if (typeof b.promos !== "boolean") throw new ErrorHttp(400, "datos_invalidos");
   await env.DB.prepare("UPDATE clientes SET promos = ?, promos_fecha = datetime('now') WHERE id = ?").bind(b.promos ? 1 : 0, ses.id).run();
   return json({ ok: true, promos: b.promos });

@@ -2,7 +2,7 @@
    Iniciar sesión con Google (OpenID Connect, flujo con código)
    Necesita GOOGLE_CLIENT_ID (variable) y GOOGLE_CLIENT_SECRET (secreto) en Cloudflare.
    ========================================================= */
-import { aleatorio, cookie, borrarCookie, leerCookies, crearSesion, COOKIE } from "./util.js";
+import { aleatorio, cookie, borrarCookie, leerCookies, crearSesion, COOKIE, cumpleValido } from "./util.js";
 
 const DIAS_SESION = 30;
 const redir = (url, cookies = []) => {
@@ -14,15 +14,16 @@ const redir = (url, cookies = []) => {
 const volverSeguro = v => (typeof v === "string" && /^\/(?!\/)[\w\-./?=&%~+]*$/.test(v) ? v : "/");
 const callback = url => `${url.origin}/api/auth/google/callback`;
 
-/* GET /api/auth/google?acepto=1&promos=0|1&volver=/tienda
+/* GET /api/auth/google?acepto=1&promos=0|1&cumple=MM-DD&volver=/tienda
    acepto: el cliente marcó que acepta los Términos y la Política de privacidad (obligatorio)
-   promos: el cliente marcó que quiere recibir promociones (opcional) */
+   promos: el cliente marcó que quiere recibir promociones (opcional)
+   cumple: día y mes de su cumpleaños (opcional; solo se guarda si su cuenta todavía no tiene uno) */
 export async function empezar({ env, url }) {
   const volver = volverSeguro(url.searchParams.get("volver"));
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return redir(`${volver}#cuenta=no-disponible`);
   if (url.searchParams.get("acepto") !== "1") return redir(`${volver}#cuenta=falta-aceptar`);
   const estado = aleatorio(24);
-  const datos = btoa(JSON.stringify({ e: estado, p: url.searchParams.get("promos") === "1" ? 1 : 0, v: volver }));
+  const datos = btoa(JSON.stringify({ e: estado, p: url.searchParams.get("promos") === "1" ? 1 : 0, c: cumpleValido(url.searchParams.get("cumple")), v: volver }));
   const q = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID, redirect_uri: callback(url), response_type: "code",
     scope: "openid email profile", state: estado, prompt: "select_account",
@@ -67,16 +68,20 @@ export async function volver({ env, url, request }) {
   }
 
   const nombre = String(id.name || id.given_name || "").slice(0, 120) || null, foto = String(id.picture || "").slice(0, 500) || null;
+  const cumple = cumpleValido(datos.c);
   const existe = await env.DB.prepare("SELECT id FROM clientes WHERE google_id = ?").bind(id.sub).first();
   let clienteId;
   if (existe) {
     clienteId = existe.id;
+    // Si ya tenía cumpleaños guardado, no se cambia: solo se completa si estaba vacío
     await env.DB.prepare(`UPDATE clientes SET email = ?, nombre = ?, foto = ?, ultimo_acceso = datetime('now')
-        ${datos.p ? ", promos = 1, promos_fecha = datetime('now')" : ""} WHERE id = ?`).bind(id.email, nombre, foto, clienteId).run();
+        ${datos.p ? ", promos = 1, promos_fecha = datetime('now')" : ""}
+        ${cumple ? ", cumple_fecha = CASE WHEN cumple IS NULL THEN datetime('now') ELSE cumple_fecha END, cumple = COALESCE(cumple, ?)" : ""}
+        WHERE id = ?`).bind(id.email, nombre, foto, ...(cumple ? [cumple] : []), clienteId).run();
   } else {
-    const n = await env.DB.prepare(`INSERT INTO clientes (google_id, email, nombre, foto, acepto, promos, promos_fecha, ultimo_acceso)
-        VALUES (?, ?, ?, ?, datetime('now'), ?, CASE WHEN ? = 1 THEN datetime('now') END, datetime('now')) RETURNING id`)
-      .bind(id.sub, id.email, nombre, foto, datos.p, datos.p).first();
+    const n = await env.DB.prepare(`INSERT INTO clientes (google_id, email, nombre, foto, acepto, promos, promos_fecha, cumple, cumple_fecha, ultimo_acceso)
+        VALUES (?, ?, ?, ?, datetime('now'), ?, CASE WHEN ? = 1 THEN datetime('now') END, ?, CASE WHEN ? IS NOT NULL THEN datetime('now') END, datetime('now')) RETURNING id`)
+      .bind(id.sub, id.email, nombre, foto, datos.p, datos.p, cumple, cumple).first();
     clienteId = n.id;
   }
   const token = await crearSesion(env, "cliente", clienteId, DIAS_SESION * 24);

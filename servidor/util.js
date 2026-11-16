@@ -25,6 +25,15 @@ export const texto = (v, max = 200) => {
   return s || null;
 };
 
+/* Cumpleaños "MM-DD" (solo día y mes; el 29 de febrero vale). Devuelve null si no es una fecha real. */
+const DIAS_MES = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+export const cumpleValido = v => {
+  const m = /^(\d{2})-(\d{2})$/.exec(String(v ?? ""));
+  if (!m) return null;
+  const mes = +m[1], dia = +m[2];
+  return mes >= 1 && mes <= 12 && dia >= 1 && dia <= DIAS_MES[mes - 1] ? `${m[1]}-${m[2]}` : null;
+};
+
 /* ---------- Cookies (siempre HttpOnly + Secure) ---------- */
 export const COOKIE = { admin: "__Host-ms_admin", cliente: "__Host-ms_cliente", oauth: "__Host-ms_oauth" };
 export const leerCookies = request => Object.fromEntries((request.headers.get("cookie") || "").split(/;\s*/).filter(Boolean).map(c => {
