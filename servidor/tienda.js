@@ -88,13 +88,14 @@ async function clienteObligatorio(env, request) {
   return ses;
 }
 
-/* GET /api/cuenta → sus datos y su historial de pedidos */
+/* GET /api/cuenta → sus datos y su historial de pedidos.
+   Los pedidos que la tienda cancela en el panel no se muestran al cliente: solo ve los que están en confirmación o confirmados. */
 export async function cuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
   const [cli, peds, items, tot] = await env.DB.batch([
     env.DB.prepare("SELECT nombre, email, foto, promos, creado FROM clientes WHERE id = ?").bind(ses.id),
-    env.DB.prepare("SELECT id, codigo, creado, estado, origen, subtotal, descuento, envio, total, precio_pendiente FROM pedidos WHERE cliente_id = ? ORDER BY creado DESC LIMIT 100").bind(ses.id),
-    env.DB.prepare("SELECT i.pedido_id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id WHERE p.cliente_id = ? ORDER BY i.id").bind(ses.id),
+    env.DB.prepare("SELECT id, codigo, creado, estado, origen, subtotal, descuento, envio, total, precio_pendiente FROM pedidos WHERE cliente_id = ? AND estado <> 'cancelado' ORDER BY creado DESC LIMIT 100").bind(ses.id),
+    env.DB.prepare("SELECT i.pedido_id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id WHERE p.cliente_id = ? AND p.estado <> 'cancelado' ORDER BY i.id").bind(ses.id),
     env.DB.prepare("SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS n FROM pedidos WHERE cliente_id = ? AND estado = 'procede'").bind(ses.id),
   ]);
   const c = cli.results[0];
