@@ -1,7 +1,8 @@
 /* =========================================================
    Rutas públicas de la tienda: catálogo, sesión, pedidos, cuenta del cliente y Libro de Reclamaciones
    ========================================================= */
-import { ErrorHttp, json, leerJson, texto, leerSesion, cerrarSesion, limitar, ipDe, catalogo, config, iso, COOKIE, borrarCookie, cumpleValido } from "./util.js";
+import { ErrorHttp, json, leerJson, texto, leerSesion, cerrarSesion, limitar, ipDe, catalogo, config, iso, COOKIE, borrarCookie, cumpleValido,
+  aleatorio, codigoCupon, CUPON_RE, efectoCupon } from "./util.js";
 
 const googleListo = env => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 const r2 = n => Math.round(n * 100) / 100;
@@ -21,7 +22,9 @@ async function clienteActual(env, request) {
 }
 
 /* POST /api/pedidos → guarda el pedido que el cliente envía por WhatsApp (queda "pendiente").
-   Los precios salen de la base, nunca del navegador. */
+   Los precios salen de la base, nunca del navegador.
+   cupon (opcional, solo desde el carrito y con la cuenta abierta): código de un cupón activo del cliente. Si ya no sirve,
+   el pedido se guarda igual, sin descuento, y queda anotado el código para que el panel lo vea. */
 export async function crearPedido({ env, request }) {
   await limitar(env, "pedido:" + ipDe(request), 30, 60);
   const b = await leerJson(request);
@@ -58,27 +61,50 @@ export async function crearPedido({ env, request }) {
   const entrega = ["domicilio", "recojo", "provincia"].includes(d.entrega) ? d.entrega : null;
   if (origen === "carrito" && (!entrega || !texto(d.nombre))) throw new ErrorHttp(400, "faltan_datos");
   const envio = entrega === "domicilio" ? (subtotal >= cfg.gratisDesde ? 0 : cfg.envio) : entrega === "recojo" ? 0 : null;
-  const total = r2(subtotal - descuento + (envio || 0));
   const destino = entrega === "provincia" ? [d.distP, d.prov, d.dep].map(x => texto(x, 60)).filter(Boolean).join(", ") || null : null;
   const agencia = entrega === "provincia" ? texto(d.agencia, 150) || (texto(d.agenciaAlt, 150) ? "Sin agencia cerca, prefiere: " + texto(d.agenciaAlt, 150) : null) : null;
 
   const ses = await leerSesion(env, request, "cliente");
-  try {
-    await env.DB.batch([
+  // El mismo pedido enviado dos veces (doble toque o reintento): ya está guardado
+  if (await env.DB.prepare("SELECT 1 FROM pedidos WHERE codigo = ?").bind(codigo).first()) return json({ ok: true, codigo, repetido: true });
+
+  // Cupón de los Puntos MAISON: solo en el carrito y con la cuenta abierta
+  const codCupon = origen === "carrito" && ses && CUPON_RE.test(String(b.cupon || "")) ? b.cupon : null;
+  let cupon = null;
+  if (codCupon) {
+    const c = await env.DB.prepare("SELECT id, nombre, tipo, valor FROM cupones WHERE codigo = ? AND cliente_id = ? AND estado = 'activo'").bind(codCupon, ses.id).first();
+    const ef = c && efectoCupon(c, { subtotal, descuento, entrega, envio });
+    if (ef) cupon = { ...c, ...ef };
+  }
+
+  const guardar = cup => {
+    const desc = r2(descuento + (cup ? cup.desc : 0)), env_ = cup ? cup.envio : envio;
+    const total = r2(subtotal - desc + (env_ || 0));
+    return env.DB.batch([
       env.DB.prepare(`INSERT INTO pedidos (codigo, origen, cliente_id, nombre, celular, entrega, distrito, direccion, referencia, destino, agencia,
-          subtotal, descuento, envio, total, precio_pendiente) VALUES (?, ?, (SELECT id FROM clientes WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          subtotal, descuento, envio, total, precio_pendiente, cupon_id, cupon_codigo, cupon_nombre, cupon_tipo, cupon_valor, cupon_desc)
+          VALUES (?, ?, (SELECT id FROM clientes WHERE id = ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
         .bind(codigo, origen, ses ? ses.id : null, texto(d.nombre, 120), texto(d.celular, 30), entrega,
           entrega === "domicilio" ? texto(d.distrito, 60) : null, entrega === "domicilio" ? texto(d.direccion, 200) : null,
-          entrega === "domicilio" ? texto(d.referencia, 200) : null, destino, agencia, subtotal, descuento, envio, total, pendiente),
+          entrega === "domicilio" ? texto(d.referencia, 200) : null, destino, agencia, subtotal, desc, env_, total, pendiente,
+          cup ? cup.id : null, codCupon, cup ? cup.nombre : null, cup ? cup.tipo : null, cup ? cup.valor : null, cup ? cup.desc : 0),
       ...items.map(i => env.DB.prepare(`INSERT INTO pedido_items (pedido_id, slug, nombre, color, talla, cantidad, precio)
           VALUES ((SELECT id FROM pedidos WHERE codigo = ?), ?, ?, ?, ?, ?, ?)`).bind(codigo, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio)),
-    ]);
+    ]).then(() => total);
+  };
+  let total;
+  try {
+    total = await guardar(cupon);
   } catch (e) {
-    // El mismo pedido enviado dos veces (doble toque o reintento): ya está guardado
-    if (/UNIQUE/i.test(String(e.message))) return json({ ok: true, codigo, repetido: true });
-    throw e;
+    const m = String(e.message);
+    if (/UNIQUE/i.test(m)) return json({ ok: true, codigo, repetido: true });
+    // El cupón se usó o se anuló justo ahora: el pedido se guarda igual, sin el descuento
+    if (cupon && /CUPON_NO_DISPONIBLE/.test(m)) {
+      try { total = await guardar(null); } catch (e2) { if (/UNIQUE/i.test(String(e2.message))) return json({ ok: true, codigo, repetido: true }); throw e2; }
+      cupon = null;
+    } else throw e;
   }
-  return json({ ok: true, codigo, total });
+  return json({ ok: true, codigo, total, ...(codCupon ? { cupon: cupon ? "aplicado" : "no_disponible" } : {}) });
 }
 
 /* ---------- Cuenta del cliente ---------- */
@@ -88,15 +114,21 @@ async function clienteObligatorio(env, request) {
   return ses;
 }
 
-/* GET /api/cuenta → sus datos y su historial de pedidos.
+/* GET /api/cuenta → sus datos, su historial de pedidos, sus Puntos MAISON, las recompensas y sus cupones.
    Los pedidos que la tienda cancela en el panel no se muestran al cliente: solo ve los que están en confirmación o confirmados. */
 export async function cuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
-  const [cli, peds, items, tot] = await env.DB.batch([
+  const [cli, peds, items, tot, pts, recs, cups] = await env.DB.batch([
     env.DB.prepare("SELECT nombre, email, foto, promos, cumple, creado FROM clientes WHERE id = ?").bind(ses.id),
-    env.DB.prepare("SELECT id, codigo, creado, estado, origen, subtotal, descuento, envio, total, precio_pendiente FROM pedidos WHERE cliente_id = ? AND estado <> 'cancelado' ORDER BY creado DESC LIMIT 100").bind(ses.id),
+    env.DB.prepare(`SELECT p.id, p.codigo, p.creado, p.estado, p.origen, p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente,
+        p.cupon_nombre, p.cupon_tipo, p.cupon_desc, (SELECT cantidad FROM puntos WHERE pedido_id = p.id AND motivo = 'pedido') AS puntos
+      FROM pedidos p WHERE p.cliente_id = ? AND p.estado <> 'cancelado' ORDER BY p.creado DESC LIMIT 100`).bind(ses.id),
     env.DB.prepare("SELECT i.pedido_id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id WHERE p.cliente_id = ? AND p.estado <> 'cancelado' ORDER BY i.id").bind(ses.id),
     env.DB.prepare("SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS n FROM pedidos WHERE cliente_id = ? AND estado = 'procede'").bind(ses.id),
+    env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(ses.id),
+    env.DB.prepare("SELECT id, nombre, puntos, tipo, valor FROM recompensas WHERE activa = 1 ORDER BY puntos, id"),
+    env.DB.prepare(`SELECT c.codigo, c.nombre, c.tipo, c.valor, c.estado, p.codigo AS pedido FROM cupones c LEFT JOIN pedidos p ON p.id = c.pedido_id
+      WHERE c.cliente_id = ? AND c.estado IN ('activo', 'en_pedido') ORDER BY c.id`).bind(ses.id),
   ]);
   const c = cli.results[0];
   if (!c) throw new ErrorHttp(401, "sin_sesion");
@@ -106,15 +138,81 @@ export async function cuenta({ env, request }) {
     ok: true,
     cliente: { nombre: c.nombre, email: c.email, foto: c.foto, promos: !!c.promos, cumple: c.cumple || null, desde: iso(c.creado) },
     compras: { total: tot.results[0].total, pedidos: tot.results[0].n },
-    pedidos: peds.results.map(p => ({ codigo: p.codigo, fecha: iso(p.creado), estado: p.estado, origen: p.origen, subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total, consultar: !!p.precio_pendiente, items: porPedido[p.id] || [] })),
+    puntos: pts.results[0].saldo,
+    recompensas: recs.results,
+    cupones: cups.results,
+    pedidos: peds.results.map(p => ({
+      codigo: p.codigo, fecha: iso(p.creado), estado: p.estado, origen: p.origen, subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total,
+      consultar: !!p.precio_pendiente, puntos: p.puntos || 0,
+      cupon: p.cupon_tipo ? { nombre: p.cupon_nombre, tipo: p.cupon_tipo, desc: p.cupon_desc } : null,
+      items: porPedido[p.id] || [],
+    })),
   });
 }
 
-/* PATCH /api/cuenta → { promos: true | false } o { cumple: "MM-DD" }
-   El cumpleaños se guarda una sola vez: después ya no se cambia desde la cuenta (así nadie lo mueve para cobrar un regalo dos veces). */
+/* GET /api/cuenta/cupones → solo sus cupones listos para usar (para el carrito) */
+export async function misCupones({ env, request }) {
+  const ses = await clienteObligatorio(env, request);
+  const r = await env.DB.prepare("SELECT codigo, nombre, tipo, valor FROM cupones WHERE cliente_id = ? AND estado = 'activo' ORDER BY id").bind(ses.id).all();
+  return json({ ok: true, cupones: r.results });
+}
+
+/* POST /api/cuenta/canjear { recompensa: id } → descuenta los puntos y le da un cupón para el carrito.
+   La base no deja canjear si no le alcanzan los puntos (disparador puntos_sin_negativo). */
+export async function canjear({ env, request }) {
+  const ses = await clienteObligatorio(env, request);
+  await limitar(env, "canje:" + ses.id, 20, 60);
+  const b = await leerJson(request);
+  const rid = Math.trunc(+b.recompensa);
+  if (!(rid > 0)) throw new ErrorHttp(400, "datos_invalidos");
+  let codigo;
+  for (let intento = 0; intento < 3 && !codigo; intento++) {
+    const cod = codigoCupon();
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO cupones (codigo, cliente_id, recompensa_id, nombre, tipo, valor, puntos)
+            SELECT ?, ?, id, nombre, tipo, valor, puntos FROM recompensas
+             WHERE id = ? AND activa = 1 AND puntos <= COALESCE((SELECT SUM(cantidad) FROM puntos WHERE cliente_id = ?), 0)`).bind(cod, ses.id, rid, ses.id),
+        env.DB.prepare("INSERT INTO puntos (cliente_id, cantidad, motivo, cupon_id) SELECT cliente_id, -puntos, 'canje', id FROM cupones WHERE codigo = ?").bind(cod),
+      ]);
+      codigo = cod;
+    } catch (e) {
+      const m = String(e.message);
+      if (/PUNTOS_INSUFICIENTES/.test(m)) throw new ErrorHttp(409, "puntos_insuficientes");
+      if (!/UNIQUE/i.test(m)) throw e; // código repetido (rarísimo): se intenta con otro
+    }
+  }
+  const [cup, rec, pts] = await env.DB.batch([
+    env.DB.prepare("SELECT codigo, nombre, tipo, valor, puntos FROM cupones WHERE codigo = ? AND cliente_id = ?").bind(codigo || "", ses.id),
+    env.DB.prepare("SELECT activa FROM recompensas WHERE id = ?").bind(rid),
+    env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(ses.id),
+  ]);
+  if (!cup.results[0]) {
+    if (!rec.results[0] || !rec.results[0].activa) throw new ErrorHttp(404, "recompensa_no_disponible");
+    throw new ErrorHttp(409, "puntos_insuficientes", { saldo: pts.results[0].saldo });
+  }
+  return json({ ok: true, cupon: cup.results[0], puntos: pts.results[0].saldo });
+}
+
+/* Foto de perfil: llega como imagen JPG, WebP o PNG en base64 (el celular ya la recortó y achicó a 400 × 400) */
+const FOTO_MAX = 200000; // caracteres en base64 (≈150 KB)
+function leerFoto(v) {
+  const m = /^data:(image\/(?:jpeg|webp|png));base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(v || ""));
+  if (!m || m[2].length > FOTO_MAX) throw new ErrorHttp(400, "foto_invalida");
+  let cab;
+  try { cab = Uint8Array.from(atob(m[2].slice(0, 24)), ch => ch.charCodeAt(0)); } catch (_) { throw new ErrorHttp(400, "foto_invalida"); }
+  const es = (off, bytes) => bytes.every((x, i) => cab[off + i] === x);
+  const ok = m[1] === "image/jpeg" ? es(0, [0xff, 0xd8, 0xff]) : m[1] === "image/png" ? es(0, [0x89, 0x50, 0x4e, 0x47]) : es(0, [0x52, 0x49, 0x46, 0x46]) && es(8, [0x57, 0x45, 0x42, 0x50]);
+  if (!ok) throw new ErrorHttp(400, "foto_invalida");
+  return { tipo: m[1], datos: m[2] };
+}
+
+/* PATCH /api/cuenta → { promos: true | false } · { cumple: "MM-DD" } · { nombre, foto } (cualquiera de los dos; foto null = quitarla)
+   El cumpleaños se guarda una sola vez: después ya no se cambia desde la cuenta (así nadie lo mueve para cobrar un regalo dos veces).
+   El correo no se cambia: es el de su cuenta de Google. */
 export async function cambiarCuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
-  const b = await leerJson(request);
+  const b = await leerJson(request, 250000);
   if ("cumple" in b) {
     const cumple = cumpleValido(b.cumple);
     if (!cumple) throw new ErrorHttp(400, "cumple_invalido");
@@ -122,18 +220,50 @@ export async function cambiarCuenta({ env, request }) {
     if (!r.meta.changes) throw new ErrorHttp(409, "cumple_ya_guardado");
     return json({ ok: true, cumple });
   }
+  if ("nombre" in b || "foto" in b) {
+    await limitar(env, "perfil:" + ses.id, 30, 60);
+    const sets = [], vals = [], antes = [];
+    let nombre, foto;
+    if ("nombre" in b) {
+      nombre = texto(b.nombre, 60);
+      if (!nombre || nombre.length < 2) throw new ErrorHttp(400, "nombre_invalido");
+      sets.push("nombre = ?", "nombre_propio = 1"); vals.push(nombre);
+    }
+    if ("foto" in b) {
+      antes.push(env.DB.prepare("DELETE FROM fotos_clientes WHERE cliente_id = ?").bind(ses.id));
+      if (b.foto === null) { foto = null; sets.push("foto = NULL", "foto_propia = 1"); }
+      else {
+        const f = leerFoto(b.foto), token = aleatorio(18);
+        antes.push(env.DB.prepare("INSERT INTO fotos_clientes (token, cliente_id, tipo, datos) VALUES (?, ?, ?, ?)").bind(token, ses.id, f.tipo, f.datos));
+        foto = "/api/foto/" + token; sets.push("foto = ?", "foto_propia = 1"); vals.push(foto);
+      }
+    }
+    await env.DB.batch([...antes, env.DB.prepare(`UPDATE clientes SET ${sets.join(", ")} WHERE id = ?`).bind(...vals, ses.id)]);
+    return json({ ok: true, ...("nombre" in b ? { nombre } : {}), ...("foto" in b ? { foto } : {}) });
+  }
   if (typeof b.promos !== "boolean") throw new ErrorHttp(400, "datos_invalidos");
   await env.DB.prepare("UPDATE clientes SET promos = ?, promos_fecha = datetime('now') WHERE id = ?").bind(b.promos ? 1 : 0, ses.id).run();
   return json({ ok: true, promos: b.promos });
 }
 
-/* DELETE /api/cuenta → elimina la cuenta: se borran sus datos y su historial deja de estar ligado a la persona.
+/* GET /api/foto/:token → la foto de perfil que subió el cliente (el enlace cambia con cada foto nueva) */
+export async function foto({ env, params }) {
+  const f = await env.DB.prepare("SELECT tipo, datos FROM fotos_clientes WHERE token = ?").bind(params[0]).first();
+  if (!f) return new Response("No existe", { status: 404, headers: { "cache-control": "no-store" } });
+  const bin = Uint8Array.from(atob(f.datos), ch => ch.charCodeAt(0));
+  return new Response(bin, { headers: { "content-type": f.tipo, "cache-control": "private, max-age=31536000, immutable", "x-content-type-options": "nosniff" } });
+}
+
+/* DELETE /api/cuenta → elimina la cuenta: se borran sus datos, su foto, sus puntos y cupones, y su historial deja de estar ligado a la persona.
    Las ventas quedan en la tienda de forma anónima (qué prenda, talla, cantidad, monto y fecha), sin nombre ni contacto. */
 export async function eliminarCuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
   await env.DB.batch([
-    env.DB.prepare(`UPDATE pedidos SET cliente_id = NULL, nombre = NULL, celular = NULL, direccion = NULL, referencia = NULL, destino = NULL, agencia = NULL
+    env.DB.prepare(`UPDATE pedidos SET cliente_id = NULL, nombre = NULL, celular = NULL, direccion = NULL, referencia = NULL, destino = NULL, agencia = NULL, cupon_id = NULL
         WHERE cliente_id = ?`).bind(ses.id),
+    env.DB.prepare("DELETE FROM puntos WHERE cliente_id = ?").bind(ses.id),
+    env.DB.prepare("DELETE FROM cupones WHERE cliente_id = ?").bind(ses.id),
+    env.DB.prepare("DELETE FROM fotos_clientes WHERE cliente_id = ?").bind(ses.id),
     env.DB.prepare("DELETE FROM sesiones WHERE tipo = 'cliente' AND usuario_id = ?").bind(ses.id),
     env.DB.prepare("DELETE FROM clientes WHERE id = ?").bind(ses.id),
   ]);

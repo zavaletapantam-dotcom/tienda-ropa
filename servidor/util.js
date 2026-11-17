@@ -34,6 +34,22 @@ export const cumpleValido = v => {
   return mes >= 1 && mes <= 12 && dia >= 1 && dia <= DIAS_MES[mes - 1] ? `${m[1]}-${m[2]}` : null;
 };
 
+/* ---------- Cupones de los Puntos MAISON ---------- */
+const LETRAS_CUPON = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const codigoCupon = () => "MC" + Array.from(crypto.getRandomValues(new Uint8Array(6)), x => LETRAS_CUPON[x % 32]).join("");
+export const CUPON_RE = /^MC[A-HJ-NP-Z2-9]{6}$/;
+/* Qué hace un cupón en un pedido (la misma regla en el carrito, al guardar el pedido y al editarlo en el panel):
+   monto → descuenta hasta ese monto de las prendas · porcentaje → ese % de las prendas (después de otros descuentos)
+   envio → envío gratis, solo para envío a domicilio cuando se cobra envío.
+   Devuelve { desc, envio } o null si en ese pedido el cupón no sirve. */
+export function efectoCupon(c, { subtotal, descuento = 0, entrega, envio }) {
+  const r2 = n => Math.round(n * 100) / 100;
+  if (c.tipo === "envio") return entrega === "domicilio" && envio > 0 ? { desc: 0, envio: 0 } : null;
+  const base = Math.max(0, r2(subtotal - descuento));
+  const desc = c.tipo === "monto" ? Math.min(+c.valor, base) : c.tipo === "porcentaje" ? r2((base * +c.valor) / 100) : 0;
+  return desc > 0 ? { desc: r2(desc), envio } : null;
+}
+
 /* ---------- Cookies (siempre HttpOnly + Secure) ---------- */
 export const COOKIE = { admin: "__Host-ms_admin", cliente: "__Host-ms_cliente", oauth: "__Host-ms_oauth" };
 export const leerCookies = request => Object.fromEntries((request.headers.get("cookie") || "").split(/;\s*/).filter(Boolean).map(c => {

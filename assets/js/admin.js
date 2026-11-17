@@ -82,6 +82,9 @@ const I = {
   salida: svg('<path d="M12 14V3M7.5 7.5 12 3l4.5 4.5"/><path d="M4 14v6h16v-6"/>'),
   mas: svg('<path d="M12 5v14M5 12h14"/>'),
   editar: svg('<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>'),
+  recompensas: svg('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/>'),
+  cupon: svg('<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4V7Z"/><path d="M15 7v2M15 11v2M15 15v2"/>'),
+  menos: svg('<path d="M5 12h14"/>'),
 };
 
 /* ---------- API ---------- */
@@ -130,6 +133,15 @@ const MSG = {
   datos_invalidos: "Revisa los datos.",
   descuento_invalido: "El descuento no puede ser mayor que el subtotal.",
   envio_invalido: "Revisa el monto del envío.",
+  puntos_insuficientes: "No le alcanzan los puntos: nadie puede quedar en negativo.",
+  falta_motivo: "Escribe el motivo del ajuste.",
+  cantidad_invalida: "Revisa la cantidad de puntos.",
+  cumple_invalido: "Esa fecha no existe. Revisa el día y el mes.",
+  cupon_no_activo: "Ese cupón ya no está sin usar (está en un pedido, ya se usó o ya se anuló).",
+  nombre_invalido: "Escribe un nombre de al menos 3 letras.",
+  puntos_invalidos: "Los puntos van de 1 a 100 000.",
+  valor_invalido: "Revisa el monto o el porcentaje.",
+  no_existe: "Ya no existe. Recarga la página.",
   error: "No se pudo completar. Inténtalo de nuevo.",
 };
 const msg = e => { const m = MSG[e.codigo] || MSG.error; return typeof m === "function" ? m(e.data || {}) : m; };
@@ -245,7 +257,7 @@ async function pantallaActivar(token) {
 /* =========================================================
    ESTRUCTURA Y NAVEGACIÓN
    ========================================================= */
-const SECCIONES = [["resumen", "Resumen"], ["pedidos", "Pedidos"], ["mayorista", "Mayorista"], ["stock", "Stock"], ["productos", "Productos"], ["clientes", "Clientes"], ["reclamos", "Reclamos"]];
+const SECCIONES = [["resumen", "Resumen"], ["pedidos", "Pedidos"], ["mayorista", "Mayorista"], ["stock", "Stock"], ["productos", "Productos"], ["clientes", "Clientes"], ["recompensas", "Recompensas"], ["reclamos", "Reclamos"]];
 let actual = "", sucio = null, badgeT;
 function armar() {
   actual = "";
@@ -503,12 +515,14 @@ function ganPedido(p) {
   return { venta, costo, g: venta - costo };
 }
 const pctDe = (g, venta) => (venta ? Math.round((g / venta) * 100) : 0);
+/* El descuento del pedido incluye el del cupón: aquí, solo la parte que no es del cupón */
+const descAparte = p => r2((p.descuento || 0) - (p.cupon && p.cupon.aplicado ? p.cupon.desc || 0 : 0));
 function pedidoHTML(p) {
   const c = p.cliente, g = ganPedido(p);
   return `<article class="ped ped--${p.estado}" data-cod="${p.codigo}">
     <header class="ped__head">
       <div><span class="ped__cod">${p.codigo}</span><span class="ped__fecha">${fFecha(p.fecha)}${p.editado ? ` · Editado por ${esc(p.editado_por || "—")} el ${fFecha(p.editado)}` : ""}</span></div>
-      <div class="ped__tags"><span class="chip">${ORIGEN[p.origen] || p.origen}</span>${c.registrado ? `<span class="chip chip--teal">Con cuenta</span>` : ""}<span class="pill pill--${p.estado}">${ESTADO[p.estado]}</span></div>
+      <div class="ped__tags"><span class="chip">${ORIGEN[p.origen] || p.origen}</span>${c.registrado ? `<span class="chip chip--teal">Con cuenta</span>` : ""}${p.cupon && p.cupon.aplicado ? `<span class="chip chip--teal">${I.cupon}Cupón</span>` : ""}<span class="pill pill--${p.estado}">${ESTADO[p.estado]}</span></div>
     </header>
     <div class="ped__body">
       <div class="ped__cli">
@@ -523,7 +537,8 @@ function pedidoHTML(p) {
       </table></div>
     </div>
     <footer class="ped__foot">
-      <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${p.descuento ? `<span>Descuento <b>−${money(p.descuento)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}</div>
+      ${p.cupon && !p.cupon.aplicado ? `<p class="alert alert--warn ped__aviso">El cliente quiso usar el cupón ${esc(p.cupon.codigo)}, pero ya no estaba disponible (usado o anulado): el pedido se guardó sin ese descuento.</p>` : ""}
+      <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${descAparte(p) ? `<span>Descuento <b>−${money(descAparte(p))}</b></span>` : ""}${p.cupon && p.cupon.aplicado && p.cupon.desc ? `<span>Cupón ${esc(p.cupon.nombre)} <b>−${money(p.cupon.desc)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : p.cupon && p.cupon.aplicado && p.cupon.tipo === "envio" ? "Gratis (cupón)" : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}${p.puntos ? `<span>Puntos <b class="pos">+${p.puntos} pts</b></span>` : p.puntos_al_confirmar ? `<span>Al confirmar <b>+${p.puntos_al_confirmar} pts</b></span>` : ""}</div>
       ${p.estado === "pendiente"
         ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn" type="button" data-accion="editar">${I.editar}Editar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`
         : `<p class="ped__done">${ESTADO[p.estado]}${p.origen_stock ? " " + DESDE[p.origen_stock] : ""} por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>`}
@@ -583,7 +598,10 @@ async function editarPedido(p) {
   const lineas = p.items.map(i => ({ slug: i.slug, nombre: i.nombre, color: i.color, talla: i.talla, cantidad: i.cantidad, precio: i.precio }));
   const tipo = p.entrega.tipo, num = v => (v === "" || v == null ? null : +v);
   // Mismas reglas que el carrito: domicilio S/10 (gratis desde S/200), recojo gratis, provincia o sin datos: a coordinar
-  const envioAuto = sub => (tipo === "domicilio" ? (sub >= C.envioGratisDesde ? 0 : C.envio) : tipo === "recojo" ? 0 : null);
+  const cup = p.cupon && p.cupon.aplicado ? p.cupon : null;
+  const envioAuto = sub => (tipo === "domicilio" ? (sub >= C.envioGratisDesde || (cup && cup.tipo === "envio") ? 0 : C.envio) : tipo === "recojo" ? 0 : null);
+  // Mismo cálculo que el servidor: el cupón se vuelve a calcular con las prendas nuevas (monto o % sobre prendas menos el descuento aparte)
+  const cuponDesc = (sub, desc) => { if (!cup || cup.tipo === "envio") return 0; const base = Math.max(0, r2(sub - desc)); return cup.tipo === "monto" ? Math.min(cup.valor, base) : r2((base * cup.valor) / 100); };
   const sinEnvio = tipo === "provincia" ? `Tarifa ${C.courier}` : "A coordinar";
   let manual = (p.envio ?? null) !== envioAuto(p.subtotal); // si alguien ya lo escribió a mano, se respeta
   const subtotal = () => r2(lineas.reduce((s, l) => s + (l.precio || 0) * l.cantidad, 0));
@@ -614,7 +632,8 @@ async function editarPedido(p) {
     <div class="add add--2">${selPrendas("edP")}<button class="btn" type="button" id="edAdd">${I.mas}Agregar prenda</button></div>
     <div class="ed-tot">
       <div class="ed-tot__f"><span>Subtotal</span><b id="edSub"></b></div>
-      <div class="ed-tot__f"><label for="edDesc">Descuento</label><label class="money"><span>S/</span><input class="inp" id="edDesc" inputmode="decimal" autocomplete="off" value="${p.descuento || ""}" placeholder="0.00"></label></div>
+      <div class="ed-tot__f"><label for="edDesc">${cup ? "Otro descuento" : "Descuento"}</label><label class="money"><span>S/</span><input class="inp" id="edDesc" inputmode="decimal" autocomplete="off" value="${descAparte(p) || ""}" placeholder="0.00"></label></div>
+      ${cup ? `<div class="ed-tot__f"><span>Cupón ${esc(cup.nombre)}</span><b id="edCup"></b></div>` : ""}
       <div class="ed-tot__f"><label for="edEnv">Envío</label><label class="money"><span>S/</span><input class="inp" id="edEnv" inputmode="decimal" autocomplete="off" value="${p.envio ?? ""}" placeholder="${esc(sinEnvio)}"></label></div>
       <p class="ed-tot__nota" id="edEnvNota"></p>
       <div class="ed-tot__f ed-tot__f--total"><span>Total</span><b id="edTot"></b></div>
@@ -630,7 +649,9 @@ async function editarPedido(p) {
       ? `Envío escrito a mano. <button type="button" class="lnk-btn" id="edEnvAuto">Calcularlo solo</button>`
       : tipo === "domicilio" ? `Se calcula solo: S/${C.envio}, gratis desde S/${C.envioGratisDesde}. Puedes escribir otro monto.`
       : tipo === "recojo" ? "Recojo en tienda: sin costo de envío." : `${esc(sinEnvio)}: escríbelo aquí si ya lo sabes.`;
-    $("#edTot", d).textContent = money(sub - (num($("#edDesc", d).value) || 0) + env);
+    const desc = num($("#edDesc", d).value) || 0, cd = cuponDesc(sub, desc);
+    if (cup) $("#edCup", d).textContent = cup.tipo === "envio" ? (tipo === "domicilio" && !manual ? "Envío gratis" : "Envío gratis (no aplica con envío a mano)") : "−" + money(cd);
+    $("#edTot", d).textContent = money(sub - desc - cd + env);
   };
   const pintar = d => { $("#edLineas", d).innerHTML = lineas.length ? lineas.map(filaHTML).join("") : `<p class="vacio">El pedido no tiene prendas. Agrega al menos una.</p>`; totales(d); };
   const r = await ventana({
@@ -1372,21 +1393,204 @@ async function vClientes(m) {
     <div class="card wrap-tbl" id="cLista"></div>`;
   const pintar = () => {
     const s = buscaTexto(q), lista = r.clientes.filter(c => !s || buscaTexto((c.nombre || "") + " " + c.email).includes(s));
-    $("#cLista").innerHTML = lista.length ? `<table class="tbl"><thead><tr><th>Cliente</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th>Promociones</th><th>Cumpleaños</th><th>Desde</th><th>Última compra</th></tr></thead>
-      <tbody>${lista.map(c => `<tr><td><b>${esc(c.nombre || "Sin nombre")}</b><br><span style="color:var(--muted)">${esc(c.email)}</span></td><td class="num">${c.pedidos}</td><td class="num"><b>${money(c.total)}</b></td>
+    $("#cLista").innerHTML = lista.length ? `<table class="tbl tbl--click"><thead><tr><th>Cliente</th><th class="num">Pedidos</th><th class="num">Total comprado</th><th class="num">Puntos</th><th>Promociones</th><th>Cumpleaños</th><th>Desde</th><th>Última compra</th></tr></thead>
+      <tbody>${lista.map(c => `<tr data-id="${c.id}" tabindex="0" title="Ver puntos, cupones e historial"><td><b>${esc(c.nombre || "Sin nombre")}</b><br><span style="color:var(--muted)">${esc(c.email)}</span></td><td class="num">${c.pedidos}</td><td class="num"><b>${money(c.total)}</b></td><td class="num"><b>${Number(c.puntos || 0).toLocaleString("es-PE")}</b></td>
         <td><span class="pill ${c.promos ? "pill--procede" : "pill--cancelado"}">${c.promos ? "Sí" : "No"}</span></td><td>${c.cumple ? fCumple(c.cumple) : "—"}</td><td>${fDia(c.creado)}</td><td>${c.ultima_compra ? fDia(c.ultima_compra) : "—"}</td></tr>`).join("")}</tbody></table>`
       : `<div class="empty"><b>${q ? "Sin resultados" : "Todavía no hay clientes con cuenta"}</b></div>`;
   };
   pintar();
   $("#cQ").addEventListener("input", e => { q = e.target.value.trim(); pintar(); });
+  const abrir = e => { const tr = e.target.closest("tr[data-id]"); if (tr && (e.type === "click" || e.key === "Enter")) verCliente(+tr.dataset.id, () => vClientes(m).catch(x => toast(msg(x)))); };
+  $("#cLista").addEventListener("click", abrir);
+  $("#cLista").addEventListener("keydown", abrir);
   $("#cBajar").addEventListener("click", () => {
-    const filas = [["Nombre", "Correo", "Pedidos confirmados", "Total comprado (S/)", "Acepta promociones", "Cumpleaños", "Cliente desde", "Última compra"],
-      ...r.clientes.map(c => [c.nombre || "", c.email, c.pedidos, Number(c.total).toFixed(2), c.promos ? "Sí" : "No", fCumple(c.cumple), fDia(c.creado), c.ultima_compra ? fDia(c.ultima_compra) : ""])];
+    const filas = [["Nombre", "Correo", "Pedidos confirmados", "Total comprado (S/)", "Puntos", "Acepta promociones", "Cumpleaños", "Cliente desde", "Última compra"],
+      ...r.clientes.map(c => [c.nombre || "", c.email, c.pedidos, Number(c.total).toFixed(2), c.puntos || 0, c.promos ? "Sí" : "No", fCumple(c.cumple), fDia(c.creado), c.ultima_compra ? fDia(c.ultima_compra) : ""])];
     const csv = filas.map(f => f.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     a.download = `clientes-maison-${diaLima(new Date())}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   });
+}
+
+/* =========================================================
+   PUNTOS MAISON: detalle de cada cliente (saldo, historial, cupones, ajustes y cumpleaños)
+   ========================================================= */
+const MOTIVO_PTS = { pedido: "Pedido confirmado", canje: "Canje", devolucion: "Devolución", ajuste: "Ajuste a mano" };
+const ESTADO_CUPON = { activo: "Sin usar", en_pedido: "En un pedido", usado: "Usado", devuelto: "Devuelto (pedido cancelado)", anulado: "Anulado" };
+const PILL_CUPON = { activo: "procede", en_pedido: "pendiente", usado: "cancelado", devuelto: "cancelado", anulado: "bad" };
+const pts = n => Number(n || 0).toLocaleString("es-PE") + " pts";
+async function verCliente(id, alCambiar) {
+  let r;
+  try { r = await api(`clientes/${id}`); } catch (x) { toast(msg(x)); return; }
+  const c = r.cliente, html = () => `<div class="cli">
+    <p class="cli__dato">${esc(c.email)}<br>Cliente desde ${fDia(c.creado)} · ${c.promos ? "Acepta promociones" : "No acepta promociones"}</p>
+    <section class="kpis">
+      <div class="kpi"><span>Puntos disponibles</span><b>${pts(r.puntos.saldo)}</b></div>
+      <div class="kpi"><span>Ganados con pedidos</span><b>${pts(r.puntos.ganados)}</b></div>
+      <div class="kpi"><span>Canjeados</span><b>${pts(r.puntos.canjeados)}</b></div>
+      <div class="kpi"><span>Compras confirmadas</span><b>${money(r.compras.total)}</b><em>${plural(r.compras.n, "pedido", "pedidos")}</em></div>
+    </section>
+    <div class="cli__acts">
+      <button class="btn" type="button" data-cli="puntos">${I.mas}Sumar o restar puntos</button>
+      <button class="btn" type="button" data-cli="cumple">${I.editar}Cumpleaños: ${c.cumple ? fCumple(c.cumple) : "sin dato"}</button>
+    </div>
+    <h3>Cupones</h3>
+    ${r.cupones.length ? `<div class="wrap-tbl"><table class="tbl"><thead><tr><th>Cupón</th><th>Recompensa</th><th class="num">Puntos</th><th>Estado</th><th>Canjeado</th><th></th></tr></thead><tbody>
+      ${r.cupones.map(x => `<tr><td><b>${esc(x.codigo)}</b></td><td>${esc(x.nombre)}</td><td class="num">${pts(x.puntos)}</td>
+        <td><span class="pill pill--${PILL_CUPON[x.estado]}">${ESTADO_CUPON[x.estado] || x.estado}</span>${x.pedido ? `<br><small>Pedido ${esc(x.pedido)}</small>` : ""}</td><td>${fDia(x.creado)}</td>
+        <td>${x.estado === "activo" ? `<button class="btn btn--sm" type="button" data-anular="${esc(x.codigo)}" data-pts="${x.puntos}">${I.x}Anular</button>` : ""}</td></tr>`).join("")}</tbody></table></div>`
+      : `<p class="vacio">Todavía no canjeó ningún cupón.</p>`}
+    <h3>Historial de puntos</h3>
+    ${r.movimientos.length ? `<div class="wrap-tbl"><table class="tbl"><thead><tr><th>Fecha</th><th>Movimiento</th><th class="num">Puntos</th><th>Detalle</th></tr></thead><tbody>
+      ${r.movimientos.map(m => `<tr><td>${fFecha(m.creado)}</td><td>${MOTIVO_PTS[m.motivo] || m.motivo}</td><td class="num"><b class="${m.cantidad < 0 ? "neg" : "pos"}">${m.cantidad > 0 ? "+" : ""}${m.cantidad.toLocaleString("es-PE")}</b></td>
+        <td>${[m.pedido && `Pedido ${esc(m.pedido)}`, m.cupon && `Cupón ${esc(m.cupon)} (${esc(m.cupon_nombre || "")})`, m.nota && esc(m.nota), m.admin && `por ${esc(m.admin)}`].filter(Boolean).join(" · ") || "—"}</td></tr>`).join("")}</tbody></table></div>`
+      : `<p class="vacio">Todavía no tiene puntos. Los gana cuando confirmas sus pedidos (1 sol = 1 punto, sin envío).</p>`}
+  </div>`;
+  let cambio = false;
+  const recargar = async d => {
+    try { r = await api(`clientes/${id}`); Object.assign(c, r.cliente); $(".dlg__body", d).innerHTML = html(); cambio = true; } catch (x) { toast(msg(x)); }
+  };
+  await ventana({
+    titulo: c.nombre || c.email, ancho: true, html: html(),
+    alAbrir: d => d.addEventListener("click", async e => {
+      const b = e.target.closest("[data-cli], [data-anular]"); if (!b) return;
+      if (b.dataset.cli === "puntos") { if (await ajustarPuntos(c, r.puntos.saldo)) await recargar(d); }
+      else if (b.dataset.cli === "cumple") { if (await corregirCumple(c)) await recargar(d); }
+      else if (b.dataset.anular) { if (await anularCupon(b.dataset.anular, +b.dataset.pts)) await recargar(d); }
+    }),
+  });
+  if (cambio && alCambiar) alCambiar();
+}
+async function ajustarPuntos(c, saldo) {
+  let ok = false;
+  await ventana({
+    titulo: "Sumar o restar puntos", html: `<div class="frm">
+      <p class="frm__lead">${esc(c.nombre || c.email)} tiene <b>${pts(saldo)}</b>. El ajuste queda en su historial con el motivo.</p>
+      <div class="opcs opcs--mb" role="radiogroup" aria-label="Sumar o restar"><label class="opc"><input type="radio" name="ajS" value="1" checked><span><b>Sumar</b><em>Le das puntos</em></span></label><label class="opc"><input type="radio" name="ajS" value="-1"><span><b>Restar</b><em>Le quitas puntos</em></span></label></div>
+      <div class="f"><label for="ajN">Puntos</label><input class="inp" id="ajN" inputmode="numeric" autocomplete="off" placeholder="Ej. 50"></div>
+      <div class="f"><label for="ajM">Motivo</label><input class="inp" id="ajM" maxlength="200" placeholder="Ej. Regalo por su cumpleaños, corrección…"></div>
+      <div class="alert alert--bad" id="ajErr" hidden></div></div>`,
+    acciones: [{ t: "Volver", v: false }, { t: `${I.check}Guardar`, clase: "btn--pri", antes: async d => {
+      const n = +$("#ajN", d).value.replace(/\D/g, ""), nota = $("#ajM", d).value.trim(), signo = +$('input[name="ajS"]:checked', d).value, err = $("#ajErr", d);
+      const mal = t => { err.textContent = t; err.hidden = false; return false; };
+      if (!(n >= 1 && n <= 100000)) return mal("Escribe cuántos puntos (de 1 a 100 000).");
+      if (!nota) return mal("Escribe el motivo: queda en el historial del cliente.");
+      if (signo < 0 && n > saldo) return mal(`No puede quedar en negativo: tiene ${pts(saldo)}.`);
+      try { await api(`clientes/${c.id}/puntos`, { method: "POST", body: { cantidad: signo * n, nota } }); ok = true; toast(`${signo > 0 ? "Sumaste" : "Restaste"} ${pts(n)} a ${c.nombre || c.email}.`); return true; }
+      catch (x) { return mal(msg(x)); }
+    } }],
+    alAbrir: d => $("#ajN", d).focus(),
+  });
+  return ok;
+}
+async function corregirCumple(c) {
+  let ok = false;
+  const dias = Array.from({ length: 31 }, (_, i) => i + 1), [m0, d0] = c.cumple ? [+c.cumple.slice(0, 2), +c.cumple.slice(3)] : [0, 0];
+  await ventana({
+    titulo: "Cumpleaños del cliente", html: `<div class="frm">
+      <p class="frm__lead">El cliente lo guarda una sola vez desde su cuenta. Aquí puedes corregirlo si se equivocó, o borrarlo.</p>
+      <div class="frm__2"><div class="f"><label for="cuD">Día</label><select class="sel" id="cuD"><option value="">—</option>${dias.map(x => `<option${x === d0 ? " selected" : ""}>${x}</option>`).join("")}</select></div>
+      <div class="f"><label for="cuM">Mes</label><select class="sel" id="cuM"><option value="">—</option>${MESES_LARGO.map((x, i) => `<option value="${i + 1}"${i + 1 === m0 ? " selected" : ""}>${x[0].toUpperCase() + x.slice(1)}</option>`).join("")}</select></div></div>
+      <div class="alert alert--bad" id="cuErr" hidden></div></div>`,
+    acciones: [{ t: "Volver", v: false }, ...(c.cumple ? [{ t: "Borrar", clase: "btn--bad", antes: async () => {
+      try { await api(`clientes/${c.id}/cumple`, { method: "POST", body: { cumple: null } }); ok = true; toast("Cumpleaños borrado."); return true; } catch (x) { toast(msg(x)); return false; }
+    } }] : []), { t: `${I.check}Guardar`, clase: "btn--pri", antes: async d => {
+      const di = +$("#cuD", d).value, me = +$("#cuM", d).value, err = $("#cuErr", d);
+      if (!di || !me) { err.textContent = "Elige el día y el mes."; err.hidden = false; return false; }
+      try { await api(`clientes/${c.id}/cumple`, { method: "POST", body: { cumple: `${String(me).padStart(2, "0")}-${String(di).padStart(2, "0")}` } }); ok = true; toast("Cumpleaños guardado."); return true; }
+      catch (x) { err.textContent = msg(x); err.hidden = false; return false; }
+    } }],
+  });
+  return ok;
+}
+async function anularCupon(codigo, puntos) {
+  let ok = false;
+  await ventana({
+    titulo: `¿Anular el cupón ${codigo}?`, html: `<p>El cliente ya no podrá usarlo.</p>
+      <label class="chk chk--txt"><input type="checkbox" id="anDev" checked><span>Devolverle los ${pts(puntos)} que pagó por él</span></label>`,
+    acciones: [{ t: "Volver", v: false }, { t: "Sí, anular", clase: "btn--bad", antes: async d => {
+      const devolver = $("#anDev", d).checked;
+      try { await api(`cupones/${codigo}/anular`, { method: "POST", body: { devolver } }); ok = true; toast(`Cupón ${codigo} anulado${devolver ? ` y ${pts(puntos)} devueltos` : ""}.`); return true; }
+      catch (x) { toast(msg(x)); return false; }
+    } }],
+  });
+  return ok;
+}
+
+/* =========================================================
+   RECOMPENSAS: qué se puede canjear con los Puntos MAISON (1 sol = 1 punto)
+   ========================================================= */
+const TIPO_REC = { monto: "Descuento en soles", porcentaje: "Descuento en %", envio: "Envío gratis" };
+const queDa = x => (x.tipo === "monto" ? `S/${Number(x.valor).toFixed(2).replace(/\.00$/, "")} de descuento` : x.tipo === "porcentaje" ? `${x.valor}% de descuento` : "Envío gratis");
+async function vRecompensas(m) {
+  const r = await api("recompensas");
+  m.innerHTML = `<header class="top"><h1>Recompensas</h1><div class="top__acts"><button class="btn btn--pri" type="button" id="rNueva">${I.mas}Nueva recompensa</button></div></header>
+    <p class="top__sub">Puntos MAISON: cada cliente con cuenta gana 1 punto por cada sol de sus pedidos confirmados (prendas menos descuentos, sin envío). Con sus puntos canjea estas recompensas: recibe un cupón y lo usa en el carrito (uno por pedido). Si el pedido se cancela, recupera sus puntos.</p>
+    <section class="kpis">
+      <div class="kpi"><span>Puntos de los clientes</span><b>${pts(r.totales.saldo)}</b><em>sin canjear todavía</em></div>
+      <div class="kpi"><span>Puntos dados con pedidos</span><b>${pts(r.totales.ganados)}</b></div>
+      <div class="kpi"><span>Cupones sin usar</span><b>${r.totales.cupones_activos}</b></div>
+    </section>
+    <div class="card wrap-tbl">${r.recompensas.length ? `<table class="tbl"><thead><tr><th>Recompensa</th><th class="num">Cuesta</th><th>Qué da</th><th class="num">Canjes</th><th>En la tienda</th><th></th></tr></thead><tbody>
+      ${r.recompensas.map(x => `<tr${x.activa ? "" : ' class="apagada"'}><td><b>${esc(x.nombre)}</b></td><td class="num"><b>${pts(x.puntos)}</b></td><td>${queDa(x)}</td>
+        <td class="num">${x.canjes}${x.usados ? `<br><small>${x.usados} ${x.usados === 1 ? "usado" : "usados"}</small>` : ""}</td>
+        <td><label class="sw" title="${x.activa ? "Se ve en la tienda" : "Apagada: no se ve ni se puede canjear"}"><input type="checkbox" data-sw="${x.id}"${x.activa ? " checked" : ""} aria-label="Mostrar ${esc(x.nombre)} en la tienda"><b></b></label></td>
+        <td><button class="btn btn--sm" type="button" data-editar="${x.id}">${I.editar}Editar</button></td></tr>`).join("")}</tbody></table>`
+      : `<div class="empty"><b>Todavía no hay recompensas</b>Crea la primera con «Nueva recompensa».</div>`}</div>
+    <p class="bar__nota">Apagar una recompensa la quita de la tienda: nadie más la puede canjear, pero los cupones que ya se canjearon siguen sirviendo. Editarla tampoco cambia esos cupones.</p>`;
+  const recargar = () => vRecompensas(m).catch(x => toast(msg(x)));
+  $("#rNueva").addEventListener("click", async () => { if (await editarRecompensa()) recargar(); });
+  m.querySelector(".tbl")?.addEventListener("click", async e => {
+    const b = e.target.closest("[data-editar]"); if (!b) return;
+    if (await editarRecompensa(r.recompensas.find(x => x.id === +b.dataset.editar))) recargar();
+  });
+  m.querySelector(".tbl")?.addEventListener("change", async e => {
+    const sw = e.target.closest("[data-sw]"); if (!sw) return;
+    const x = r.recompensas.find(y => y.id === +sw.dataset.sw); sw.disabled = true;
+    try { await api(`recompensas/${x.id}`, { method: "POST", body: { ...x, activa: sw.checked } }); toast(sw.checked ? `«${x.nombre}» ya se ve en la tienda.` : `«${x.nombre}» se apagó: ya no se puede canjear.`); recargar(); }
+    catch (err) { sw.checked = !sw.checked; sw.disabled = false; toast(msg(err)); }
+  });
+}
+async function editarRecompensa(x) {
+  let ok = false, nombreAMano = !!x && x.nombre !== queDa(x);
+  await ventana({
+    titulo: x ? "Editar recompensa" : "Nueva recompensa", html: `<div class="frm">
+      <div class="frm__2">
+        <div class="f"><label for="reP">Cuesta (puntos)</label><input class="inp" id="reP" inputmode="numeric" autocomplete="off" value="${x ? x.puntos : ""}" placeholder="Ej. 200"></div>
+        <div class="f"><label for="reT">Qué da</label><select class="sel" id="reT">${Object.entries(TIPO_REC).map(([k, t]) => `<option value="${k}"${(x ? x.tipo : "monto") === k ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      </div>
+      <div class="f" id="reVf"><label for="reV" id="reVl">Monto</label><input class="inp" id="reV" inputmode="decimal" autocomplete="off" value="${x && x.tipo !== "envio" ? x.valor : ""}"></div>
+      <div class="f"><label for="reN">Nombre que ve el cliente</label><input class="inp" id="reN" maxlength="60" value="${x ? esc(x.nombre) : ""}" placeholder="Ej. S/10 de descuento"></div>
+      ${x ? "" : `<label class="chk chk--txt"><input type="checkbox" id="reA" checked><span>Mostrarla en la tienda desde ya</span></label>`}
+      <p class="frm__lead">Los clientes ganan 1 punto por cada sol: ${x ? "" : "por ejemplo, "}una recompensa de 200 puntos se alcanza con S/200 en compras.</p>
+      <div class="alert alert--bad" id="reErr" hidden></div></div>`,
+    acciones: [{ t: "Volver", v: false }, { t: `${I.check}Guardar`, clase: "btn--pri", antes: async d => {
+      const tipo = $("#reT", d).value, puntos = +$("#reP", d).value.replace(/\D/g, ""), valor = +$("#reV", d).value.replace(",", "."), nombre = $("#reN", d).value.trim(), err = $("#reErr", d);
+      const mal = t => { err.textContent = t; err.hidden = false; return false; };
+      if (!(puntos >= 1 && puntos <= 100000)) return mal("Escribe cuántos puntos cuesta (de 1 a 100 000).");
+      if (tipo === "monto" && !(valor >= 1 && valor <= 10000)) return mal("Escribe el monto del descuento (desde S/1).");
+      if (tipo === "porcentaje" && !(Number.isInteger(valor) && valor >= 1 && valor <= 90)) return mal("El porcentaje va de 1 a 90, sin decimales.");
+      if (nombre.length < 3) return mal("Escribe el nombre que verá el cliente.");
+      const body = { nombre, puntos, tipo, valor: tipo === "envio" ? 0 : valor, activa: x ? x.activa : $("#reA", d).checked };
+      try { await api(x ? `recompensas/${x.id}` : "recompensas", { method: "POST", body }); ok = true; toast(x ? "Recompensa actualizada." : "Recompensa creada."); return true; }
+      catch (e) { return mal(msg(e)); }
+    } }],
+    alAbrir: d => {
+      const sugerir = () => {
+        const tipo = $("#reT", d).value, v = $("#reV", d).value.replace(",", ".");
+        $("#reVf", d).hidden = tipo === "envio";
+        $("#reVl", d).textContent = tipo === "porcentaje" ? "Porcentaje (%)" : "Monto (S/)";
+        $("#reV", d).placeholder = tipo === "porcentaje" ? "Ej. 10" : "Ej. 10";
+        if (!nombreAMano) $("#reN", d).value = tipo === "envio" ? "Envío gratis" : v ? queDa({ tipo, valor: +v }) : "";
+      };
+      $("#reT", d).addEventListener("change", sugerir);
+      $("#reV", d).addEventListener("input", sugerir);
+      $("#reN", d).addEventListener("input", () => (nombreAMano = true));
+      sugerir(); $("#reP", d).focus();
+    },
+  });
+  return ok;
 }
 
 /* =========================================================
@@ -1464,7 +1668,7 @@ function imprimir(x, respuesta) {
 /* =========================================================
    ARRANQUE
    ========================================================= */
-const VISTAS = { resumen: vResumen, pedidos: vPedidos, mayorista: vMayorista, stock: vStock, productos: vProductos, clientes: vClientes, reclamos: vReclamos };
+const VISTAS = { resumen: vResumen, pedidos: vPedidos, mayorista: vMayorista, stock: vStock, productos: vProductos, clientes: vClientes, recompensas: vRecompensas, reclamos: vReclamos };
 (async () => {
   const act = location.hash.match(/^#activar=([\w-]+)/);
   if (act) return pantallaActivar(act[1]);

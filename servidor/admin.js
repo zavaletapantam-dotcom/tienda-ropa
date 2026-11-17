@@ -3,7 +3,7 @@
    ========================================================= */
 import {
   ErrorHttp, json, leerJson, texto, cifrarClave, verificarClave, sha256, crearSesion, leerSesion, cerrarSesion,
-  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE, config,
+  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE, config, cumpleValido, efectoCupon,
 } from "./util.js";
 
 const HORAS_SESION = 12;
@@ -167,7 +167,9 @@ export async function ventasDias({ env, request }) {
 
 const PEDIDO_SQL = `SELECT p.id, p.codigo, p.creado, p.origen, p.estado, p.procesado, a.nombre AS procesado_por, p.cliente_id,
     COALESCE(p.nombre, c.nombre) AS nombre, c.email, p.celular, p.entrega, p.distrito, p.direccion, p.referencia, p.destino, p.agencia,
-    p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente, p.origen_stock, p.editado, e.nombre AS editado_por
+    p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente, p.origen_stock, p.editado, e.nombre AS editado_por,
+    p.cupon_codigo, p.cupon_nombre, p.cupon_tipo, p.cupon_valor, p.cupon_desc,
+    (SELECT cantidad FROM puntos WHERE pedido_id = p.id AND motivo = 'pedido') AS puntos_dados
   FROM pedidos p LEFT JOIN clientes c ON c.id = p.cliente_id LEFT JOIN admins a ON a.id = p.procesado_por LEFT JOIN admins e ON e.id = p.editado_por`;
 async function conItems(env, pedidos) {
   if (!pedidos.length) return [];
@@ -181,6 +183,13 @@ async function conItems(env, pedidos) {
     entrega: { tipo: p.entrega, distrito: p.distrito, direccion: p.direccion, referencia: p.referencia, destino: p.destino, agencia: p.agencia },
     subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total, consultar: !!p.precio_pendiente, origen_stock: p.origen_stock,
     editado: iso(p.editado), editado_por: p.editado_por,
+    // Cupón: aplicado (con su descuento) o "no_disponible" si el cliente lo quiso usar pero ya no servía
+    cupon: !p.cupon_codigo ? null : p.cupon_tipo
+      ? { codigo: p.cupon_codigo, nombre: p.cupon_nombre, tipo: p.cupon_tipo, valor: p.cupon_valor, desc: p.cupon_desc, aplicado: true }
+      : { codigo: p.cupon_codigo, aplicado: false },
+    // Puntos MAISON: los que dio al confirmarse, o los que dará si se confirma (solo clientes con cuenta)
+    puntos: p.puntos_dados || 0,
+    puntos_al_confirmar: p.cliente_id != null && p.estado === "pendiente" ? Math.max(0, Math.trunc(redondear(p.total - (p.envio || 0)))) : 0,
     items: items.filter(i => i.pedido_id === p.id).map(({ pedido_id, ...i }) => i),
   }));
 }
@@ -246,11 +255,13 @@ export async function procesarPedido({ env, request, params }) {
 
 /* POST /api/admin/pedidos/:codigo/editar { items: [{ slug, color, talla, cantidad, precio }], descuento, envio, envio_manual }
    Solo pedidos POR CONFIRMAR: el stock todavía no se tocó, así que editar no mueve stock (se descuenta al confirmar).
-   precio vacío = precio actual de la tienda · envío: se recalcula con las reglas de la tienda, salvo que se escriba a mano. */
+   precio vacío = precio actual de la tienda · envío: se recalcula con las reglas de la tienda, salvo que se escriba a mano.
+   descuento = descuento aparte del cupón. Si el pedido trae un cupón, su descuento se vuelve a calcular con las prendas nuevas
+   (y el envío gratis del cupón se mantiene mientras el envío se calcule solo). */
 export async function editarPedido({ env, request, params }) {
   const a = await adminDe(env, request);
   const b = await leerJson(request, 60000);
-  const p = await env.DB.prepare("SELECT id, estado, entrega FROM pedidos WHERE codigo = ?").bind(params[0]).first();
+  const p = await env.DB.prepare("SELECT id, estado, entrega, cupon_tipo, cupon_valor FROM pedidos WHERE codigo = ?").bind(params[0]).first();
   if (!p) throw new ErrorHttp(404, "no_existe");
   if (p.estado !== "pendiente") throw new ErrorHttp(409, "ya_procesado", { estado: p.estado });
   const lista = Array.isArray(b.items) ? b.items : [];
@@ -276,16 +287,18 @@ export async function editarPedido({ env, request, params }) {
     if (envio !== null && !(envio >= 0 && envio < 10000)) throw new ErrorHttp(400, "envio_invalido");
   } else {
     const cfg = await config(env); // mismas reglas que el carrito: domicilio S/10 (gratis desde S/200), recojo gratis, provincia y sin datos: a coordinar
-    envio = p.entrega === "domicilio" ? (subtotal >= cfg.gratisDesde ? 0 : cfg.envio) : p.entrega === "recojo" ? 0 : null;
+    envio = p.entrega === "domicilio" ? (subtotal >= cfg.gratisDesde || p.cupon_tipo === "envio" ? 0 : cfg.envio) : p.entrega === "recojo" ? 0 : null;
   }
-  const total = redondear(subtotal - descuento + (envio || 0));
+  const ef = p.cupon_tipo === "monto" || p.cupon_tipo === "porcentaje" ? efectoCupon({ tipo: p.cupon_tipo, valor: p.cupon_valor }, { subtotal, descuento }) : null;
+  const cuponDesc = ef ? ef.desc : 0, descTotal = redondear(descuento + cuponDesc);
+  const total = redondear(subtotal - descTotal + (envio || 0));
   try {
     await env.DB.batch([
       env.DB.prepare("DELETE FROM pedido_items WHERE pedido_id = ?").bind(p.id),
       ...items.map(i => env.DB.prepare("INSERT INTO pedido_items (pedido_id, slug, nombre, color, talla, cantidad, precio) VALUES (?, ?, ?, ?, ?, ?, ?)")
         .bind(p.id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio)),
-      env.DB.prepare(`UPDATE pedidos SET subtotal = ?, descuento = ?, envio = ?, total = ?, precio_pendiente = ?, editado = datetime('now'), editado_por = ?
-          WHERE id = ?`).bind(subtotal, descuento, envio, total, items.some(i => i.precio == null) ? 1 : 0, a.id, p.id),
+      env.DB.prepare(`UPDATE pedidos SET subtotal = ?, descuento = ?, cupon_desc = ?, envio = ?, total = ?, precio_pendiente = ?, editado = datetime('now'), editado_por = ?
+          WHERE id = ?`).bind(subtotal, descTotal, cuponDesc, envio, total, items.some(i => i.precio == null) ? 1 : 0, a.id, p.id),
     ]);
   } catch (e) {
     // Si alguien lo confirmó o canceló justo ahora, la base no deja tocar sus prendas (disparadores items_solo_pendiente_*)
@@ -403,14 +416,133 @@ export async function movimientos({ env, request, url }) {
 
 /* ---------- Clientes ---------- */
 
-/* GET /api/admin/clientes → clientes con cuenta, lo que compraron (pedidos que procedieron) y si aceptan promociones */
+/* GET /api/admin/clientes → clientes con cuenta, lo que compraron (pedidos que procedieron), sus puntos y si aceptan promociones */
 export async function clientes({ env, request }) {
   await adminDe(env, request);
   const r = await env.DB.prepare(`SELECT c.id, c.nombre, c.email, c.promos, c.cumple, c.creado, c.ultimo_acceso,
-      COUNT(p.id) AS pedidos, COALESCE(SUM(p.total), 0) AS total, MAX(p.procesado) AS ultima_compra
+      COUNT(p.id) AS pedidos, COALESCE(SUM(p.total), 0) AS total, MAX(p.procesado) AS ultima_compra,
+      (SELECT COALESCE(SUM(cantidad), 0) FROM puntos WHERE cliente_id = c.id) AS puntos
     FROM clientes c LEFT JOIN pedidos p ON p.cliente_id = c.id AND p.estado = 'procede'
     GROUP BY c.id ORDER BY total DESC, c.creado DESC`).all();
   return json({ ok: true, clientes: r.results.map(c => ({ ...c, promos: !!c.promos, creado: iso(c.creado), ultimo_acceso: iso(c.ultimo_acceso), ultima_compra: iso(c.ultima_compra) })) });
+}
+
+/* ---------- Puntos MAISON: cada cliente, sus cupones y las recompensas ---------- */
+
+const idCliente = params => { const id = Math.trunc(+params[0]); if (!(id > 0)) throw new ErrorHttp(404, "no_existe"); return id; };
+
+/* GET /api/admin/clientes/:id → sus datos, su saldo de puntos, de dónde salen (historial) y sus cupones */
+export async function cliente({ env, request, params }) {
+  await adminDe(env, request);
+  const id = idCliente(params);
+  const [cli, saldo, mov, cups, comp] = await env.DB.batch([
+    env.DB.prepare("SELECT id, nombre, email, foto, promos, cumple, cumple_fecha, creado, ultimo_acceso FROM clientes WHERE id = ?").bind(id),
+    env.DB.prepare(`SELECT COALESCE(SUM(cantidad), 0) AS saldo, COALESCE(SUM(CASE WHEN motivo = 'pedido' THEN cantidad END), 0) AS ganados,
+        COALESCE(-SUM(CASE WHEN motivo = 'canje' THEN cantidad END), 0) AS canjeados FROM puntos WHERE cliente_id = ?`).bind(id),
+    env.DB.prepare(`SELECT m.cantidad, m.motivo, m.nota, m.creado, p.codigo AS pedido, c.codigo AS cupon, c.nombre AS cupon_nombre, a.nombre AS admin
+        FROM puntos m LEFT JOIN pedidos p ON p.id = m.pedido_id LEFT JOIN cupones c ON c.id = m.cupon_id LEFT JOIN admins a ON a.id = m.admin_id
+        WHERE m.cliente_id = ? ORDER BY m.id DESC LIMIT 300`).bind(id),
+    env.DB.prepare(`SELECT c.codigo, c.nombre, c.tipo, c.valor, c.puntos, c.estado, c.creado, c.actualizado, p.codigo AS pedido
+        FROM cupones c LEFT JOIN pedidos p ON p.id = c.pedido_id WHERE c.cliente_id = ? ORDER BY c.id DESC LIMIT 200`).bind(id),
+    env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(total), 0) AS total FROM pedidos WHERE cliente_id = ? AND estado = 'procede'").bind(id),
+  ]);
+  const c = cli.results[0];
+  if (!c) throw new ErrorHttp(404, "no_existe");
+  return json({
+    ok: true,
+    cliente: { ...c, promos: !!c.promos, creado: iso(c.creado), ultimo_acceso: iso(c.ultimo_acceso), cumple_fecha: iso(c.cumple_fecha) },
+    puntos: saldo.results[0], compras: comp.results[0],
+    movimientos: mov.results.map(m => ({ ...m, creado: iso(m.creado) })),
+    cupones: cups.results.map(x => ({ ...x, creado: iso(x.creado), actualizado: iso(x.actualizado) })),
+  });
+}
+
+/* POST /api/admin/clientes/:id/puntos { cantidad: entero (+ suma, − resta), nota } → ajuste a mano, queda en su historial.
+   No se puede dejar a nadie con puntos en negativo. */
+export async function ajustarPuntos({ env, request, params }) {
+  const a = await adminDe(env, request);
+  const id = idCliente(params);
+  const b = await leerJson(request);
+  const cantidad = Number(b.cantidad), nota = texto(b.nota, 200);
+  if (!Number.isInteger(cantidad) || cantidad === 0 || Math.abs(cantidad) > 100000) throw new ErrorHttp(400, "cantidad_invalida");
+  if (!nota) throw new ErrorHttp(400, "falta_motivo");
+  if (!(await env.DB.prepare("SELECT 1 FROM clientes WHERE id = ?").bind(id).first())) throw new ErrorHttp(404, "no_existe");
+  try {
+    await env.DB.prepare("INSERT INTO puntos (cliente_id, cantidad, motivo, nota, admin_id) VALUES (?, ?, 'ajuste', ?, ?)").bind(id, cantidad, nota, a.id).run();
+  } catch (e) {
+    if (/PUNTOS_INSUFICIENTES/.test(String(e.message))) throw new ErrorHttp(409, "puntos_insuficientes");
+    throw e;
+  }
+  const s = await env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(id).first();
+  return json({ ok: true, saldo: s.saldo });
+}
+
+/* POST /api/admin/clientes/:id/cumple { cumple: "MM-DD" | null } → corrige (o borra) el cumpleaños del cliente */
+export async function corregirCumple({ env, request, params }) {
+  await adminDe(env, request);
+  const id = idCliente(params);
+  const b = await leerJson(request);
+  const cumple = b.cumple === null || b.cumple === "" ? null : cumpleValido(b.cumple);
+  if (b.cumple && !cumple) throw new ErrorHttp(400, "cumple_invalido");
+  const r = await env.DB.prepare("UPDATE clientes SET cumple = ?, cumple_fecha = CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END WHERE id = ?").bind(cumple, cumple, id).run();
+  if (!r.meta.changes) throw new ErrorHttp(404, "no_existe");
+  return json({ ok: true, cumple });
+}
+
+/* POST /api/admin/cupones/:codigo/anular { devolver: true | false } → anula un cupón que el cliente todavía no usó.
+   devolver: le regresan los puntos que pagó por él. Un cupón que ya está en un pedido no se anula aquí: se cancela o edita ese pedido. */
+export async function anularCupon({ env, request, params }) {
+  const a = await adminDe(env, request);
+  const b = await leerJson(request);
+  const c = await env.DB.prepare("SELECT id, estado, cliente_id, puntos FROM cupones WHERE codigo = ?").bind(params[0]).first();
+  if (!c) throw new ErrorHttp(404, "no_existe");
+  if (c.estado !== "activo") throw new ErrorHttp(409, "cupon_no_activo", { estado: c.estado });
+  const res = await env.DB.batch([
+    ...(b.devolver === true ? [env.DB.prepare(`INSERT INTO puntos (cliente_id, cantidad, motivo, cupon_id, nota, admin_id)
+        SELECT cliente_id, puntos, 'devolucion', id, 'Cupón anulado', ? FROM cupones WHERE id = ? AND estado = 'activo'`).bind(a.id, c.id)] : []),
+    env.DB.prepare("UPDATE cupones SET estado = 'anulado', actualizado = datetime('now') WHERE id = ? AND estado = 'activo'").bind(c.id),
+  ]);
+  if (!res[res.length - 1].meta.changes) throw new ErrorHttp(409, "cupon_no_activo");
+  return json({ ok: true, devuelto: b.devolver === true ? c.puntos : 0 });
+}
+
+const TIPOS_RECOMPENSA = ["monto", "porcentaje", "envio"];
+/* GET /api/admin/recompensas → todas (encendidas y apagadas) con cuántas veces se canjearon */
+export async function recompensas({ env, request }) {
+  await adminDe(env, request);
+  const [r, t] = await env.DB.batch([
+    env.DB.prepare(`SELECT r.id, r.nombre, r.puntos, r.tipo, r.valor, r.activa, r.creado, r.actualizado,
+        (SELECT COUNT(*) FROM cupones c WHERE c.recompensa_id = r.id) AS canjes,
+        (SELECT COUNT(*) FROM cupones c WHERE c.recompensa_id = r.id AND c.estado = 'usado') AS usados
+      FROM recompensas r ORDER BY r.activa DESC, r.puntos, r.id`),
+    env.DB.prepare(`SELECT (SELECT COALESCE(SUM(cantidad), 0) FROM puntos) AS saldo,
+        (SELECT COALESCE(SUM(cantidad), 0) FROM puntos WHERE motivo = 'pedido') AS ganados,
+        (SELECT COUNT(*) FROM cupones WHERE estado = 'activo') AS cupones_activos`),
+  ]);
+  return json({ ok: true, recompensas: r.results.map(x => ({ ...x, activa: !!x.activa, creado: iso(x.creado), actualizado: iso(x.actualizado) })), totales: t.results[0] });
+}
+
+/* POST /api/admin/recompensas (nueva) · /api/admin/recompensas/:id (editar) { nombre, puntos, tipo, valor, activa }
+   Editar una recompensa no cambia los cupones que ya se canjearon. */
+export async function guardarRecompensa({ env, request, params }) {
+  await adminDe(env, request);
+  const b = await leerJson(request);
+  const id = params && params[0] ? Math.trunc(+params[0]) : null;
+  const nombre = texto(b.nombre, 60), puntos = Number(b.puntos), tipo = b.tipo, activa = b.activa === false ? 0 : 1;
+  const valor = tipo === "envio" ? 0 : Math.round(Number(b.valor) * 100) / 100;
+  if (!nombre || nombre.length < 3) throw new ErrorHttp(400, "nombre_invalido");
+  if (!Number.isInteger(puntos) || puntos < 1 || puntos > 100000) throw new ErrorHttp(400, "puntos_invalidos");
+  if (!TIPOS_RECOMPENSA.includes(tipo)) throw new ErrorHttp(400, "tipo_invalido");
+  if (tipo === "monto" && !(valor >= 1 && valor <= 10000)) throw new ErrorHttp(400, "valor_invalido");
+  if (tipo === "porcentaje" && !(Number.isInteger(valor) && valor >= 1 && valor <= 90)) throw new ErrorHttp(400, "valor_invalido");
+  if (id) {
+    const r = await env.DB.prepare("UPDATE recompensas SET nombre = ?, puntos = ?, tipo = ?, valor = ?, activa = ?, actualizado = datetime('now') WHERE id = ?")
+      .bind(nombre, puntos, tipo, valor, activa, id).run();
+    if (!r.meta.changes) throw new ErrorHttp(404, "no_existe");
+    return json({ ok: true, id });
+  }
+  const r = await env.DB.prepare("INSERT INTO recompensas (nombre, puntos, tipo, valor, activa) VALUES (?, ?, ?, ?, ?) RETURNING id").bind(nombre, puntos, tipo, valor, activa).first();
+  return json({ ok: true, id: r.id });
 }
 
 /* ---------- Libro de Reclamaciones ---------- */

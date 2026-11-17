@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<base href="/">
+<title>Prototipo · Mi cuenta · MAISON</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/css/styles.css">
+<style>
+/* =========================================================
+   PROTOTIPO · Perfil del cliente (Mi cuenta) con puntos MAISON
+   Estas reglas pf-… son las que pasarán a styles.css cuando se apruebe.
+   ========================================================= */
+.pf-demo{display:flex;width:max-content;max-width:calc(100% - 32px);margin:18px auto 0;gap:4px;align-items:center;padding:5px 6px 5px 12px;background:var(--ink);color:#fff;border-radius:999px;font-size:12px;white-space:nowrap}
+.pf-demo button{padding:6px 10px;border-radius:999px;font-size:12px;color:#fff;opacity:.7}
+.pf-demo button.on{background:#fff;color:var(--ink);opacity:1}
+
+.pf-sec{padding:clamp(16px,3vw,40px) 0 clamp(40px,6vw,80px)}
+.pf{display:grid;gap:26px}
+.pf-box{border:1px solid var(--line);border-radius:16px;padding:20px 14px 18px;background:var(--bg)}
+.pf-card{border-radius:12px}
+
+/* Perfil */
+.pf-top__perfil{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center}
+.pf-foto{position:relative;width:104px;height:104px;flex:none}
+.pf-foto__img{width:100%;height:100%;border-radius:50%;overflow:hidden;background:var(--teal);color:#fff;display:grid;place-items:center;font-size:40px;font-weight:600}
+.pf-foto__img img{width:100%;height:100%;object-fit:cover;display:block}
+.pf-foto__btn{position:absolute;right:-2px;bottom:4px;width:34px;height:34px;border-radius:50%;background:#fff;color:var(--ink);box-shadow:0 2px 10px rgba(15,15,15,.2);display:grid;place-items:center}
+.pf-foto__btn svg{width:16px;height:16px}
+.pf-divv{display:none}
+.pf-nom{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
+.pf-nombre{font-family:var(--serif);font-weight:600;font-size:clamp(25px,6.8vw,30px);line-height:1.06;color:var(--ink);word-break:break-word}
+.pf-editar{flex:none;width:36px;height:36px;margin:-4px -6px 0 0;display:grid;place-items:center;color:var(--ink);border-radius:50%}
+.pf-editar:hover{background:var(--mist-2)}
+.pf-editar svg{width:19px;height:19px}
+.pf-mail{margin-top:7px;font-size:13.5px;color:var(--ink);overflow-wrap:anywhere}
+.pf-desde{margin-top:3px;font-size:13px;color:var(--muted-2)}
+
+/* Cifras */
+.pf-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.pf-stat{display:flex;align-items:center;gap:12px;background:var(--mist-2);border-radius:12px;padding:14px 12px;min-width:0}
+.pf-stat svg{width:30px;height:30px;flex:none;color:var(--ink)}
+.pf-stat b{display:block;font-size:19px;font-weight:600;color:var(--ink);line-height:1.15}
+.pf-stat span{display:block;font-size:12.5px;color:var(--muted);line-height:1.3}
+.pf-stat--pc{display:none}
+
+/* Puntos */
+.pf-pts{margin-top:16px;background:var(--teal);color:#fff;border-radius:12px;padding:14px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px}
+.pf-pts__ic{display:grid;place-items:center;padding-right:12px;border-right:1px solid rgba(255,255,255,.35);align-self:stretch}
+.pf-pts__ic svg{width:28px;height:28px}
+.pf-pts__t{font-size:12.5px;line-height:1.3;opacity:.92}
+.pf-pts__n{font-size:28px;font-weight:600;line-height:1.1;white-space:nowrap}
+.pf-pts__n small{font-size:.72em;font-weight:500}
+.pf-pts__prog{display:none}
+.pf-pts__btn{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border:1px solid rgba(255,255,255,.85);border-radius:999px;color:#fff;font-size:12.5px;font-weight:500;white-space:nowrap;transition:background .2s,color .2s}
+.pf-pts__btn:hover{background:#fff;color:var(--teal)}
+.pf-pts__btn svg{width:14px;height:14px}
+
+/* Cupones listos para usar */
+.pf-cup{margin-top:10px;display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px dashed var(--sage);border-radius:12px;background:#F6FAF9;font-size:13px;color:var(--ink);line-height:1.4}
+.pf-cup svg{width:22px;height:22px;color:var(--teal);flex:none}
+.pf-cup b{font-weight:600}
+
+/* Recompensas */
+.pf-rec{margin-top:18px}
+.pf-rec__head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:10px;padding:0 2px}
+.pf-rec__head h3{font-size:15.5px;font-weight:600;color:var(--ink)}
+.pf-rec__head span{font-size:12.5px;color:var(--muted)}
+.pf-rec__wrap{display:flex;align-items:center;gap:4px}
+.pf-rec__list{flex:1;min-width:0;display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 16px) / 3);gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+.pf-rec__list::-webkit-scrollbar{display:none}
+.pf-rec__arr{flex:none;width:26px;height:40px;display:grid;place-items:center;color:var(--ink)}
+.pf-rec__arr svg{width:20px;height:20px}
+.pf-rec__arr[hidden]{display:none}
+.pf-rec__dots{display:flex;justify-content:center;gap:6px;margin-top:10px}
+.pf-rec__dots span{width:7px;height:7px;border-radius:50%;background:#D3DCDA}
+.pf-rec__dots span.on{background:var(--teal)}
+.pf-rw{scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 6px 12px;background:var(--mist-2);border-radius:12px;text-align:center;color:var(--ink);min-width:0}
+.pf-rw svg{width:24px;height:24px;color:var(--teal);margin-bottom:4px}
+.pf-rw b{font-size:16.5px;font-weight:600;line-height:1.15}
+.pf-rw span{font-size:12px;color:var(--muted);line-height:1.3}
+.pf-rw em{margin-top:6px;font-style:normal;font-size:11px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:var(--muted-2)}
+.pf-rw.is-ok em{color:#fff;background:var(--teal);padding:3px 9px;border-radius:999px}
+.pf-rw.is-ok{box-shadow:inset 0 0 0 1.5px var(--sage-light)}
+.pf-rec__vacio{padding:18px;border-radius:12px;background:var(--mist-2);text-align:center;font-size:13.5px;color:var(--muted)}
+
+/* Cumpleaños */
+.pf-cum{margin-top:18px;border:1px solid var(--line);border-radius:12px;padding:14px 12px;background:#FBFCFC}
+.pf-cum__row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
+.pf-cum__ic{display:grid;place-items:center;padding-right:9px;border-right:1px solid var(--line);align-self:stretch}
+.pf-cum__ic svg{width:29px;height:29px;color:var(--ink)}
+.pf-cum__t b{display:block;font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.2;white-space:nowrap}
+.pf-cum__t span{font-size:13.5px;color:var(--muted)}
+.pf-cum__cnt{display:flex;gap:5px}
+.pf-cum__cnt div{min-width:39px;padding:6px 3px;border-radius:8px;background:var(--mist);text-align:center}
+.pf-cum__cnt b{display:block;font-size:19px;font-weight:600;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums}
+.pf-cum__cnt span{font-size:11px;color:var(--muted)}
+.pf-cum__msg{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;font-size:12.5px;color:var(--muted);text-align:center}
+.pf-cum__msg svg{width:16px;height:16px;color:var(--teal);flex:none}
+.pf-cum__hoy{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--teal);line-height:1.1}
+.pf-cum__form{margin-top:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.pf-cum__form .cumple-sel select{padding:10px 28px 10px 10px}
+.pf-cum__form .btn{padding:12px 16px}
+.pf-cum__nota{margin-top:8px;font-size:11.5px;color:var(--muted-2);text-align:center}
+
+/* Ajustes de la cuenta */
+.pf-cfg{margin-top:18px}
+.pf-cfg__h{display:none}
+.pf-row{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border-top:1px solid var(--line);font-size:15px;font-weight:500;color:var(--ink);text-align:left;cursor:pointer}
+.pf-row:last-of-type{border-bottom:1px solid var(--line)}
+.pf-row > svg{width:20px;height:20px;flex:none;display:none}
+.pf-row > span{flex:1}
+.pf-row .chev{width:16px;height:16px;color:var(--muted)}
+.pf-row input{position:absolute;opacity:0;pointer-events:none}
+.pf-row--pc{display:none}
+.pf-row input:checked + .acct__sw{background:var(--teal)}
+.pf-row input:checked + .acct__sw::after{transform:translateX(20px)}
+.pf-row input:focus-visible + .acct__sw{outline:2px solid var(--teal);outline-offset:2px}
+.pf-salir{width:100%;margin-top:18px}
+.pf-borrar{display:block;margin:12px auto 0;font-size:13.5px;color:#B4462F;text-decoration:underline;text-underline-offset:3px;padding:6px}
+
+/* Solo en computadora */
+.pf-recientes,.pf-accesos{display:none}
+
+/* Mis pedidos (historial completo, igual que hoy) */
+.pf-hist > h2{font-family:var(--serif);font-weight:600;font-size:clamp(28px,3vw,36px);color:var(--ink);margin-bottom:16px}
+
+/* Ventanas */
+.pf-modal .acc-modal__box{text-align:left;width:min(480px,100%)}
+.pf-modal h2{text-align:center}
+.pf-ed__foto{position:relative;width:132px;height:132px;margin:18px auto 8px}
+.pf-ed__foto .pf-foto__img{font-size:52px}
+.pf-ed__acts{display:flex;justify-content:center;gap:18px;margin-bottom:18px}
+.pf-ed__acts button{font-size:13.5px;font-weight:500;color:var(--teal);text-decoration:underline;text-underline-offset:3px;padding:4px}
+.pf-ed__acts button.quitar{color:var(--muted)}
+.pf-campo{display:block;margin-bottom:14px}
+.pf-campo span{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.pf-campo input{width:100%;border:1px solid var(--line);padding:12px 13px;font-size:15px;color:var(--ink);background:var(--bg);border-radius:0;outline:0}
+.pf-campo input:focus{border-color:var(--ink)}
+.pf-campo input[readonly]{background:var(--mist-2);color:var(--muted)}
+.pf-campo small{display:block;margin-top:5px;font-size:12px;color:var(--muted-2)}
+.pf-modal .btn{width:100%;margin-top:6px}
+.pf-rm__pts{display:flex;align-items:center;gap:12px;margin:16px 0 18px;padding:14px 16px;border-radius:12px;background:var(--teal);color:#fff}
+.pf-rm__pts svg{width:26px;height:26px}
+.pf-rm__pts b{font-size:24px;font-weight:600}
+.pf-rm h3{font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.pf-rm__it{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.pf-rm__it > svg{width:24px;height:24px;color:var(--teal)}
+.pf-rm__it b{display:block;font-size:15px;font-weight:600;color:var(--ink)}
+.pf-rm__it span{font-size:13px;color:var(--muted)}
+.pf-rm__it .btn{width:auto;margin:0;padding:10px 16px;font-size:12px}
+.pf-rm__it em{font-style:normal;font-size:12.5px;color:var(--muted-2);white-space:nowrap}
+.pf-rm__cod{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;letter-spacing:.5px;color:var(--ink);background:var(--mist-2);padding:2px 7px}
+.pf-rm ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+
+/* Vista previa del carrito (solo en este prototipo) */
+.pf-prev{border-top:1px dashed var(--line);padding-top:24px}
+.pf-prev > h2{font-family:var(--serif);font-weight:600;font-size:26px;color:var(--ink)}
+.pf-prev > p{margin:6px 0 16px;font-size:14px}
+.pf-carro{max-width:420px;border:1px solid var(--line);padding:18px}
+.pf-carro label{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.pf-carro select{width:100%;border:1px solid var(--line);padding:11px 12px;font-size:14px;background:var(--bg);color:var(--ink)}
+.pf-carro dl{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin-top:14px;font-size:14px}
+.pf-carro dt{color:var(--muted)} .pf-carro dd{text-align:right;color:var(--ink)}
+.pf-carro .tot{font-weight:600;font-size:16px;color:var(--ink);border-top:1px solid var(--line);padding-top:8px}
+.pf-carro .cup{color:var(--teal);font-weight:600}
+
+/* ===== Computadora ===== */
+@media (min-width:900px){
+  .pf-box{border:0;border-radius:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"top top" "main side";gap:22px 24px;align-items:start;background:none}
+  .pf-top{grid-area:top;border:1px solid var(--line);border-radius:16px;padding:22px 22px 20px;box-shadow:0 2px 14px rgba(15,15,15,.04)}
+  .pf-top__perfil{grid-template-columns:auto auto minmax(0,1fr);gap:28px;padding:0 10px}
+  .pf-foto{width:128px;height:128px}
+  .pf-foto__img{font-size:48px}
+  .pf-divv{display:block;width:1px;align-self:stretch;margin:10px 0;background:var(--line)}
+  .pf-nom{justify-content:flex-start;align-items:center;gap:12px}
+  .pf-nombre{font-size:38px}
+  .pf-editar{margin:0}
+  .pf-mail{font-size:16px}
+  .pf-desde{font-size:15px}
+  .pf-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:22px}
+  .pf-stat{padding:18px 20px;gap:16px}
+  .pf-stat svg{width:34px;height:34px}
+  .pf-stat b{font-size:24px}
+  .pf-stat span{font-size:14px}
+  .pf-stat--pc{display:flex}
+  .pf-main{grid-area:main;min-width:0}
+  .pf-side{grid-area:side;display:grid;gap:18px;min-width:0}
+  .pf-pts{margin-top:0;grid-template-columns:auto auto minmax(0,1fr) auto;gap:20px;padding:18px 22px}
+  .pf-pts__ic svg{width:32px;height:32px}
+  .pf-pts__ic{padding-right:20px}
+  .pf-pts__t{font-size:14px}
+  .pf-pts__n{font-size:34px}
+  .pf-pts__prog{display:block;padding-left:20px;border-left:1px solid rgba(255,255,255,.35);font-size:13px}
+  .pf-pts__bar{display:flex;align-items:center;gap:12px;margin-top:10px}
+  .pf-pts__bar i{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.25);overflow:hidden}
+  .pf-pts__bar i b{display:block;height:100%;background:#fff;border-radius:999px}
+  .pf-pts__bar span{font-size:12px;opacity:.9;white-space:nowrap}
+  .pf-pts__btn{padding:11px 18px;font-size:13.5px}
+  .pf-rec{margin-top:24px}
+  .pf-rec__head h3{font-family:var(--serif);font-size:26px}
+  .pf-rec__head span{font-size:14px}
+  .pf-rec__list{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));overflow:visible;gap:14px}
+  .pf-rec__arr,.pf-rec__dots{display:none}
+  .pf-rw{padding:20px 10px 16px}
+  .pf-rw svg{width:28px;height:28px}
+  .pf-rw b{font-size:20px}
+  .pf-rw span{font-size:14px}
+  .pf-cum{margin-top:24px;padding:20px 24px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;box-shadow:0 2px 14px rgba(15,15,15,.04)}
+  .pf-cum__row{gap:18px}
+  .pf-cum__ic{padding-right:18px}
+  .pf-cum__ic svg{width:44px;height:44px}
+  .pf-cum__t b{font-family:var(--serif);font-size:28px;font-weight:600}
+  .pf-cum__t span{font-size:16px}
+  .pf-cum__cnt .solo-cel{display:none}
+  .pf-cum__cnt div{min-width:84px;padding:10px 12px}
+  .pf-cum__cnt b{font-size:26px}
+  .pf-cum__cnt span{font-size:13px}
+  .pf-cum__msg{margin:0;padding-left:24px;border-left:1px solid var(--line);max-width:240px;justify-content:flex-start;text-align:left;font-size:14px;line-height:1.45}
+  .pf-cum__msg svg{width:26px;height:26px}
+  .pf-cum--form{display:block}
+  .pf-accesos{display:block;margin-top:24px}
+  .pf-accesos h3{font-family:var(--serif);font-size:26px;font-weight:600;color:var(--ink);margin-bottom:12px}
+  .pf-accesos div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .pf-accesos button{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 10px;border:1px solid var(--line);border-radius:12px;font-size:15px;color:var(--ink);transition:border-color .2s,background .2s}
+  .pf-accesos button:hover{border-color:var(--sage);background:var(--mist-2)}
+  .pf-accesos svg{width:30px;height:30px;color:var(--teal)}
+  .pf-recientes{display:block;border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .pf-recientes header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+  .pf-recientes h3{font-family:var(--serif);font-size:24px;font-weight:600;color:var(--ink)}
+  .pf-recientes header a{font-size:13.5px;color:var(--teal);text-decoration:underline;text-underline-offset:3px;display:inline-flex;align-items:center;gap:4px}
+  .pf-recientes header a svg{width:13px;height:13px}
+  .pf-ped{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+  .pf-ped:first-of-type{border-top:0}
+  .pf-ped img,.pf-ped .ph{width:54px;height:60px;object-fit:cover;background:var(--mist-2)}
+  .pf-ped b{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+  .pf-ped .pill{display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:500}
+  .pf-ped .pill svg{width:13px;height:13px}
+  .pf-ped .pill--procede{background:#E1EFEC;color:var(--teal)}
+  .pf-ped .pill--pendiente{background:#FFF2D2;color:#8A5A00}
+  .pf-ped__vacio{padding:10px 0 4px;font-size:13.5px}
+  .pf-cfg{margin-top:0;border:1px solid var(--line);border-radius:16px;padding:16px 18px 18px}
+  .pf-cfg__h{display:block;font-family:var(--serif);font-size:24px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .pf-row{padding:13px 0;font-size:14.5px}
+  .pf-row > svg{display:block}
+  .pf-row--pc{display:flex}
+  .pf-row:first-of-type{border-top:0}
+}
+</style>
+</head>
+<body data-page="cuenta">
+
+<main>
+  <div class="pf-demo" role="group" aria-label="Ver el prototipo como">Prototipo · ver como
+    <button type="button" class="on" data-estado="puntos">Cliente con puntos</button>
+    <button type="button" data-estado="nuevo">Cliente nuevo</button>
+  </div>
+  <section class="pf-sec">
+    <div class="wrap" id="pf"></div>
+  </section>
+</main>
+
+<script src="assets/js/marca.js"></script>
+<script src="assets/js/datos.js"></script>
+<script src="assets/js/fotos.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(() => {
+/* ---------- Datos de ejemplo (en la tienda real salen de la base) ---------- */
+const RECOMPENSAS = [
+  { id: 1, puntos: 200, titulo: "S/10 de descuento" },
+  { id: 2, puntos: 250, titulo: "10% de descuento" },
+  { id: 3, puntos: 500, titulo: "Envío gratis" },
+];
+const lima = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+const enDias = n => { const d = new Date(Date.parse(lima + "T12:00:00Z") + n * 864e5); return d.toISOString().slice(5, 10); };
+const ESTADOS = {
+  puntos: {
+    nombre: "Ana Torres Ríos", email: "ana.torres@ejemplo.pe", foto: "img/prime-acero-a-400.b23152f6.webp", fotoDemo: "object-position:52% 26%;transform:scale(1.9);transform-origin:52% 26%", desde: "noviembre de 2026",
+    compras: 480, pedidosN: 3, puntos: 320, cumple: enDias(24), promos: true,
+    cupones: [{ codigo: "MSC7K2PQ", titulo: "S/10 de descuento" }],
+    pedidos: [
+      { codigo: "MSK3P9QA", fecha: "16 de noviembre de 2026", estado: "procede", total: 150, envio: 10, items: [
+        { nombre: "Polo Luxury Negro", color: "Negro", talla: "M", cantidad: 1, precio: 75, img: "img/luxury-negro-a-400.092df00c.webp" },
+        { nombre: "Polera Básica", color: "Verde", talla: "L", cantidad: 1, precio: 65, img: "img/polera-basica-verde-b-400.c3cf6980.webp" }] },
+      { codigo: "MSF7R2XC", fecha: "14 de noviembre de 2026", estado: "pendiente", total: 90, items: [
+        { nombre: "Cargo", color: "Cemento", talla: "32", cantidad: 1, precio: 90, img: "img/cargo-cemento-b-400.a1477c78.webp" }] },
+      { codigo: "MSB4N8WZ", fecha: "10 de noviembre de 2026", estado: "procede", total: 240, items: [
+        { nombre: "Polo Prime", color: "Verde", talla: "M", cantidad: 2, precio: 120, img: "img/prime-verde-c-400.d5010a9b.webp" }] },
+    ],
+  },
+  nuevo: { nombre: "Luis Pérez", email: "luis.perez@ejemplo.pe", foto: null, desde: "noviembre de 2026", compras: 0, pedidosN: 0, puntos: 0, cumple: null, promos: false, cupones: [], pedidos: [] },
+};
+let E = structuredClone(ESTADOS.puntos);
+
+/* ---------- Íconos (mismo trazo que la tienda) ---------- */
+const sv = (d, w = 1.6) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC = {
+  bag: sv('<path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>', 1.4),
+  box: sv('<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>', 1.4),
+  ticket: sv('<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4V7Z"/><path d="M15 7v2M15 11v2M15 15v2"/>', 1.4),
+  star: sv('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/>', 1.5),
+  gift: sv('<rect x="3" y="8" width="18" height="13"/><path d="M3 12h18M12 8v13M12 8C10 4 6 4 6 6.5S9 8 12 8Zm0 0c2-4 6-4 6-1.5S15 8 12 8Z"/>'),
+  cake: sv('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M8 13V9.5M12 13V9.5M16 13V9.5M8 6.8c.7 0 1.1-.5 1.1-1.1C9.1 4.9 8 3.8 8 3.8s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM12 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM16 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1Z"/>', 1.4),
+  pencil: sv('<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>'),
+  camera: sv('<path d="M4 8h3l2-3h6l2 3h3v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/>'),
+  arrow: sv('<path d="M5 12h14M13 6l6 6-6 6"/>', 1.8),
+  prev: sv('<path d="m15 6-6 6 6 6"/>', 1.8),
+  next: sv('<path d="m9 6 6 6-6 6"/>', 1.8),
+  check: sv('<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16 9.5"/>'),
+  clock: sv('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  mega: sv('<path d="M3 10v4h3l7 4V6l-7 4H3Z"/><path d="M17 9a4 4 0 0 1 0 6"/>'),
+  user: sv('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+  spark: sv('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>'),
+  close: sv('<path d="M6 6l12 12M18 6 6 18"/>', 1.8),
+};
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const sol = n => "S/" + Number(n).toFixed(2);
+const pts = n => Number(n).toLocaleString("es-PE");
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "setiembre", "octubre", "noviembre", "diciembre"];
+const cumpleTexto = c => `${+c.slice(3)} de ${MESES[+c.slice(0, 2) - 1]}`;
+const ESTADO_PED = { pendiente: "En confirmación", procede: "Confirmado", cancelado: "Cancelado" };
+
+/* Cuenta regresiva hasta las 00:00 (hora de Lima) del cumpleaños. El 29 de febrero se celebra el 28 en años no bisiestos. */
+function falta(c) {
+  const ahora = Date.now(), [y] = lima.split("-").map(Number), cm = +c.slice(0, 2), cd = +c.slice(3);
+  const bis = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+  const en = a => Date.UTC(a, cm - 1, cm === 2 && cd === 29 && !bis(a) ? 28 : cd, 5); // 00:00 en Lima = 05:00 UTC
+  let t = en(y);
+  if (ahora >= t + 864e5) t = en(y + 1);
+  if (ahora >= t) return { hoy: true };
+  const ms = t - ahora;
+  return { dias: Math.floor(ms / 864e5), horas: Math.floor(ms / 36e5) % 24, min: Math.floor(ms / 6e4) % 60 };
+}
+const dd = n => String(n).padStart(2, "0");
+
+/* ---------- Pintar el perfil ---------- */
+function pintar() {
+  const primero = E.nombre.split(" ")[0];
+  const recs = [...RECOMPENSAS].sort((a, b) => a.puntos - b.puntos);
+  const prox = recs.find(r => r.puntos > E.puntos);
+  const foto = E.foto ? `<img src="${esc(E.foto)}" alt=""${E.fotoDemo && E.foto.startsWith("img/") ? ` style="${E.fotoDemo}"` : ""}>` : `<span>${esc(primero[0].toUpperCase())}</span>`;
+  $("#pf").innerHTML = `<div class="pf">
+  <div class="pf-box">
+    <div class="pf-top">
+      <div class="pf-top__perfil">
+        <div class="pf-foto"><div class="pf-foto__img">${foto}</div><button type="button" class="pf-foto__btn" data-editar aria-label="Cambiar foto de perfil">${IC.pencil}</button></div>
+        <span class="pf-divv" aria-hidden="true"></span>
+        <div class="pf-info">
+          <div class="pf-nom"><h2 class="pf-nombre">${esc(E.nombre)}</h2><button type="button" class="pf-editar" data-editar aria-label="Editar mis datos">${IC.pencil}</button></div>
+          <p class="pf-mail">${esc(E.email)}</p>
+          <p class="pf-desde">Cliente desde ${esc(E.desde)}</p>
+        </div>
+      </div>
+      <div class="pf-stats">
+        <div class="pf-stat">${IC.bag}<div><b>${sol(E.compras)}</b><span>En compras</span></div></div>
+        <div class="pf-stat">${IC.box}<div><b>${E.pedidosN}</b><span>${E.pedidosN === 1 ? "Pedido confirmado" : "Pedidos confirmados"}</span></div></div>
+        <div class="pf-stat pf-stat--pc">${IC.ticket}<div><b>${E.cupones.length}</b><span>${E.cupones.length === 1 ? "Cupón activo" : "Cupones activos"}</span></div></div>
+      </div>
+    </div>
+
+    <div class="pf-main">
+      <div class="pf-pts" aria-label="Mis puntos MAISON">
+        <div class="pf-pts__ic">${IC.star}</div>
+        <div><p class="pf-pts__t">Mis puntos MAISON</p><p class="pf-pts__n">${pts(E.puntos)} <small>pts</small></p></div>
+        <div class="pf-pts__prog">${prox
+          ? `<p>Próxima recompensa: ${esc(prox.titulo)} (${pts(prox.puntos)} pts)</p><div class="pf-pts__bar"><i><b style="width:${Math.min(100, E.puntos / prox.puntos * 100)}%"></b></i><span>${pts(E.puntos)} / ${pts(prox.puntos)} pts</span></div>`
+          : `<p>¡Ya alcanzas todas las recompensas!</p><div class="pf-pts__bar"><i><b style="width:100%"></b></i></div>`}</div>
+        <button type="button" class="pf-pts__btn" data-recompensas>Ver recompensas ${IC.arrow}</button>
+      </div>
+      ${E.cupones.length ? `<p class="pf-cup">${IC.ticket}<span>Tienes <b>${E.cupones.length === 1 ? "1 cupón" : E.cupones.length + " cupones"}</b> listo${E.cupones.length === 1 ? "" : "s"}: ${E.cupones.map(c => esc(c.titulo)).join(", ")}. ${E.cupones.length === 1 ? "Úsalo" : "Úsalos"} al hacer tu pedido desde el carrito (uno por pedido).</span></p>` : ""}
+
+      <div class="pf-rec">
+        <div class="pf-rec__head"><h3>Recompensas disponibles</h3><span>(con tus puntos)</span></div>
+        ${recs.length ? `<div class="pf-rec__wrap">
+          <button type="button" class="pf-rec__arr" data-dir="-1" aria-label="Anterior" hidden>${IC.prev}</button>
+          <div class="pf-rec__list" id="pfRecList">${recs.map(r => {
+            const ok = E.puntos >= r.puntos;
+            return `<button type="button" class="pf-rw${ok ? " is-ok" : ""}" data-recompensas>${IC.gift}<b>${pts(r.puntos)} pts</b><span>${esc(r.titulo)}</span><em>${ok ? "Canjear" : `Faltan ${pts(r.puntos - E.puntos)}`}</em></button>`;
+          }).join("")}</div>
+          <button type="button" class="pf-rec__arr" data-dir="1" aria-label="Siguiente" hidden>${IC.next}</button>
+        </div><div class="pf-rec__dots" id="pfRecDots"></div>` : `<p class="pf-rec__vacio">Pronto tendremos recompensas para ti.</p>`}
+      </div>
+
+      <div class="pf-cum${E.cumple ? "" : " pf-cum--form"}" id="pfCum"></div>
+
+      <div class="pf-accesos" aria-label="Accesos rápidos">
+        <h3>Accesos rápidos</h3>
+        <div>
+          <button type="button" data-historial>${IC.box}Mis pedidos</button>
+          <button type="button" data-recompensas>${IC.star}Mis recompensas</button>
+          <button type="button" data-editar>${IC.user}Mis datos</button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="pf-side">
+      <div class="pf-recientes">
+        <header><h3>Mis pedidos recientes</h3>${E.pedidos.length ? `<a href="#pfHist" data-historial>Ver historial ${IC.arrow}</a>` : ""}</header>
+        ${E.pedidos.length ? E.pedidos.slice(0, 3).map(p => {
+          const n = p.items.reduce((s, i) => s + i.cantidad, 0);
+          return `<div class="pf-ped"><img src="${esc(p.items[0].img)}" alt=""><div><b>Pedido ${esc(p.codigo)}</b>${n} ${n === 1 ? "producto" : "productos"} · ${sol(p.total)}<br>${esc(p.fecha)}</div>
+            <span class="pill pill--${p.estado}">${p.estado === "procede" ? IC.check : IC.clock}${ESTADO_PED[p.estado]}</span></div>`;
+        }).join("") : `<p class="pf-ped__vacio">Todavía no tienes pedidos.</p>`}
+      </div>
+
+      <div class="pf-cfg">
+        <h3 class="pf-cfg__h">Mi cuenta</h3>
+        <label class="pf-row">${IC.mega}<span>Recibir promociones</span><input type="checkbox" id="pfPromos"${E.promos ? " checked" : ""}><span class="acct__sw" aria-hidden="true" style="flex:none"></span></label>
+        <button type="button" class="pf-row pf-row--pc" data-editar>${IC.user}<span>Mis datos (nombre y foto)</span>${IC.next.replace("<svg", '<svg class="chev"')}</button>
+        <button type="button" class="btn btn--outline pf-salir">Cerrar sesión</button>
+        <button type="button" class="pf-borrar">Eliminar mi cuenta</button>
+      </div>
+    </aside>
+  </div>
+
+  <div class="pf-hist" id="pfHist">
+    <h2>Mis pedidos</h2>
+    ${E.pedidos.length ? E.pedidos.map(p => `<article class="acct__ped">
+      <header><b>${esc(p.codigo)}</b><span>${esc(p.fecha)}</span><span class="acct__est acct__est--${p.estado}">${ESTADO_PED[p.estado]}</span></header>
+      <ul>${p.items.map(i => `<li><img src="${esc(i.img)}" alt=""><span><b>${esc(i.nombre)}</b>${esc(i.color)} · Talla ${esc(i.talla)} × ${i.cantidad}</span><em>${sol(i.precio * i.cantidad)}</em></li>`).join("")}</ul>
+      <footer>${p.envio ? `<span>Envío ${sol(p.envio)}</span>` : ""}<span>Total <b>${sol(p.total)}</b></span></footer>
+    </article>`).join("") : `<div class="acct-vacio acct-vacio--sm"><h3>Todavía no tienes pedidos</h3><p>Cuando hagas un pedido con tu cuenta abierta, aparecerá aquí y empezarás a sumar puntos.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`}
+  </div>
+
+  <div class="pf-prev">
+    <h2>Vista previa: el cupón en el carrito</h2>
+    <p>Así elegiría el cliente su cupón al hacer el pedido (ejemplo con prendas por S/150 y envío a Lima).</p>
+    <div class="pf-carro">
+      <label for="pfCupSel">Usar un cupón</label>
+      <select id="pfCupSel"><option value="">No usar cupón</option>${E.cupones.map(c => `<option value="${esc(c.codigo)}">${esc(c.titulo)}</option>`).join("")}</select>
+      <dl id="pfCarroTot"></dl>
+    </div>
+  </div>
+</div>`;
+  pintarCumple();
+  pintarCarro();
+  enlazar();
+}
+
+/* Cumpleaños: cuenta regresiva (días, horas y minutos en celular; días en computadora) o el formulario si aún no lo dio */
+function pintarCumple() {
+  const box = $("#pfCum"); if (!box) return;
+  if (!E.cumple) {
+    box.innerHTML = `<div class="pf-cum__row" style="grid-template-columns:auto minmax(0,1fr)"><div class="pf-cum__ic">${IC.cake}</div>
+      <div class="pf-cum__t"><b>Tu cumpleaños</b><span>Agrégalo y te mostramos cuánto falta para tu día.</span></div></div>
+      <div class="pf-cum__form"><div class="cumple-sel"><select aria-label="Día"><option value="">Día</option>${Array.from({ length: 31 }, (_, i) => `<option>${i + 1}</option>`).join("")}</select>
+      <select aria-label="Mes"><option value="">Mes</option>${MESES.map(m => `<option>${m[0].toUpperCase() + m.slice(1)}</option>`).join("")}</select></div>
+      <button type="button" class="btn btn--dark">Guardar</button></div>
+      <p class="pf-cum__nota">Solo día y mes. Una vez guardado, ya no se puede cambiar.</p>`;
+    return;
+  }
+  const f = falta(E.cumple);
+  box.innerHTML = f.hoy
+    ? `<div class="pf-cum__row"><div class="pf-cum__ic">${IC.cake}</div><div class="pf-cum__t"><b class="pf-cum__hoy">¡Feliz cumpleaños, ${esc(E.nombre.split(" ")[0])}!</b><span>Hoy es tu día · ${cumpleTexto(E.cumple)}</span></div></div>
+       <p class="pf-cum__msg">${IC.spark}<span>Gracias por ser parte de MAISON.</span></p>`
+    : `<div class="pf-cum__row"><div class="pf-cum__ic">${IC.cake}</div><div class="pf-cum__t"><b>Tu cumpleaños</b><span>Faltan</span></div>
+        <div class="pf-cum__cnt" title="${cumpleTexto(E.cumple)}"><div><b>${f.dias}</b><span>${f.dias === 1 ? "día" : "días"}</span></div><div class="solo-cel"><b>${dd(f.horas)}</b><span>horas</span></div><div class="solo-cel"><b>${dd(f.min)}</b><span>min</span></div></div></div>
+       <p class="pf-cum__msg">${IC.spark}<span>${cumpleTexto(E.cumple)} · Te esperamos para celebrarlo juntos.</span></p>`;
+}
+setInterval(pintarCumple, 30000);
+
+function pintarCarro() {
+  const sel = $("#pfCupSel"), dl = $("#pfCarroTot"); if (!sel) return;
+  const sub = 150, envio = 10, c = E.cupones.find(x => x.codigo === sel.value);
+  const desc = !c ? 0 : /10%/.test(c.titulo) ? sub * 0.1 : /S\/10/.test(c.titulo) ? 10 : 0, envF = c && /Envío gratis/.test(c.titulo) ? 0 : envio;
+  dl.innerHTML = `<dt>Subtotal</dt><dd>${sol(sub)}</dd>${c ? `<dt class="cup">Cupón: ${esc(c.titulo)}</dt><dd class="cup">${desc ? "−" + sol(desc) : "Envío gratis"}</dd>` : ""}
+    <dt>Envío a Lima</dt><dd>${envF ? sol(envF) : "Gratis"}</dd><dt class="tot">Total</dt><dd class="tot">${sol(sub - desc + envF)}</dd>`;
+}
+
+/* ---------- Ventanas ---------- */
+function ventana(html, clase = "") {
+  const d = document.createElement("div");
+  d.className = "acc-modal pf-modal " + clase;
+  d.innerHTML = `<div class="acc-modal__bg" data-x></div><div class="acc-modal__box" role="dialog" aria-modal="true"><button type="button" class="acc-modal__x" data-x aria-label="Cerrar">${IC.close}</button>${html}</div>`;
+  document.body.append(d);
+  requestAnimationFrame(() => d.classList.add("open"));
+  const cerrar = () => { d.classList.remove("open"); setTimeout(() => d.remove(), 400); };
+  $$("[data-x]", d).forEach(b => b.addEventListener("click", cerrar));
+  return { d, cerrar };
+}
+
+function abrirEditar() {
+  let nuevaFoto = E.foto;
+  const fotoHTML = f => f ? `<img src="${esc(f)}" alt=""${E.fotoDemo && f.startsWith("img/") ? ` style="${E.fotoDemo}"` : ""}>` : `<span>${esc(E.nombre[0].toUpperCase())}</span>`;
+  const { d, cerrar } = ventana(`<h2>Mis datos</h2>
+    <div class="pf-ed__foto"><div class="pf-foto__img" id="pfEdImg">${fotoHTML(nuevaFoto)}</div><label class="pf-foto__btn" style="cursor:pointer" aria-label="Elegir foto">${IC.camera}<input type="file" accept="image/*" id="pfEdFile" hidden></label></div>
+    <div class="pf-ed__acts"><button type="button" id="pfEdCambiar">Cambiar foto</button><button type="button" class="quitar" id="pfEdQuitar"${nuevaFoto ? "" : " hidden"}>Quitar foto</button></div>
+    <label class="pf-campo"><span>Tu nombre</span><input id="pfEdNom" maxlength="60" value="${esc(E.nombre)}" autocomplete="name"></label>
+    <label class="pf-campo"><span>Tu correo</span><input value="${esc(E.email)}" readonly><small>Viene de tu cuenta de Google y no se puede cambiar.</small></label>
+    <button type="button" class="btn btn--dark" id="pfEdOk">Guardar cambios</button>`);
+  // La foto se recorta al centro y se achica a 400 × 400 en el mismo celular antes de subirla
+  $("#pfEdCambiar", d).addEventListener("click", () => $("#pfEdFile", d).click());
+  $("#pfEdFile", d).addEventListener("change", e => {
+    const file = e.target.files[0]; if (!file) return;
+    const img = new Image();
+    img.onload = () => {
+      const lado = Math.min(img.width, img.height), cv = document.createElement("canvas");
+      cv.width = cv.height = 400;
+      cv.getContext("2d").drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 400, 400);
+      nuevaFoto = cv.toDataURL("image/webp", 0.85);
+      $("#pfEdImg", d).innerHTML = fotoHTML(nuevaFoto); $("#pfEdQuitar", d).hidden = false;
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+  $("#pfEdQuitar", d).addEventListener("click", () => { nuevaFoto = null; $("#pfEdImg", d).innerHTML = fotoHTML(null); $("#pfEdQuitar", d).hidden = true; });
+  $("#pfEdOk", d).addEventListener("click", () => {
+    const n = $("#pfEdNom", d).value.trim();
+    if (n.length < 2) return $("#pfEdNom", d).focus();
+    E.nombre = n; E.foto = nuevaFoto; cerrar(); pintar();
+  });
+}
+
+function abrirRecompensas() {
+  const recs = [...RECOMPENSAS].sort((a, b) => a.puntos - b.puntos);
+  const { d, cerrar } = ventana(`<div class="pf-rm"><h2>Mis recompensas</h2>
+    <div class="pf-rm__pts">${IC.star}<div><span style="font-size:13px;opacity:.9">Mis puntos MAISON</span><br><b>${pts(E.puntos)} pts</b></div></div>
+    <h3>Canjea tus puntos</h3>
+    ${recs.map(r => `<div class="pf-rm__it">${IC.gift}<div><b>${esc(r.titulo)}</b><span>${pts(r.puntos)} puntos</span></div>${E.puntos >= r.puntos
+      ? `<button type="button" class="btn btn--dark" data-canjear="${r.id}">Canjear</button>` : `<em>Te faltan ${pts(r.puntos - E.puntos)} pts</em>`}</div>`).join("")}
+    ${E.cupones.length ? `<h3>Mis cupones</h3>${E.cupones.map(c => `<div class="pf-rm__it">${IC.ticket}<div><b>${esc(c.titulo)}</b><span>Úsalo en el carrito · <span class="pf-rm__cod">${esc(c.codigo)}</span></span></div><em>Listo</em></div>`).join("")}` : ""}
+    <h3>Cómo funcionan</h3>
+    <ul>
+      <li>Ganas 1 punto por cada sol de tus pedidos confirmados (el envío no suma).</li>
+      <li>Los puntos se suman cuando confirmamos tu pedido.</li>
+      <li>Al canjear recibes un cupón: lo eliges en el carrito al hacer tu pedido. Un cupón por pedido.</li>
+      <li>Si tu pedido se cancela, te devolvemos los puntos del cupón.</li>
+      <li>Tus puntos y cupones no vencen.</li>
+    </ul></div>`);
+  $$("[data-canjear]", d).forEach(b => b.addEventListener("click", () => {
+    const r = RECOMPENSAS.find(x => x.id === +b.dataset.canjear);
+    cerrar();
+    const c = ventana(`<h2>¿Canjear ${pts(r.puntos)} pts?</h2><p class="acc-modal__lead" style="text-align:center">Recibes un cupón de <b>${esc(r.titulo)}</b> para tu próximo pedido. Te quedarán ${pts(E.puntos - r.puntos)} pts.</p>
+      <button type="button" class="btn btn--dark" id="pfCjOk">Sí, canjear</button><button type="button" class="acc-skip" data-x style="display:block;margin:10px auto 0">Cancelar</button>`, "acc-modal--sm");
+    $("#pfCjOk", c.d).addEventListener("click", () => {
+      E.puntos -= r.puntos; E.cupones.push({ codigo: "MSC" + Math.random().toString(36).slice(2, 7).toUpperCase(), titulo: r.titulo });
+      c.cerrar(); pintar();
+    });
+  }));
+}
+
+/* ---------- Eventos ---------- */
+function enlazar() {
+  $$("[data-editar]").forEach(b => b.addEventListener("click", abrirEditar));
+  $$("[data-recompensas]").forEach(b => b.addEventListener("click", abrirRecompensas));
+  $$("[data-historial]").forEach(b => b.addEventListener("click", e => { e.preventDefault(); $("#pfHist").scrollIntoView({ behavior: "smooth" }); }));
+  $("#pfCupSel")?.addEventListener("change", pintarCarro);
+  // Carrusel de recompensas en celular: flechas y puntos solo si hay más de las que entran
+  const list = $("#pfRecList"); if (!list) return;
+  const arrs = $$(".pf-rec__arr"), dots = $("#pfRecDots");
+  const act = () => {
+    const sobra = list.scrollWidth > list.clientWidth + 4, paginas = sobra ? Math.ceil(list.scrollWidth / list.clientWidth) : 0;
+    arrs.forEach(a => (a.hidden = !sobra));
+    const i = Math.round(list.scrollLeft / list.clientWidth);
+    dots.innerHTML = paginas > 1 ? Array.from({ length: paginas }, (_, k) => `<span class="${k === i ? "on" : ""}"></span>`).join("") : "";
+  };
+  arrs.forEach(a => a.addEventListener("click", () => list.scrollBy({ left: list.clientWidth * +a.dataset.dir, behavior: "smooth" })));
+  list.addEventListener("scroll", act, { passive: true });
+  addEventListener("resize", act);
+  act();
+}
+
+$$(".pf-demo button").forEach(b => b.addEventListener("click", () => {
+  $$(".pf-demo button").forEach(x => x.classList.toggle("on", x === b));
+  E = structuredClone(ESTADOS[b.dataset.estado]); pintar(); scrollTo({ top: 0 });
+}));
+pintar();
+})();
+</script>
+</body>
+</html>

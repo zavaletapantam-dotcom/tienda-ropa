@@ -73,8 +73,10 @@ export async function volver({ env, url, request }) {
   let clienteId;
   if (existe) {
     clienteId = existe.id;
-    // Si ya tenía cumpleaños guardado, no se cambia: solo se completa si estaba vacío
-    await env.DB.prepare(`UPDATE clientes SET email = ?, nombre = ?, foto = ?, ultimo_acceso = datetime('now')
+    // Si ya tenía cumpleaños guardado, no se cambia: solo se completa si estaba vacío.
+    // Si el cliente cambió su nombre o su foto en "Mi cuenta", Google ya no los reemplaza.
+    await env.DB.prepare(`UPDATE clientes SET email = ?, nombre = CASE WHEN nombre_propio = 1 THEN nombre ELSE ? END,
+        foto = CASE WHEN foto_propia = 1 THEN foto ELSE ? END, ultimo_acceso = datetime('now')
         ${datos.p ? ", promos = 1, promos_fecha = datetime('now')" : ""}
         ${cumple ? ", cumple_fecha = CASE WHEN cumple IS NULL THEN datetime('now') ELSE cumple_fecha END, cumple = COALESCE(cumple, ?)" : ""}
         WHERE id = ?`).bind(id.email, nombre, foto, ...(cumple ? [cumple] : []), clienteId).run();

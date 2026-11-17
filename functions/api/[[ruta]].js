@@ -14,6 +14,9 @@ const RUTAS = [
   ["GET", "/api/cuenta", tienda.cuenta],
   ["PATCH", "/api/cuenta", tienda.cambiarCuenta],
   ["DELETE", "/api/cuenta", tienda.eliminarCuenta],
+  ["GET", "/api/cuenta/cupones", tienda.misCupones],
+  ["POST", "/api/cuenta/canjear", tienda.canjear],
+  ["GET", /^\/api\/foto\/([A-Za-z0-9_-]{16,64})$/, tienda.foto],
   ["GET", "/api/auth/google", google.empezar],
   ["GET", "/api/auth/google/callback", google.volver],
   ["POST", "/api/auth/salir", tienda.salirCliente],
@@ -37,6 +40,13 @@ const RUTAS = [
   ["GET", "/api/admin/mayor", admin.ventasMayor],
   ["POST", "/api/admin/mayor", admin.crearVentaMayor],
   ["GET", "/api/admin/clientes", admin.clientes],
+  ["GET", /^\/api\/admin\/clientes\/(\d+)$/, admin.cliente],
+  ["POST", /^\/api\/admin\/clientes\/(\d+)\/puntos$/, admin.ajustarPuntos],
+  ["POST", /^\/api\/admin\/clientes\/(\d+)\/cumple$/, admin.corregirCumple],
+  ["POST", /^\/api\/admin\/cupones\/(MC[A-Z0-9]{6})\/anular$/, admin.anularCupon],
+  ["GET", "/api/admin/recompensas", admin.recompensas],
+  ["POST", "/api/admin/recompensas", admin.guardarRecompensa],
+  ["POST", /^\/api\/admin\/recompensas\/(\d+)$/, admin.guardarRecompensa],
   ["GET", "/api/admin/reclamos", admin.reclamos],
   ["POST", /^\/api\/admin\/reclamos\/(\d{4}-\d{6})$/, admin.responderReclamo],
 ];
@@ -47,7 +57,7 @@ export async function onRequest(ctx) {
   if (request.method !== "GET") {
     const origen = request.headers.get("origin");
     if (origen && origen !== url.origin) return json({ ok: false, error: "origen_no_permitido" }, 403);
-    if ((url.pathname.startsWith("/api/admin/") || url.pathname === "/api/cuenta") && request.headers.get("x-maison") !== "1")
+    if ((url.pathname.startsWith("/api/admin/") || url.pathname === "/api/cuenta" || url.pathname.startsWith("/api/cuenta/")) && request.headers.get("x-maison") !== "1")
       return json({ ok: false, error: "origen_no_permitido" }, 403);
   }
   if (!ctx.env.DB) return json({ ok: false, error: "sin_base" }, 503);

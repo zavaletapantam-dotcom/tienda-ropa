@@ -175,6 +175,16 @@ const I = {
   spark: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>'),
   clock2: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
   cake: svg('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M12 13V9.5M12 6.5c.9 0 1.5-.6 1.5-1.4C13.5 4 12 2.5 12 2.5S10.5 4 10.5 5.1c0 .8.6 1.4 1.5 1.4Z"/>'),
+  cake3: svg('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M8 13V9.5M12 13V9.5M16 13V9.5M8 6.8c.7 0 1.1-.5 1.1-1.1C9.1 4.9 8 3.8 8 3.8s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM12 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM16 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1Z"/>', 1.4),
+  star: svg('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/>', 1.5),
+  ticket: svg('<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4V7Z"/><path d="M15 7v2M15 11v2M15 15v2"/>', 1.4),
+  pencil: svg('<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/>'),
+  camera: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4V8Z"/><circle cx="12" cy="13" r="3.5"/>'),
+  mega: svg('<path d="M3 10v4h3l7 4V6l-7 4H3Z"/><path d="M17 9a4 4 0 0 1 0 6"/>'),
+  arrow: svg('<path d="M5 12h14M13 6l6 6-6 6"/>', 1.8),
+  checkc: svg('<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16 9.5"/>'),
+  bag2: svg('<path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>', 1.4),
+  box2: svg('<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z"/><path d="M3 7.5 12 12l9-4.5M12 12v9"/>', 1.4),
   book: svg('<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20v3H6.5M9 7h7M9 11h5"/>'),
   google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.5 5.5 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7Z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24Z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6h-4a12 12 0 0 0 0 10.8l4-3.1Z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9Z"/></svg>',
 };
@@ -388,8 +398,14 @@ function renderLayout() {
             <p class="co__eta">${I.box}Te confirmamos por WhatsApp el costo del envío por ${esc(C.courier)}.</p>
           </div>
         </div>
+        <div class="co__cup" id="coCup" hidden>
+          <label for="coCupSel">${I.ticket}Usar un cupón de tus Puntos MAISON</label>
+          <select id="coCupSel"><option value="">No usar cupón</option></select>
+          <p class="co__cupnota" id="coCupNota" hidden></p>
+        </div>
         <div class="co__sum">
           <div class="cart__row"><span>Subtotal</span><b id="coSub"></b></div>
+          <div class="cart__row co__cuprow" id="coCupRow" hidden><span id="coCupTxt">Cupón</span><b id="coCupMonto"></b></div>
           <div class="cart__row"><span>Envío</span><b id="coShipCost"></b></div>
           <div class="cart__row co__total"><span>Total</span><b id="coTotal"></b></div>
         </div>
@@ -726,6 +742,29 @@ const coData = () => {
     dep: v("coDep"), prov: v("coPrv"), distP: v("coDistP"), agencia: v("coAg"), agenciaAlt: v("coAgAlt") };
 };
 const shipCost = ent => (ent !== "domicilio" ? 0 : cartSub() >= C.envioGratisDesde ? 0 : C.envio);
+/* Cupones de los Puntos MAISON en el carrito (solo con la cuenta abierta; uno por pedido).
+   Misma regla que el servidor: monto y porcentaje sobre las prendas · envío gratis solo para envío a domicilio cuando se cobra envío. */
+let cuponesCarrito = [];
+function cargarCupones() {
+  if (!SES.cliente || !$("#coCup")) { cuponesCarrito = []; pintarCupones(); return; }
+  fetch("/api/cuenta/cupones", { credentials: "same-origin", cache: "no-store", headers: { "x-maison": "1" } })
+    .then(r => (r.ok ? r.json() : { cupones: [] })).then(j => { cuponesCarrito = Array.isArray(j.cupones) ? j.cupones : []; pintarCupones(); renderCheckout(); }).catch(() => {});
+}
+function pintarCupones() {
+  const sel = $("#coCupSel"); if (!sel) return;
+  const antes = sel.value;
+  sel.innerHTML = `<option value="">No usar cupón</option>` + cuponesCarrito.map(c => `<option value="${esc(c.codigo)}">${esc(c.nombre)}</option>`).join("");
+  sel.value = cuponesCarrito.some(c => c.codigo === antes) ? antes : "";
+  $("#coCup").hidden = !cuponesCarrito.length;
+}
+const cuponElegido = () => cuponesCarrito.find(c => c.codigo === ($("#coCupSel") || {}).value) || null;
+function efectoCuponCarrito(c, entrega) {
+  if (!c) return null;
+  const r2 = n => Math.round(n * 100) / 100;
+  if (c.tipo === "envio") return entrega === "domicilio" && shipCost("domicilio") > 0 ? { desc: 0, envio: 0 } : null;
+  const sub = cartSub(), desc = c.tipo === "monto" ? Math.min(+c.valor, sub) : c.tipo === "porcentaje" ? r2((sub * +c.valor) / 100) : 0;
+  return desc > 0 ? { desc: r2(desc), envio: shipCost(entrega) } : null;
+}
 /* Departamentos, provincias y distritos del Perú (assets/js/ubigeo.js, ~27 KB): se cargan solo al elegir "Envío a provincia" */
 let ubiP;
 const fillSel = (id, items, first) => { const s = $("#" + id); s.innerHTML = `<option value="">${first}</option>` + items.map(x => `<option>${esc(x)}</option>`).join(""); s.disabled = !items.length; };
@@ -747,8 +786,9 @@ function setUbigeo({ dep, prov, distP } = {}) {
   fillSel("coDistP", (ubiPrv() || [])[1] || [], "Elige tu distrito");
   if (distP) $("#coDistP").value = distP;
 }
-function orderMsg(o, codigo) {
-  const L = "———————————————", sub = cartSub(), env = shipCost(o.entrega), l = ["✨ *NUEVO PEDIDO* ✨", `🧾 *Pedido:* ${codigo}`, `👤 *Cliente:* ${o.nombre}`];
+function orderMsg(o, codigo, cup) {
+  const ef = cup ? efectoCuponCarrito(cup, o.entrega) : null;
+  const L = "———————————————", sub = cartSub(), env = ef ? ef.envio : shipCost(o.entrega), desc = ef ? ef.desc : 0, l = ["✨ *NUEVO PEDIDO* ✨", `🧾 *Pedido:* ${codigo}`, `👤 *Cliente:* ${o.nombre}`];
   if (o.celular) l.push(`📞 *Celular:* ${o.celular}`);
   l.push(L, "");
   cart.forEach(x => {
@@ -770,24 +810,34 @@ function orderMsg(o, codigo) {
   } else {
     l.push("🚚 *Entrega:* Envío a domicilio", `📍 *Dirección:* ${o.direccion}`, `🏙️ *Distrito:* ${o.distrito}`);
     if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
-    l.push(`📦 *Envío:* ${env ? money(env) : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
+    l.push(`📦 *Envío:* ${env ? money(env) : ef && cup.tipo === "envio" ? "GRATIS (cupón)" : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
   }
-  l.push(L, `💰 *TOTAL: ${money(sub + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}${o.entrega === "provincia" ? ` + envío ${C.courier}` : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
+  if (ef) l.push(L, `🎟️ *Cupón Puntos MAISON:* ${cup.nombre} (${cup.codigo})${desc ? ` −${money(desc)}` : ""}`);
+  l.push(L, `💰 *TOTAL: ${money(sub - desc + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}${o.entrega === "provincia" ? ` + envío ${C.courier}` : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
   return l.join("\n");
 }
 function renderCheckout() {
-  const o = coData(), env = shipCost(o.entrega);
+  const o = coData(), cup = cuponElegido(), ef = efectoCuponCarrito(cup, o.entrega), env = ef ? ef.envio : shipCost(o.entrega), desc = ef ? ef.desc : 0;
+  if ($("#coCupRow")) {
+    $("#coCupRow").hidden = !ef || !desc;
+    if (ef && desc) { $("#coCupTxt").textContent = "Cupón: " + cup.nombre; $("#coCupMonto").textContent = "−" + money(desc); }
+    const nota = $("#coCupNota");
+    nota.hidden = !cup || !!ef;
+    if (cup && !ef) nota.textContent = cup.tipo === "envio"
+      ? (o.entrega === "domicilio" ? "Tu envío ya es gratis: guarda este cupón para otro pedido." : "Este cupón solo vale para envío a domicilio.")
+      : "Agrega prendas con precio para usar este cupón.";
+  }
   $("#coFields").hidden = !o.entrega; $("#coHint").hidden = !!o.entrega;
   $("#coShip").hidden = o.entrega !== "domicilio"; $("#coProv").hidden = o.entrega !== "provincia";
   if (o.entrega === "provincia") loadUbigeo().catch(() => {});
   $("#coSub").textContent = money(cartSub()) + (cartAsk() ? " + a consultar" : "");
-  $("#coShipCost").textContent = { "": "—", recojo: "Sin costo", provincia: C.provinciaCosto }[o.entrega] ?? (env ? money(env) : "Gratis");
-  $("#coTotal").textContent = money(cartSub() + env) + (cartAsk() ? " + a consultar" : "") + (o.entrega === "provincia" ? " + envío" : "");
+  $("#coShipCost").textContent = { "": "—", recojo: "Sin costo", provincia: C.provinciaCosto }[o.entrega] ?? (env ? money(env) : ef && cup.tipo === "envio" ? "Gratis (cupón)" : "Gratis");
+  $("#coTotal").textContent = money(cartSub() - desc + env) + (cartAsk() ? " + a consultar" : "") + (o.entrega === "provincia" ? " + envío" : "");
 }
 function showCheckout(on) {
   $("#checkout").hidden = !on; $("#cartList").hidden = on; $("#cartFoot").hidden = on || !cart.length;
   $("#cartTitle").firstChild.textContent = on ? "Datos de entrega " : "Tu carrito ";
-  if (on) { renderCheckout(); if (!$("#coFields").hidden) setTimeout(() => $("#coName").focus(), 60); }
+  if (on) { renderCheckout(); cargarCupones(); if (!$("#coFields").hidden) setTimeout(() => $("#coName").focus(), 60); }
 }
 /* Mensaje con todo el pedido para el asesor */
 function cartMsg() {
@@ -889,12 +939,16 @@ function initCart() {
     $$("#checkout .co__f").forEach(f => f.classList.remove("err"));
     if (bad.length) { bad.forEach(id => document.getElementById(id).closest(".co__f").classList.add("err")); document.getElementById(bad[0]).focus(); toast("Completa los datos marcados"); return; }
     if (cartOut()) { toast("Quita las prendas agotadas para continuar"); showCheckout(false); return; }
+    const cup = cuponElegido();
+    if (cup && !efectoCuponCarrito(cup, o.entrega)) { toast("Ese cupón no sirve en este pedido. Elige «No usar cupón» u otro"); $("#coCupSel").focus(); return; }
     try { localStorage.setItem(CO_KEY, JSON.stringify(o)); } catch (_) {}
     const codigo = nuevoCodigo();
-    irAWhatsApp(waLink(orderMsg(o, codigo)), {
+    irAWhatsApp(waLink(orderMsg(o, codigo, cup)), {
       codigo, origen: "carrito", datos: o,
       items: cart.map(x => ({ slug: x.slug, color: x.color, talla: x.size, cantidad: x.qty })),
+      ...(cup ? { cupon: cup.codigo } : {}),
     }, "Abriendo WhatsApp con tu pedido…");
+    if (cup) { cuponesCarrito = cuponesCarrito.filter(c => c !== cup); pintarCupones(); renderCheckout(); }
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
   // Si el cliente tiene la tienda abierta en otra pestaña, el carrito se mantiene igual
@@ -960,16 +1014,17 @@ function cumpleLeer(id) {
   return `${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 const cumpleTexto = c => `${+c.slice(3)} de ${cumpleMeses()[+c.slice(0, 2) - 1]}`;
-/* Cuánto falta (en hora de Lima): días en total y también en meses + días. En años no bisiestos, el 29 de febrero se celebra el 28. */
+/* Cuánto falta hasta las 00:00 (hora de Lima) del cumpleaños: días, horas y minutos; { hoy: true } durante ese día.
+   En años no bisiestos, el 29 de febrero se celebra el 28. */
 function cumpleFalta(c) {
-  const [y, mo, da] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date()).split("-").map(Number);
-  const hoy = Date.UTC(y, mo - 1, da), cm = +c.slice(0, 2), cd = +c.slice(3);
-  const bis = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
-  const en = a => Date.UTC(a, cm - 1, cm === 2 && cd === 29 && !bis(a) ? 28 : cd);
-  let t = en(y); if (t < hoy) t = en(y + 1);
-  const sumarMeses = n => { const f = new Date(Date.UTC(y, mo - 1 + n, 1)); return Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), Math.min(da, new Date(Date.UTC(f.getUTCFullYear(), f.getUTCMonth() + 1, 0)).getUTCDate())); };
-  let meses = 0; while (sumarMeses(meses + 1) <= t) meses++;
-  return { dias: Math.round((t - hoy) / 864e5), meses, resto: Math.round((t - sumarMeses(meses)) / 864e5) };
+  const ahora = Date.now(), y = +new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date()).slice(0, 4);
+  const cm = +c.slice(0, 2), cd = +c.slice(3), bis = a => (a % 4 === 0 && a % 100 !== 0) || a % 400 === 0;
+  const en = a => Date.UTC(a, cm - 1, cm === 2 && cd === 29 && !bis(a) ? 28 : cd, 5); // 00:00 en Lima = 05:00 UTC
+  let t = en(y);
+  if (ahora >= t + 864e5) t = en(y + 1);
+  if (ahora >= t) return { hoy: true };
+  const ms = t - ahora;
+  return { dias: Math.floor(ms / 864e5), horas: Math.floor(ms / 36e5) % 24, min: Math.floor(ms / 6e4) % 60 };
 }
 
 let accCtx = null;
@@ -1873,8 +1928,8 @@ function initContacto() {
    PÁGINA: MI CUENTA (historial, promociones, cerrar sesión y eliminar cuenta)
    ========================================================= */
 const ESTADO_PEDIDO = { pendiente: "En confirmación", procede: "Confirmado", cancelado: "Cancelado" };
-function cuentaApi(method = "GET", body) {
-  return fetch("/api/cuenta", {
+function cuentaApi(method = "GET", body, ruta = "") {
+  return fetch("/api/cuenta" + ruta, {
     method, credentials: "same-origin", cache: "no-store",
     headers: { "x-maison": "1", ...(body ? { "content-type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
@@ -1898,6 +1953,43 @@ function confirmarCuenta({ titulo, texto, ok, peligro = true }) {
     $("[data-ok]", d).addEventListener("click", () => fin(true));
   });
 }
+/* Ventana de la cuenta (Mis datos y Mis recompensas) */
+function ventanaCuenta(html, etiqueta) {
+  const d = document.createElement("div");
+  d.className = "acc-modal pf-modal";
+  d.innerHTML = `<div class="acc-modal__bg" data-x></div><div class="acc-modal__box" role="dialog" aria-modal="true" aria-label="${esc(etiqueta)}">
+    <button type="button" class="acc-modal__x" data-x aria-label="Cerrar">${I.close}</button>${html}</div>`;
+  document.body.append(d);
+  requestAnimationFrame(() => { d.classList.add("open"); bloquearScroll(true); });
+  const tecla = e => { if (e.key === "Escape") cerrar(); };
+  const cerrar = () => { if (!d.isConnected || !d.classList.contains("open")) return; d.classList.remove("open"); bloquearScroll(false); removeEventListener("keydown", tecla); setTimeout(() => d.remove(), 400); };
+  addEventListener("keydown", tecla);
+  $$("[data-x]", d).forEach(b => b.addEventListener("click", cerrar));
+  setTimeout(() => $(".acc-modal__x", d).focus(), 60);
+  return { d, cerrar };
+}
+const pts = n => Number(n || 0).toLocaleString("es-PE");
+const dd = n => String(n).padStart(2, "0");
+/* La foto que elige el cliente se recorta al centro y se achica a 400 × 400 en su mismo celular (WebP o, si no se puede, JPG) */
+function fotoCuadrada(file) {
+  return new Promise((ok, ko) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const lado = Math.min(img.naturalWidth, img.naturalHeight); if (!lado) return ko();
+      const cv = document.createElement("canvas"); cv.width = cv.height = 400;
+      const g = cv.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, 400, 400);
+      g.drawImage(img, (img.naturalWidth - lado) / 2, (img.naturalHeight - lado) / 2, lado, lado, 0, 0, 400, 400);
+      let d = cv.toDataURL("image/webp", 0.85);
+      if (!d.startsWith("data:image/webp")) d = cv.toDataURL("image/jpeg", 0.85);
+      if (d.length > 190000) d = cv.toDataURL("image/jpeg", 0.7);
+      ok(d);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); ko(); };
+    img.src = url;
+  });
+}
+let cumpleReloj = null;
 async function initMiCuenta() {
   const root = $("#cuenta"); if (!root) return;
   const sinCuenta = (titulo, texto) => {
@@ -1905,7 +1997,7 @@ async function initMiCuenta() {
     root.innerHTML = `<div class="acct-vacio">
       <div class="acct-vacio__mark">${logoSVG("mark", "logo-ink")}</div>
       <h2>${titulo || (SES.google ? "Tu cuenta MAISON" : "Muy pronto")}</h2>
-      <p>${texto || (SES.google ? "Crea tu cuenta con Google: guarda tu historial y recibe descuentos según tus compras." : "Muy pronto podrás crear tu cuenta y ver aquí tu historial de compras.")}</p>
+      <p>${texto || (SES.google ? "Crea tu cuenta con Google: guarda tu historial, suma Puntos MAISON con cada compra y canjéalos por descuentos." : "Muy pronto podrás crear tu cuenta y ver aquí tu historial de compras.")}</p>
       ${SES.google ? `<button type="button" class="btn btn--dark" id="acctCrear">Registrarme o entrar <span>→</span></button>` : `<a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a>`}
     </div>`;
     $("#acctCrear")?.addEventListener("click", () => abrirCuentaModal());
@@ -1913,94 +2005,258 @@ async function initMiCuenta() {
   if (!SES.cliente) return sinCuenta();
   const r = await cuentaApi();
   if (!r.ok) { SES.cliente = null; mostrarCuenta(); return sinCuenta(); }
-  const { cliente: c, compras, pedidos } = r.j;
-  const nombre = c.nombre || c.email, primero = nombre.split(" ")[0];
+  const D = r.j, c = D.cliente;
   const desde = new Date(c.desde).toLocaleDateString("es-PE", { timeZone: "America/Lima", month: "long", year: "numeric" });
   const fecha = iso => new Date(iso).toLocaleDateString("es-PE", { timeZone: "America/Lima", day: "numeric", month: "long", year: "numeric" });
-  const imgItem = i => { const p = findProduct(i.slug); return p ? pic(colorImgs(p, i.color)[0], "64px", { alt: i.nombre }) : ""; };
-  $("#acctTitulo").textContent = `Hola, ${primero}`;
-  root.innerHTML = `<div class="acct">
-    <aside class="acct__perfil">
-      <div class="acct__foto">${c.foto ? `<img src="${esc(c.foto)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(primero[0].toUpperCase())}</span>`}</div>
-      <h2>${esc(nombre)}</h2>
-      <p class="acct__mail">${esc(c.email)}</p>
-      <p class="acct__desde">Cliente desde ${esc(desde)}</p>
-      <div class="acct__cumple" id="acctCumple"></div>
-      <div class="acct__stats"><div><b>${money(compras.total)}</b><span>En compras</span></div><div><b>${compras.pedidos}</b><span>${compras.pedidos === 1 ? "Pedido confirmado" : "Pedidos confirmados"}</span></div></div>
-      <label class="acct__switch"><input type="checkbox" id="acctPromos"${c.promos ? " checked" : ""}><span class="acct__sw" aria-hidden="true"></span><span>Recibir promociones</span></label>
-      <button type="button" class="btn btn--outline acct__salir" id="acctSalir">Cerrar sesión</button>
-      <button type="button" class="acct__borrar" id="acctBorrar">Eliminar mi cuenta</button>
-    </aside>
-    <section class="acct__hist">
+  const imgItem = (i, size = "64px") => { const p = findProduct(i.slug); return p ? pic(colorImgs(p, i.color)[0], size, { alt: i.nombre }) : `<span class="ph"></span>`; };
+  const primero = () => (c.nombre || c.email).split(" ")[0];
+  const fotoHTML = f => (f ? `<img src="${esc(f)}" alt="" referrerpolicy="no-referrer">` : `<span>${esc(primero()[0].toUpperCase())}</span>`);
+  const activos = () => D.cupones.filter(x => x.estado === "activo");
+  const recs = () => [...D.recompensas].sort((a, b) => a.puntos - b.puntos || a.id - b.id);
+  $("#acctTitulo").textContent = `Mi cuenta · ${c.nombre || c.email}`;
+
+  const pintar = () => {
+    const prox = recs().find(x => x.puntos > D.puntos), act = activos(), n = act.length;
+    root.innerHTML = `<div class="pf">
+    <div class="pf-box">
+      <div class="pf-top">
+        <div class="pf-top__perfil">
+          <div class="pf-foto"><div class="pf-foto__img">${fotoHTML(c.foto)}</div><button type="button" class="pf-foto__btn" data-editar aria-label="Cambiar mi foto de perfil">${I.pencil}</button></div>
+          <span class="pf-divv" aria-hidden="true"></span>
+          <div class="pf-info">
+            <div class="pf-nom"><h2 class="pf-nombre">${esc(c.nombre || primero())}</h2><button type="button" class="pf-editar" data-editar aria-label="Editar mi nombre y mi foto">${I.pencil}</button></div>
+            <p class="pf-mail">${esc(c.email)}</p>
+            <p class="pf-desde">Cliente desde ${esc(desde)}</p>
+          </div>
+        </div>
+        <div class="pf-stats">
+          <div class="pf-stat">${I.bag2}<div><b>${money(D.compras.total)}</b><span>En compras</span></div></div>
+          <div class="pf-stat">${I.box2}<div><b>${D.compras.pedidos}</b><span>${D.compras.pedidos === 1 ? "Pedido confirmado" : "Pedidos confirmados"}</span></div></div>
+          <div class="pf-stat pf-stat--pc">${I.ticket}<div><b>${n}</b><span>${n === 1 ? "Cupón activo" : "Cupones activos"}</span></div></div>
+        </div>
+      </div>
+
+      <div class="pf-main">
+        <div class="pf-pts" role="group" aria-label="Mis puntos MAISON">
+          <div class="pf-pts__ic">${I.star}</div>
+          <div><p class="pf-pts__t">Mis puntos MAISON</p><p class="pf-pts__n">${pts(D.puntos)} <small>pts</small></p></div>
+          <div class="pf-pts__prog">${!D.recompensas.length ? `<p>Suma 1 punto por cada sol de tus compras confirmadas.</p>`
+            : prox ? `<p>Próxima recompensa: ${esc(prox.nombre)} (${pts(prox.puntos)} pts)</p><div class="pf-pts__bar"><i><b style="width:${Math.min(100, (D.puntos / prox.puntos) * 100)}%"></b></i><span>${pts(D.puntos)} / ${pts(prox.puntos)} pts</span></div>`
+            : `<p>¡Ya alcanzas todas las recompensas!</p><div class="pf-pts__bar"><i><b style="width:100%"></b></i></div>`}</div>
+          <button type="button" class="pf-pts__btn" data-recompensas>Ver recompensas ${I.arrow}</button>
+        </div>
+        ${n ? `<p class="pf-cup">${I.ticket}<span>Tienes <b>${n === 1 ? "1 cupón" : n + " cupones"}</b> listo${n === 1 ? "" : "s"}: ${act.map(x => esc(x.nombre)).join(", ")}. ${n === 1 ? "Úsalo" : "Úsalos"} al hacer tu pedido desde el carrito (uno por pedido).</span></p>` : ""}
+
+        <div class="pf-rec">
+          <div class="pf-rec__head"><h3>Recompensas disponibles</h3><span>(con tus puntos)</span></div>
+          ${D.recompensas.length ? `<div class="pf-rec__wrap">
+            <button type="button" class="pf-rec__arr" data-dir="-1" aria-label="Recompensas anteriores" hidden>${I.prev}</button>
+            <div class="pf-rec__list" id="pfRecList">${recs().map(x => {
+              const ok = D.puntos >= x.puntos;
+              return `<button type="button" class="pf-rw${ok ? " is-ok" : ""}" data-recompensas>${I.gift}<b>${pts(x.puntos)} pts</b><span>${esc(x.nombre)}</span><em>${ok ? "Canjear" : `Faltan ${pts(x.puntos - D.puntos)}`}</em></button>`;
+            }).join("")}</div>
+            <button type="button" class="pf-rec__arr" data-dir="1" aria-label="Más recompensas" hidden>${I.next}</button>
+          </div><div class="pf-rec__dots" id="pfRecDots"></div>` : `<p class="pf-rec__vacio">Pronto tendremos recompensas para ti.</p>`}
+        </div>
+
+        <div class="pf-cum" id="pfCum"></div>
+
+        <div class="pf-accesos" role="group" aria-label="Accesos rápidos">
+          <h3>Accesos rápidos</h3>
+          <div>
+            <button type="button" data-historial>${I.box2}Mis pedidos</button>
+            <button type="button" data-recompensas>${I.star}Mis recompensas</button>
+            <button type="button" data-editar>${I.user}Mis datos</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="pf-side">
+        <div class="pf-recientes">
+          <header><h3>Mis pedidos recientes</h3>${D.pedidos.length ? `<a href="#pfHist" data-historial>Ver historial ${I.arrow}</a>` : ""}</header>
+          ${D.pedidos.length ? D.pedidos.slice(0, 3).map(p => {
+            const u = p.items.reduce((s, i) => s + i.cantidad, 0);
+            return `<div class="pf-ped">${p.items[0] ? imgItem(p.items[0], "54px") : `<span class="ph"></span>`}<div><b>Pedido ${esc(p.codigo)}</b>${u} ${u === 1 ? "producto" : "productos"} · ${money(p.total)}<br>${esc(fecha(p.fecha))}</div>
+              <span class="pill pill--${p.estado}">${p.estado === "procede" ? I.checkc : I.clock}${ESTADO_PEDIDO[p.estado] || p.estado}</span></div>`;
+          }).join("") : `<p class="pf-ped__vacio">Todavía no tienes pedidos.</p>`}
+        </div>
+
+        <div class="pf-cfg">
+          <h3 class="pf-cfg__h">Mi cuenta</h3>
+          <label class="pf-row">${I.mega}<span>Recibir promociones</span><input type="checkbox" id="acctPromos"${c.promos ? " checked" : ""}><span class="acct__sw" aria-hidden="true"></span></label>
+          <button type="button" class="pf-row pf-row--pc" data-editar>${I.user}<span>Mis datos (nombre y foto)</span>${I.next.replace("<svg", '<svg class="chev"')}</button>
+          <button type="button" class="btn btn--outline pf-salir" id="acctSalir">Cerrar sesión</button>
+          <button type="button" class="pf-borrar" id="acctBorrar">Eliminar mi cuenta</button>
+        </div>
+      </aside>
+    </div>
+
+    <section class="pf-hist acct__hist" id="pfHist" aria-label="Mis pedidos">
       <h2>Mis pedidos</h2>
-      ${pedidos.length ? pedidos.map(p => `<article class="acct__ped">
-        <header><b>${esc(p.codigo)}</b><span>${fecha(p.fecha)}</span><span class="acct__est acct__est--${p.estado}">${ESTADO_PEDIDO[p.estado] || p.estado}</span></header>
+      ${D.pedidos.length ? D.pedidos.map(p => {
+        const otro = p.cupon && p.cupon.desc ? Math.round((p.descuento - p.cupon.desc) * 100) / 100 : p.descuento;
+        const envioGratisCupon = p.cupon && p.cupon.tipo === "envio";
+        return `<article class="acct__ped">
+        <header><b>${esc(p.codigo)}</b><span>${fecha(p.fecha)}</span>${p.puntos ? `<span class="acct__pts">+${pts(p.puntos)} pts</span>` : ""}<span class="acct__est acct__est--${p.estado}">${ESTADO_PEDIDO[p.estado] || p.estado}</span></header>
         <ul>${p.items.map(i => `<li>${imgItem(i)}<span><b>${esc(i.nombre)}</b>${esc(i.color)} · Talla ${esc(i.talla)} × ${i.cantidad}</span><em>${i.precio == null ? "A consultar" : money(i.precio * i.cantidad)}</em></li>`).join("")}</ul>
-        <footer>${p.descuento ? `<span>Descuento −${money(p.descuento)}</span>` : ""}${p.envio ? `<span>Envío ${money(p.envio)}</span>` : ""}<span>Total <b>${money(p.total)}</b>${p.consultar ? " + a consultar" : ""}</span></footer>
-      </article>`).join("") : `<div class="acct-vacio acct-vacio--sm"><h3>Todavía no tienes pedidos</h3><p>Cuando hagas un pedido con tu cuenta abierta, aparecerá aquí.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`}
+        <footer>${otro ? `<span>Descuento −${money(otro)}</span>` : ""}${p.cupon && p.cupon.desc ? `<span>Cupón ${esc(p.cupon.nombre)} −${money(p.cupon.desc)}</span>` : ""}${envioGratisCupon ? `<span>Envío gratis (cupón)</span>` : p.envio ? `<span>Envío ${money(p.envio)}</span>` : ""}<span>Total <b>${money(p.total)}</b>${p.consultar ? " + a consultar" : ""}</span></footer>
+      </article>`;
+      }).join("") : `<div class="acct-vacio acct-vacio--sm"><h3>Todavía no tienes pedidos</h3><p>Cuando hagas un pedido con tu cuenta abierta, aparecerá aquí y sumarás Puntos MAISON al confirmarlo.</p><a class="btn btn--dark" href="tienda.html">Ver la tienda <span>→</span></a></div>`}
     </section>
   </div>`;
+    pintarCumple();
+    enlazar();
+  };
 
-  // Cumpleaños: cuenta regresiva si ya lo dio; si no, lo puede agregar una vez
+  /* Cumpleaños: cuenta regresiva (días, horas y minutos en celular; días en computadora) o el formulario si aún no lo dio */
   const pintarCumple = () => {
-    const box = $("#acctCumple");
-    if (c.cumple) {
-      const f = cumpleFalta(c.cumple);
-      const partes = [f.meses && `${f.meses} ${f.meses === 1 ? "mes" : "meses"}`, f.resto && `${f.resto} ${f.resto === 1 ? "día" : "días"}`].filter(Boolean);
-      box.className = "acct__cumple" + (f.dias === 0 ? " is-hoy" : "");
-      box.innerHTML = `<p class="acct__cumple-t">${I.cake}Tu cumpleaños · ${esc(cumpleTexto(c.cumple))}</p>` + (
-        f.dias === 0 ? `<b class="acct__cumple-hoy">¡Feliz cumpleaños, ${esc(primero)}!</b><span class="acct__cumple-sub">Hoy es tu día</span>`
-        : f.dias === 1 ? `<b class="acct__cumple-hoy">¡Mañana es tu día!</b><span class="acct__cumple-sub">Falta 1 día para tu cumpleaños</span>`
-        : `<b class="acct__cumple-n">${f.dias}</b><span class="acct__cumple-sub">días para tu cumpleaños</span>${f.meses ? `<span class="acct__cumple-det">${f.meses === 1 && !f.resto ? "Falta" : "Faltan"} ${partes.join(" y ")}</span>` : ""}`);
+    const box = $("#pfCum"); if (!box) return;
+    if (!c.cumple) {
+      box.classList.add("pf-cum--form");
+      box.innerHTML = `<div class="pf-cum__row" style="grid-template-columns:auto minmax(0,1fr)"><div class="pf-cum__ic">${I.cake3}</div>
+        <div class="pf-cum__t"><b>Tu cumpleaños</b><span>Agrégalo y te mostramos cuánto falta para tu día.</span></div></div>
+        <div class="pf-cum__form">${cumpleSelects("acctCumple")}<button type="button" class="btn btn--dark" id="acctCumpleOk">Guardar</button></div>
+        <p class="pf-cum__nota">Solo día y mes. Una vez guardado, ya no se puede cambiar.</p>`;
+      cumpleEnlazar("acctCumple");
+      $("#acctCumpleOk").addEventListener("click", async () => {
+        const v = cumpleLeer("acctCumple");
+        if (!v) return toast("Elige el día y el mes de tu cumpleaños");
+        const ok = await confirmarCuenta({ titulo: `¿Tu cumpleaños es el ${cumpleTexto(v)}?`, texto: "Revisa bien la fecha: una vez guardada, ya no se puede cambiar.", ok: "Sí, guardar", peligro: false });
+        if (!ok) return;
+        const x = await cuentaApi("PATCH", { cumple: v });
+        if (x.ok) { c.cumple = v; toast("¡Listo! Guardamos tu cumpleaños"); pintarCumple(); }
+        else if (x.j.error === "cumple_ya_guardado") initMiCuenta();
+        else toast("No se pudo guardar. Inténtalo de nuevo");
+      });
       return;
     }
-    box.className = "acct__cumple acct__cumple--nuevo";
-    box.innerHTML = `<p class="acct__cumple-t">${I.cake}¿Cuándo es tu cumpleaños?</p>
-      <p class="acct__cumple-txt">Agrégalo y te mostramos cuánto falta para tu día.</p>
-      ${cumpleSelects("acctCumple")}
-      <button type="button" class="btn btn--dark acct__cumple-btn" id="acctCumpleOk">Guardar</button>
-      <p class="acct__cumple-nota">Solo día y mes. Una vez guardado, ya no se puede cambiar.</p>`;
-    cumpleEnlazar("acctCumple");
-    $("#acctCumpleOk").addEventListener("click", async () => {
-      const v = cumpleLeer("acctCumple");
-      if (!v) return toast("Elige el día y el mes de tu cumpleaños");
-      const ok = await confirmarCuenta({ titulo: `¿Tu cumpleaños es el ${cumpleTexto(v)}?`, texto: "Revisa bien la fecha: una vez guardada, ya no se puede cambiar.", ok: "Sí, guardar", peligro: false });
-      if (!ok) return;
-      const x = await cuentaApi("PATCH", { cumple: v });
-      if (x.ok || x.j.error === "cumple_ya_guardado") {
-        if (x.ok) { c.cumple = v; toast("¡Listo! Guardamos tu cumpleaños"); pintarCumple(); }
-        else initMiCuenta();
-        return;
-      }
-      toast("No se pudo guardar. Inténtalo de nuevo");
+    box.classList.remove("pf-cum--form");
+    const f = cumpleFalta(c.cumple);
+    box.innerHTML = f.hoy
+      ? `<div class="pf-cum__row" style="grid-template-columns:auto minmax(0,1fr)"><div class="pf-cum__ic">${I.cake3}</div><div class="pf-cum__t"><b class="pf-cum__hoy">¡Feliz cumpleaños, ${esc(primero())}!</b><span>Hoy es tu día · ${esc(cumpleTexto(c.cumple))}</span></div></div>
+         <p class="pf-cum__msg">${I.spark}<span>Gracias por ser parte de MAISON.</span></p>`
+      : `<div class="pf-cum__row"><div class="pf-cum__ic">${I.cake3}</div><div class="pf-cum__t"><b>Tu cumpleaños</b><span>Faltan</span></div>
+          <div class="pf-cum__cnt" title="${esc(cumpleTexto(c.cumple))}"><div><b>${f.dias}</b><span>${f.dias === 1 ? "día" : "días"}</span></div><div class="solo-cel"><b>${dd(f.horas)}</b><span>horas</span></div><div class="solo-cel"><b>${dd(f.min)}</b><span>min</span></div></div></div>
+         <p class="pf-cum__msg">${I.spark}<span>${esc(cumpleTexto(c.cumple))} · Te esperamos para celebrarlo juntos.</span></p>`;
+  };
+  clearInterval(cumpleReloj);
+  cumpleReloj = setInterval(() => { if (c.cumple && $("#pfCum")) pintarCumple(); }, 30000);
+
+  /* Mis datos: nombre y foto (el correo viene de Google y no se cambia) */
+  const abrirEditar = () => {
+    let nueva; // undefined = sin cambio · null = quitar · "data:…" = foto nueva
+    const actual = () => (nueva === undefined ? c.foto : nueva);
+    const { d, cerrar } = ventanaCuenta(`<h2>Mis datos</h2>
+      <div class="pf-ed__foto"><div class="pf-foto__img" id="pfEdImg">${fotoHTML(c.foto)}</div><label class="pf-foto__btn" aria-label="Elegir una foto">${I.camera}<input type="file" accept="image/*" id="pfEdFile" hidden></label></div>
+      <div class="pf-ed__acts"><button type="button" id="pfEdCambiar">Cambiar foto</button><button type="button" class="quitar" id="pfEdQuitar"${c.foto ? "" : " hidden"}>Quitar foto</button></div>
+      <label class="pf-campo"><span>Tu nombre</span><input id="pfEdNom" maxlength="60" value="${esc(c.nombre || "")}" autocomplete="name"></label>
+      <label class="pf-campo"><span>Tu correo</span><input value="${esc(c.email)}" readonly tabindex="-1"><small>Viene de tu cuenta de Google y no se puede cambiar.</small></label>
+      <button type="button" class="btn btn--dark" id="pfEdOk">Guardar cambios</button>`, "Mis datos");
+    const pintarFoto = () => { $("#pfEdImg", d).innerHTML = fotoHTML(actual()); $("#pfEdQuitar", d).hidden = !actual(); };
+    $("#pfEdCambiar", d).addEventListener("click", () => $("#pfEdFile", d).click());
+    $("#pfEdFile", d).addEventListener("change", async e => {
+      const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+      if (!/^image\//.test(file.type) && !/\.(jpe?g|png|webp|heic|heif|gif)$/i.test(file.name)) return toast("Elige una imagen (JPG o PNG)");
+      try { nueva = await fotoCuadrada(file); pintarFoto(); }
+      catch (_) { toast("No pudimos abrir esa foto. Prueba con otra (JPG o PNG)"); }
+    });
+    $("#pfEdQuitar", d).addEventListener("click", () => { nueva = null; pintarFoto(); });
+    $("#pfEdOk", d).addEventListener("click", async () => {
+      const inp = $("#pfEdNom", d), nom = inp.value.replace(/\s+/g, " ").trim();
+      if (nom.length < 2) { inp.focus(); return toast("Escribe tu nombre"); }
+      const body = {};
+      if (nom !== c.nombre) body.nombre = nom;
+      if (nueva !== undefined) body.foto = nueva;
+      if (!Object.keys(body).length) return cerrar();
+      const b = $("#pfEdOk", d); b.disabled = true; b.textContent = "Guardando…";
+      const x = await cuentaApi("PATCH", body);
+      b.disabled = false; b.textContent = "Guardar cambios";
+      if (!x.ok) return toast(x.j.error === "foto_invalida" ? "Esa foto no se pudo guardar. Prueba con otra" : x.j.error === "nombre_invalido" ? "Revisa tu nombre" : "No se pudo guardar. Inténtalo de nuevo");
+      if ("nombre" in x.j) c.nombre = x.j.nombre;
+      if ("foto" in x.j) c.foto = x.j.foto;
+      if (SES.cliente) { SES.cliente.nombre = c.nombre; SES.cliente.foto = c.foto; }
+      mostrarCuenta(); cerrar(); pintar(); toast("Listo. Guardamos tus datos");
     });
   };
-  pintarCumple();
 
-  $("#acctPromos").addEventListener("change", async e => {
-    const quiere = e.target.checked;
-    const x = await cuentaApi("PATCH", { promos: quiere });
-    if (!x.ok) { e.target.checked = !quiere; return toast("No se pudo guardar. Inténtalo de nuevo"); }
-    if (SES.cliente) SES.cliente.promos = quiere;
-    toast(quiere ? "Listo. Te avisaremos de nuestras promociones" : "Listo. Ya no recibirás promociones");
-  });
-  $("#acctSalir").addEventListener("click", async () => {
-    await fetch("/api/auth/salir", { method: "POST", credentials: "same-origin" }).catch(() => {});
-    SES.cliente = null; mostrarCuenta(); sinCuenta(); toast("Cerraste tu sesión");
-  });
-  $("#acctBorrar").addEventListener("click", async () => {
-    const ok = await confirmarCuenta({
-      titulo: "¿Eliminar tu cuenta?",
-      texto: "Se borrarán tu nombre, tu correo, tu foto y todo tu historial de compras. Esta acción no se puede deshacer.",
-      ok: "Sí, eliminar mi cuenta",
+  /* Mis recompensas: canjear puntos por cupones, ver los cupones y cómo funcionan */
+  const abrirRecompensas = () => {
+    const cups = D.cupones;
+    const { d, cerrar } = ventanaCuenta(`<div class="pf-rm"><h2>Mis recompensas</h2>
+      <div class="pf-rm__pts">${I.star}<div><span>Mis puntos MAISON</span><br><b>${pts(D.puntos)} pts</b></div></div>
+      <h3>Canjea tus puntos</h3>
+      ${D.recompensas.length ? recs().map(x => `<div class="pf-rm__it">${I.gift}<div><b>${esc(x.nombre)}</b><span>${pts(x.puntos)} puntos</span></div>${D.puntos >= x.puntos
+        ? `<button type="button" class="btn btn--dark" data-canjear="${x.id}">Canjear</button>` : `<em>Te faltan ${pts(x.puntos - D.puntos)} pts</em>`}</div>`).join("") : `<p class="pf-rm__vacio">Pronto tendremos recompensas para ti.</p>`}
+      ${cups.length ? `<h3>Mis cupones</h3>${cups.map(x => `<div class="pf-rm__it">${I.ticket}<div><b>${esc(x.nombre)}</b><span>${x.estado === "activo" ? "Úsalo en el carrito" : `En tu pedido ${esc(x.pedido || "")}`} · <span class="pf-rm__cod">${esc(x.codigo)}</span></span></div><em>${x.estado === "activo" ? "Listo" : "En uso"}</em></div>`).join("")}` : ""}
+      <h3>Cómo funcionan</h3>
+      <ul>
+        <li>Ganas 1 punto por cada sol de tus pedidos confirmados (el envío no suma).</li>
+        <li>Los puntos se suman cuando confirmamos tu pedido.</li>
+        <li>Al canjear recibes un cupón: lo eliges en el carrito al hacer tu pedido. Un cupón por pedido.</li>
+        <li>Si tu pedido se cancela, te devolvemos los puntos del cupón.</li>
+        <li>Tus puntos y cupones no vencen.</li>
+      </ul></div>`, "Mis recompensas");
+    $$("[data-canjear]", d).forEach(b => b.addEventListener("click", async () => {
+      const x = D.recompensas.find(y => y.id === +b.dataset.canjear); if (!x) return;
+      cerrar();
+      const ok = await confirmarCuenta({ titulo: `¿Canjear ${pts(x.puntos)} pts?`, texto: `Recibes un cupón de ${x.nombre} para tu próximo pedido. Te quedarán ${pts(D.puntos - x.puntos)} pts.`, ok: "Sí, canjear", peligro: false });
+      if (!ok) return;
+      const res = await cuentaApi("POST", { recompensa: x.id }, "/canjear");
+      if (res.ok) {
+        D.puntos = res.j.puntos; D.cupones.push({ ...res.j.cupon, estado: "activo" });
+        pintar(); toast("¡Listo! Tu cupón ya está en tu cuenta. Úsalo en el carrito");
+      } else if (res.j.error === "puntos_insuficientes") { toast("Todavía no te alcanzan los puntos"); initMiCuenta(); }
+      else if (res.j.error === "recompensa_no_disponible") { toast("Esa recompensa ya no está disponible"); initMiCuenta(); }
+      else toast("No se pudo canjear. Inténtalo de nuevo");
+    }));
+  };
+
+  const enlazar = () => {
+    $$("[data-editar]", root).forEach(b => b.addEventListener("click", abrirEditar));
+    $$("[data-recompensas]", root).forEach(b => b.addEventListener("click", abrirRecompensas));
+    $$("[data-historial]", root).forEach(b => b.addEventListener("click", e => { e.preventDefault(); $("#pfHist").scrollIntoView({ behavior: "smooth" }); }));
+    $("#acctPromos").addEventListener("change", async e => {
+      const quiere = e.target.checked;
+      const x = await cuentaApi("PATCH", { promos: quiere });
+      if (!x.ok) { e.target.checked = !quiere; return toast("No se pudo guardar. Inténtalo de nuevo"); }
+      c.promos = quiere;
+      if (SES.cliente) SES.cliente.promos = quiere;
+      toast(quiere ? "Listo. Te avisaremos de nuestras promociones" : "Listo. Ya no recibirás promociones");
     });
-    if (!ok) return;
-    const x = await cuentaApi("DELETE");
-    if (!x.ok) return toast("No se pudo eliminar. Inténtalo de nuevo");
-    SES.cliente = null; mostrarCuenta();
-    sinCuenta("Tu cuenta fue eliminada", "Borramos tus datos y tu historial. Puedes seguir comprando por WhatsApp cuando quieras.");
-    scrollTo({ top: 0, behavior: "smooth" });
-  });
+    $("#acctSalir").addEventListener("click", async () => {
+      await fetch("/api/auth/salir", { method: "POST", credentials: "same-origin" }).catch(() => {});
+      clearInterval(cumpleReloj); SES.cliente = null; mostrarCuenta(); sinCuenta(); toast("Cerraste tu sesión");
+    });
+    $("#acctBorrar").addEventListener("click", async () => {
+      const ok = await confirmarCuenta({
+        titulo: "¿Eliminar tu cuenta?",
+        texto: "Se borrarán tu nombre, tu correo, tu foto, tus puntos y cupones, y todo tu historial de compras. Esta acción no se puede deshacer.",
+        ok: "Sí, eliminar mi cuenta",
+      });
+      if (!ok) return;
+      const x = await cuentaApi("DELETE");
+      if (!x.ok) return toast("No se pudo eliminar. Inténtalo de nuevo");
+      clearInterval(cumpleReloj); SES.cliente = null; mostrarCuenta();
+      sinCuenta("Tu cuenta fue eliminada", "Borramos tus datos y tu historial. Puedes seguir comprando por WhatsApp cuando quieras.");
+      scrollTo({ top: 0, behavior: "smooth" });
+    });
+    // Carrusel de recompensas en celular: flechas y puntos solo si hay más de las que entran
+    const list = $("#pfRecList"); if (!list) return;
+    const arrs = $$(".pf-rec__arr", root), dots = $("#pfRecDots");
+    const act = () => {
+      if (!list.isConnected) return removeEventListener("resize", act);
+      const sobra = list.scrollWidth > list.clientWidth + 4, pags = sobra ? Math.ceil(list.scrollWidth / list.clientWidth) : 0;
+      arrs.forEach(a => (a.hidden = !sobra));
+      const i = Math.round(list.scrollLeft / Math.max(1, list.clientWidth));
+      dots.innerHTML = pags > 1 ? Array.from({ length: pags }, (_, k) => `<span class="${k === i ? "on" : ""}"></span>`).join("") : "";
+    };
+    arrs.forEach(a => a.addEventListener("click", () => list.scrollBy({ left: list.clientWidth * +a.dataset.dir, behavior: "smooth" })));
+    list.addEventListener("scroll", act, { passive: true });
+    addEventListener("resize", act);
+    act();
+  };
+
+  pintar();
 }
 
 /* =========================================================
