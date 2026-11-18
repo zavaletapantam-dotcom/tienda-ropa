@@ -1526,6 +1526,7 @@ img.fade.ok{opacity:1}
 .pf-row:last-of-type{border-bottom:1px solid var(--line)}
 .pf-row > svg{width:20px;height:20px;flex:none;display:none}
 .pf-row > span{flex:1}
+.pf-row > .acct__sw{flex:none}
 .pf-row .chev{width:16px;height:16px;color:var(--muted)}
 .pf-row input{position:absolute;opacity:0;pointer-events:none}
 .pf-row--pc{display:none}
