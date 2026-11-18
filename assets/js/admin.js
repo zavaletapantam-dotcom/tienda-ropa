@@ -540,7 +540,9 @@ function pedidoHTML(p) {
       </table></div>
     </div>
     <footer class="ped__foot">
-      ${p.cupon && !p.cupon.aplicado ? `<p class="alert alert--warn ped__aviso">El cliente quiso usar el cupón ${esc(p.cupon.codigo)}, pero ya no estaba disponible (usado o anulado): el pedido se guardó sin ese descuento.</p>` : ""}
+      ${p.cupon && !p.cupon.aplicado ? `<p class="alert alert--warn ped__aviso">${p.cupon.canje
+        ? `El cliente quiso canjear sus puntos por «${esc(p.cupon.nombre)}» en el carrito, pero no se pudo (no le alcanzaban o la recompensa ya no estaba disponible): el pedido se guardó sin ese descuento.`
+        : `El cliente quiso usar el cupón ${esc(p.cupon.codigo)}, pero ya no estaba disponible (usado o anulado): el pedido se guardó sin ese descuento.`}</p>` : ""}
       <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${descAparte(p) ? `<span>Descuento <b>−${money(descAparte(p))}</b></span>` : ""}${p.cupon && p.cupon.aplicado && p.cupon.desc ? `<span>Cupón ${esc(p.cupon.nombre)} <b>−${money(p.cupon.desc)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : p.cupon && p.cupon.aplicado && p.cupon.tipo === "envio" ? "Gratis (cupón)" : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}${p.puntos ? `<span>Puntos <b class="pos">+${p.puntos} pts</b></span>` : p.puntos_al_confirmar ? `<span>Al confirmar <b>+${p.puntos_al_confirmar} pts</b></span>` : ""}</div>
       ${p.estado === "pendiente"
         ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn" type="button" data-accion="editar">${I.editar}Editar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`

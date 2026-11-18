@@ -68,8 +68,17 @@ export async function crearPedido({ env, request }) {
   // El mismo pedido enviado dos veces (doble toque o reintento): ya está guardado
   if (await env.DB.prepare("SELECT 1 FROM pedidos WHERE codigo = ?").bind(codigo).first()) return json({ ok: true, codigo, repetido: true });
 
-  // Cupón de los Puntos MAISON: solo en el carrito y con la cuenta abierta
-  const codCupon = origen === "carrito" && ses && CUPON_RE.test(String(b.cupon || "")) ? b.cupon : null;
+  // Puntos MAISON: solo en el carrito y con la cuenta abierta, uno por pedido.
+  // cupon = un cupón que ya canjeó · canje = una recompensa que elige en el mismo carrito (se canjea aquí, junto con el pedido)
+  let codCupon = origen === "carrito" && ses && CUPON_RE.test(String(b.cupon || "")) ? b.cupon : null;
+  const rid = !codCupon && origen === "carrito" && ses ? Math.trunc(+b.canje) || 0 : 0;
+  let canje = null, canjeNombre = null; // canje: "hecho" | "no_disponible"
+  if (rid > 0) {
+    const tope = await topePuntos(env);
+    const rec = await env.DB.prepare("SELECT id, nombre, tipo, valor FROM recompensas WHERE id = ? AND activa = 1 AND puntos <= ?").bind(rid, tope).first();
+    const cod = rec && efectoCupon(rec, { subtotal, descuento, entrega, envio }) ? await canjearRecompensa(env, ses.id, rid, tope) : null;
+    if (cod) { codCupon = cod; canje = "hecho"; } else { canje = "no_disponible"; canjeNombre = rec ? rec.nombre : "una recompensa"; }
+  }
   let cupon = null;
   if (codCupon) {
     const c = await env.DB.prepare("SELECT id, nombre, tipo, valor FROM cupones WHERE codigo = ? AND cliente_id = ? AND estado = 'activo'").bind(codCupon, ses.id).first();
@@ -87,7 +96,7 @@ export async function crearPedido({ env, request }) {
         .bind(codigo, origen, ses ? ses.id : null, texto(d.nombre, 120), texto(d.celular, 30), entrega,
           entrega === "domicilio" ? texto(d.distrito, 60) : null, entrega === "domicilio" ? texto(d.direccion, 200) : null,
           entrega === "domicilio" ? texto(d.referencia, 200) : null, destino, agencia, subtotal, desc, env_, total, pendiente,
-          cup ? cup.id : null, codCupon, cup ? cup.nombre : null, cup ? cup.tipo : null, cup ? cup.valor : null, cup ? cup.desc : 0),
+          cup ? cup.id : null, codCupon, cup ? cup.nombre : canjeNombre, cup ? cup.tipo : null, cup ? cup.valor : null, cup ? cup.desc : 0),
       ...items.map(i => env.DB.prepare(`INSERT INTO pedido_items (pedido_id, slug, nombre, color, talla, cantidad, precio)
           VALUES ((SELECT id FROM pedidos WHERE codigo = ?), ?, ?, ?, ?, ?, ?)`).bind(codigo, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio)),
     ]).then(() => total);
@@ -104,7 +113,7 @@ export async function crearPedido({ env, request }) {
       cupon = null;
     } else throw e;
   }
-  return json({ ok: true, codigo, total, ...(codCupon ? { cupon: cupon ? "aplicado" : "no_disponible" } : {}) });
+  return json({ ok: true, codigo, total, ...(codCupon || canje ? { cupon: cupon ? "aplicado" : "no_disponible" } : {}), ...(canje ? { canje } : {}) });
 }
 
 /* ---------- Cuenta del cliente ---------- */
@@ -152,11 +161,39 @@ export async function cuenta({ env, request }) {
   });
 }
 
-/* GET /api/cuenta/cupones → solo sus cupones listos para usar (para el carrito) */
+/* GET /api/cuenta/cupones → para el carrito: sus cupones listos para usar, sus puntos y las recompensas que puede canjear ahí mismo */
 export async function misCupones({ env, request }) {
   const ses = await clienteObligatorio(env, request);
-  const r = await env.DB.prepare("SELECT codigo, nombre, tipo, valor FROM cupones WHERE cliente_id = ? AND estado = 'activo' ORDER BY id").bind(ses.id).all();
-  return json({ ok: true, cupones: r.results });
+  const tope = await topePuntos(env);
+  const [r, pts, recs] = await env.DB.batch([
+    env.DB.prepare("SELECT codigo, nombre, tipo, valor FROM cupones WHERE cliente_id = ? AND estado = 'activo' ORDER BY id").bind(ses.id),
+    env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(ses.id),
+    env.DB.prepare("SELECT id, nombre, puntos, tipo, valor FROM recompensas WHERE activa = 1 AND puntos <= ? ORDER BY puntos, id").bind(tope),
+  ]);
+  return json({ ok: true, cupones: r.results, puntos: pts.results[0].saldo, tope, recompensas: recs.results });
+}
+
+/* Canjea una recompensa: crea el cupón y descuenta los puntos en un solo lote.
+   Devuelve el código del cupón, o null si no se pudo (recompensa apagada, pasa el máximo o no le alcanzan los puntos). */
+async function canjearRecompensa(env, clienteId, rid, tope) {
+  for (let intento = 0; intento < 3; intento++) {
+    const cod = codigoCupon();
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO cupones (codigo, cliente_id, recompensa_id, nombre, tipo, valor, puntos)
+            SELECT ?, ?, id, nombre, tipo, valor, puntos FROM recompensas
+             WHERE id = ? AND activa = 1 AND puntos <= ? AND puntos <= COALESCE((SELECT SUM(cantidad) FROM puntos WHERE cliente_id = ?), 0)`).bind(cod, clienteId, rid, tope, clienteId),
+        env.DB.prepare("INSERT INTO puntos (cliente_id, cantidad, motivo, cupon_id) SELECT cliente_id, -puntos, 'canje', id FROM cupones WHERE codigo = ?").bind(cod),
+      ]);
+    } catch (e) {
+      const m = String(e.message);
+      if (/PUNTOS_INSUFICIENTES/.test(m)) return null;
+      if (/UNIQUE/i.test(m)) continue; // código repetido (rarísimo): se intenta con otro
+      throw e;
+    }
+    return (await env.DB.prepare("SELECT 1 FROM cupones WHERE codigo = ? AND cliente_id = ?").bind(cod, clienteId).first()) ? cod : null;
+  }
+  return null;
 }
 
 /* POST /api/cuenta/canjear { recompensa: id } → descuenta los puntos y le da un cupón para el carrito.
@@ -168,23 +205,7 @@ export async function canjear({ env, request }) {
   const rid = Math.trunc(+b.recompensa);
   if (!(rid > 0)) throw new ErrorHttp(400, "datos_invalidos");
   const tope = await topePuntos(env);
-  let codigo;
-  for (let intento = 0; intento < 3 && !codigo; intento++) {
-    const cod = codigoCupon();
-    try {
-      await env.DB.batch([
-        env.DB.prepare(`INSERT INTO cupones (codigo, cliente_id, recompensa_id, nombre, tipo, valor, puntos)
-            SELECT ?, ?, id, nombre, tipo, valor, puntos FROM recompensas
-             WHERE id = ? AND activa = 1 AND puntos <= ? AND puntos <= COALESCE((SELECT SUM(cantidad) FROM puntos WHERE cliente_id = ?), 0)`).bind(cod, ses.id, rid, tope, ses.id),
-        env.DB.prepare("INSERT INTO puntos (cliente_id, cantidad, motivo, cupon_id) SELECT cliente_id, -puntos, 'canje', id FROM cupones WHERE codigo = ?").bind(cod),
-      ]);
-      codigo = cod;
-    } catch (e) {
-      const m = String(e.message);
-      if (/PUNTOS_INSUFICIENTES/.test(m)) throw new ErrorHttp(409, "puntos_insuficientes");
-      if (!/UNIQUE/i.test(m)) throw e; // código repetido (rarísimo): se intenta con otro
-    }
-  }
+  const codigo = await canjearRecompensa(env, ses.id, rid, tope);
   const [cup, rec, pts] = await env.DB.batch([
     env.DB.prepare("SELECT codigo, nombre, tipo, valor, puntos FROM cupones WHERE codigo = ? AND cliente_id = ?").bind(codigo || "", ses.id),
     env.DB.prepare("SELECT activa FROM recompensas WHERE id = ? AND puntos <= ?").bind(rid, tope),

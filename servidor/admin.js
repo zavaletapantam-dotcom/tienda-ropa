@@ -194,9 +194,10 @@ async function conItems(env, pedidos) {
     editado: iso(p.editado), editado_por: p.editado_por,
     elimina_en: p.elimina_en ?? null, // cancelado: segundos que faltan para que se borre solo
     // Cupón: aplicado (con su descuento) o "no_disponible" si el cliente lo quiso usar pero ya no servía
-    cupon: !p.cupon_codigo ? null : p.cupon_tipo
-      ? { codigo: p.cupon_codigo, nombre: p.cupon_nombre, tipo: p.cupon_tipo, valor: p.cupon_valor, desc: p.cupon_desc, aplicado: true }
-      : { codigo: p.cupon_codigo, aplicado: false },
+    // (canje: el cliente quiso canjear sus puntos en el carrito y no se pudo)
+    cupon: p.cupon_tipo ? { codigo: p.cupon_codigo, nombre: p.cupon_nombre, tipo: p.cupon_tipo, valor: p.cupon_valor, desc: p.cupon_desc, aplicado: true }
+      : p.cupon_codigo ? { codigo: p.cupon_codigo, aplicado: false }
+      : p.cupon_nombre ? { nombre: p.cupon_nombre, aplicado: false, canje: true } : null,
     // Puntos MAISON: los que dio al confirmarse, o los que dará si se confirma (solo clientes con cuenta)
     puntos: p.puntos_dados || 0,
     puntos_al_confirmar: p.cliente_id != null && p.estado === "pendiente" ? Math.max(0, Math.trunc(redondear(p.total - (p.envio || 0)))) : 0,

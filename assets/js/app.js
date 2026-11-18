@@ -399,7 +399,7 @@ function renderLayout() {
           </div>
         </div>
         <div class="co__cup" id="coCup" hidden>
-          <label for="coCupSel">${I.ticket}Usar un cupón de tus Puntos MAISON</label>
+          <label for="coCupSel">${I.ticket}Usar tus Puntos MAISON <small id="coCupPts"></small></label>
           <select id="coCupSel"><option value="">No usar cupón</option></select>
           <p class="co__cupnota" id="coCupNota" hidden></p>
         </div>
@@ -742,22 +742,37 @@ const coData = () => {
     dep: v("coDep"), prov: v("coPrv"), distP: v("coDistP"), agencia: v("coAg"), agenciaAlt: v("coAgAlt") };
 };
 const shipCost = ent => (ent !== "domicilio" ? 0 : cartSub() >= C.envioGratisDesde ? 0 : C.envio);
-/* Cupones de los Puntos MAISON en el carrito (solo con la cuenta abierta; uno por pedido).
+/* Puntos MAISON en el carrito (solo con la cuenta abierta; uno por pedido): un cupón que ya canjeó en "Mi cuenta"
+   o una recompensa que le alcance, que se canjea al enviar el pedido (el servidor la canjea junto con el pedido).
    Misma regla que el servidor: monto y porcentaje sobre las prendas · envío gratis solo para envío a domicilio cuando se cobra envío. */
-let cuponesCarrito = [];
+let cuponesCarrito = [], recompensasCarrito = [], puntosCarrito = 0;
 function cargarCupones() {
-  if (!SES.cliente || !$("#coCup")) { cuponesCarrito = []; pintarCupones(); return; }
+  if (!SES.cliente || !$("#coCup")) { cuponesCarrito = []; recompensasCarrito = []; puntosCarrito = 0; pintarCupones(); return; }
   fetch("/api/cuenta/cupones", { credentials: "same-origin", cache: "no-store", headers: { "x-maison": "1" } })
-    .then(r => (r.ok ? r.json() : { cupones: [] })).then(j => { cuponesCarrito = Array.isArray(j.cupones) ? j.cupones : []; pintarCupones(); renderCheckout(); }).catch(() => {});
+    .then(r => (r.ok ? r.json() : {})).then(j => {
+      cuponesCarrito = Array.isArray(j.cupones) ? j.cupones : [];
+      recompensasCarrito = Array.isArray(j.recompensas) ? j.recompensas : [];
+      puntosCarrito = +j.puntos || 0;
+      pintarCupones(); renderCheckout();
+    }).catch(() => {});
 }
 function pintarCupones() {
   const sel = $("#coCupSel"); if (!sel) return;
-  const antes = sel.value;
-  sel.innerHTML = `<option value="">No usar cupón</option>` + cuponesCarrito.map(c => `<option value="${esc(c.codigo)}">${esc(c.nombre)}</option>`).join("");
-  sel.value = cuponesCarrito.some(c => c.codigo === antes) ? antes : "";
-  $("#coCup").hidden = !cuponesCarrito.length;
+  const antes = sel.value, alcanza = recompensasCarrito.filter(r => r.puntos <= puntosCarrito);
+  sel.innerHTML = `<option value="">No usar mis puntos</option>`
+    + (cuponesCarrito.length ? `<optgroup label="Mis cupones">${cuponesCarrito.map(c => `<option value="c:${esc(c.codigo)}">${esc(c.nombre)}</option>`).join("")}</optgroup>` : "")
+    + (alcanza.length ? `<optgroup label="Canjear ahora con mis puntos">${alcanza.map(r => `<option value="r:${r.id}">${r.puntos.toLocaleString("es-PE")} pts → ${esc(r.nombre)}</option>`).join("")}</optgroup>` : "");
+  sel.value = [...sel.options].some(o => o.value === antes) ? antes : "";
+  $("#coCupPts").textContent = puntosCarrito ? `· tienes ${puntosCarrito.toLocaleString("es-PE")} pts` : "";
+  $("#coCup").hidden = !cuponesCarrito.length && !alcanza.length;
 }
-const cuponElegido = () => cuponesCarrito.find(c => c.codigo === ($("#coCupSel") || {}).value) || null;
+/* Lo elegido: { codigo, nombre, tipo, valor } si es un cupón · { recompensa, puntos, nombre, tipo, valor } si se canjea ahora */
+function cuponElegido() {
+  const v = ($("#coCupSel") || {}).value || "";
+  if (v.startsWith("c:")) return cuponesCarrito.find(c => c.codigo === v.slice(2)) || null;
+  if (v.startsWith("r:")) { const r = recompensasCarrito.find(x => x.id === +v.slice(2)); return r ? { recompensa: r.id, puntos: r.puntos, nombre: r.nombre, tipo: r.tipo, valor: r.valor } : null; }
+  return null;
+}
 function efectoCuponCarrito(c, entrega) {
   if (!c) return null;
   const r2 = n => Math.round(n * 100) / 100;
@@ -812,7 +827,9 @@ function orderMsg(o, codigo, cup) {
     if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
     l.push(`📦 *Envío:* ${env ? money(env) : ef && cup.tipo === "envio" ? "GRATIS (cupón)" : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
   }
-  if (ef) l.push(L, `🎟️ *Cupón Puntos MAISON:* ${cup.nombre} (${cup.codigo})${desc ? ` −${money(desc)}` : ""}`);
+  if (ef) l.push(L, cup.recompensa
+    ? `🎟️ *Canje Puntos MAISON:* ${cup.puntos.toLocaleString("es-PE")} pts → ${cup.nombre}${desc ? ` −${money(desc)}` : ""}`
+    : `🎟️ *Cupón Puntos MAISON:* ${cup.nombre} (${cup.codigo})${desc ? ` −${money(desc)}` : ""}`);
   l.push(L, `💰 *TOTAL: ${money(sub - desc + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}${o.entrega === "provincia" ? ` + envío ${C.courier}` : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
   return l.join("\n");
 }
@@ -820,12 +837,14 @@ function renderCheckout() {
   const o = coData(), cup = cuponElegido(), ef = efectoCuponCarrito(cup, o.entrega), env = ef ? ef.envio : shipCost(o.entrega), desc = ef ? ef.desc : 0;
   if ($("#coCupRow")) {
     $("#coCupRow").hidden = !ef || !desc;
-    if (ef && desc) { $("#coCupTxt").textContent = "Cupón: " + cup.nombre; $("#coCupMonto").textContent = "−" + money(desc); }
+    if (ef && desc) { $("#coCupTxt").textContent = (cup.recompensa ? `Canje ${cup.puntos.toLocaleString("es-PE")} pts: ` : "Cupón: ") + cup.nombre; $("#coCupMonto").textContent = "−" + money(desc); }
     const nota = $("#coCupNota");
-    nota.hidden = !cup || !!ef;
-    if (cup && !ef) nota.textContent = cup.tipo === "envio"
-      ? (o.entrega === "domicilio" ? "Tu envío ya es gratis: guarda este cupón para otro pedido." : "Este cupón solo vale para envío a domicilio.")
-      : "Agrega prendas con precio para usar este cupón.";
+    nota.hidden = !cup;
+    nota.classList.toggle("co__cupnota--ok", !!(cup && ef));
+    if (cup && ef) nota.textContent = cup.recompensa ? `Se canjean ${cup.puntos.toLocaleString("es-PE")} pts al enviar tu pedido. Te quedarán ${(puntosCarrito - cup.puntos).toLocaleString("es-PE")} pts.` : "Tu cupón se aplica a este pedido.";
+    else if (cup) nota.textContent = cup.tipo === "envio"
+      ? (o.entrega === "domicilio" ? "Tu envío ya es gratis: guárdalo para otro pedido." : "El envío gratis solo vale para envío a domicilio.")
+      : "Agrega prendas con precio para usar tus puntos.";
   }
   $("#coFields").hidden = !o.entrega; $("#coHint").hidden = !!o.entrega;
   $("#coShip").hidden = o.entrega !== "domicilio"; $("#coProv").hidden = o.entrega !== "provincia";
@@ -940,15 +959,16 @@ function initCart() {
     if (bad.length) { bad.forEach(id => document.getElementById(id).closest(".co__f").classList.add("err")); document.getElementById(bad[0]).focus(); toast("Completa los datos marcados"); return; }
     if (cartOut()) { toast("Quita las prendas agotadas para continuar"); showCheckout(false); return; }
     const cup = cuponElegido();
-    if (cup && !efectoCuponCarrito(cup, o.entrega)) { toast("Ese cupón no sirve en este pedido. Elige «No usar cupón» u otro"); $("#coCupSel").focus(); return; }
+    if (cup && !efectoCuponCarrito(cup, o.entrega)) { toast("Eso no sirve en este pedido. Elige «No usar mis puntos» u otra opción"); $("#coCupSel").focus(); return; }
     try { localStorage.setItem(CO_KEY, JSON.stringify(o)); } catch (_) {}
     const codigo = nuevoCodigo();
     irAWhatsApp(waLink(orderMsg(o, codigo, cup)), {
       codigo, origen: "carrito", datos: o,
       items: cart.map(x => ({ slug: x.slug, color: x.color, talla: x.size, cantidad: x.qty })),
-      ...(cup ? { cupon: cup.codigo } : {}),
+      ...(cup ? (cup.recompensa ? { canje: cup.recompensa } : { cupon: cup.codigo }) : {}),
     }, "Abriendo WhatsApp con tu pedido…");
-    if (cup) { cuponesCarrito = cuponesCarrito.filter(c => c !== cup); pintarCupones(); renderCheckout(); }
+    // Lo usado deja de ofrecerse (el cupón ya está en este pedido; los puntos del canje ya se gastaron)
+    if (cup) { if (cup.recompensa) puntosCarrito -= cup.puntos; else cuponesCarrito = cuponesCarrito.filter(c => c.codigo !== cup.codigo); $("#coCupSel").value = ""; pintarCupones(); renderCheckout(); }
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeCart(); });
   // Si el cliente tiene la tienda abierta en otra pestaña, el carrito se mantiene igual
@@ -2192,7 +2212,7 @@ async function initMiCuenta() {
       <ul>
         <li>Ganas 1 punto por cada sol de tus pedidos confirmados (el envío no suma).</li>
         <li>Los puntos se suman cuando confirmamos tu pedido.</li>
-        <li>Al canjear recibes un cupón: lo eliges en el carrito al hacer tu pedido. Un cupón por pedido${D.tope ? `, así que puedes usar hasta ${pts(D.tope)} puntos en cada compra; los demás te quedan para la siguiente` : ""}.</li>
+        <li>Puedes canjear aquí (recibes un cupón para el carrito) o directamente en el carrito al hacer tu pedido. Un cupón por pedido${D.tope ? `, así que puedes usar hasta ${pts(D.tope)} puntos en cada compra; los demás te quedan para la siguiente` : ""}.</li>
         <li>Si tu pedido se cancela, te devolvemos los puntos del cupón.</li>
         <li>Tus puntos y cupones no vencen.</li>
       </ul></div>`, "Mis recompensas");
