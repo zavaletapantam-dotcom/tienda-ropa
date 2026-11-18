@@ -116,6 +116,7 @@ const MSG = {
   clave_con_usuario: "La contraseña no puede contener tu usuario.",
   usuario_existe: "Ese usuario ya existe. Elige otro.",
   ya_procesado: "Este pedido ya fue procesado.",
+  solo_cancelados: "Solo se pueden eliminar pedidos cancelados.",
   sin_conexion: "No hay conexión. Revisa tu internet.",
   precio_invalido: "Revisa el precio.",
   precio_antes_invalido: "El precio normal debe ser mayor que el precio final.",
@@ -541,10 +542,16 @@ function pedidoHTML(p) {
       <div class="tot"><span>Subtotal <b>${money(p.subtotal)}</b></span>${descAparte(p) ? `<span>Descuento <b>−${money(descAparte(p))}</b></span>` : ""}${p.cupon && p.cupon.aplicado && p.cupon.desc ? `<span>Cupón ${esc(p.cupon.nombre)} <b>−${money(p.cupon.desc)}</b></span>` : ""}<span>Envío <b>${p.envio == null ? (p.entrega.tipo === "provincia" ? "Tarifa Shalom" : "A coordinar") : p.envio ? money(p.envio) : p.cupon && p.cupon.aplicado && p.cupon.tipo === "envio" ? "Gratis (cupón)" : "Gratis"}</b></span><span class="grande">Total <b>${money(p.total)}</b></span>${g ? `<span>Ganancia <b class="${g.g < 0 ? "neg" : "pos"}">${money(g.g)} · ${pctDe(g.g, g.venta)}%</b></span>` : ""}${p.puntos ? `<span>Puntos <b class="pos">+${p.puntos} pts</b></span>` : p.puntos_al_confirmar ? `<span>Al confirmar <b>+${p.puntos_al_confirmar} pts</b></span>` : ""}</div>
       ${p.estado === "pendiente"
         ? `<div class="ped__acts"><button class="btn" type="button" data-accion="cancelado">${I.x}Cancelar</button><button class="btn" type="button" data-accion="editar">${I.editar}Editar</button><button class="btn btn--pri" type="button" data-accion="procede">${I.check}Procede</button></div>`
+        : p.estado === "cancelado"
+        ? `<div class="ped__fin"><p class="ped__done">Cancelado por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>
+            <span class="ped__borra" data-elimina="${p.elimina_en ?? 0}">${I.hist}<span>Se elimina en ${mmss(p.elimina_en ?? 0)}</span></span>
+            <button class="btn btn--bad btn--sm" type="button" data-accion="eliminar">${I.x}Eliminar ahora</button></div>`
         : `<p class="ped__done">${ESTADO[p.estado]}${p.origen_stock ? " " + DESDE[p.origen_stock] : ""} por ${esc(p.procesado_por || "—")} · ${fFecha(p.procesado)}</p>`}
     </footer>
   </article>`;
 }
+/* Cuenta regresiva de los cancelados (se borran solos a los 90 segundos de cancelarse) */
+const mmss = seg => `${Math.floor(Math.max(0, seg) / 60)}:${String(Math.max(0, seg) % 60).padStart(2, "0")}`;
 const listaFaltan = faltan => ((faltan || []).length ? `<ul>${faltan.map(f => `<li><span>${esc(f.nombre)} · ${esc(f.color)} · Talla ${esc(f.talla)}</span><b>Se necesitan ${f.pedido} · hay ${f.stock}</b></li>`).join("")}</ul>` : "");
 async function vPedidos(m) {
   m.innerHTML = `<header class="top"><h1>Pedidos</h1><div class="top__acts"><button class="btn" type="button" id="pExcel">${I.bajar}Descargar Excel</button><button class="btn" type="button" id="pRef">${I.ref}Actualizar</button></div></header>
@@ -560,8 +567,21 @@ async function vPedidos(m) {
     $("#pLista").innerHTML = lista.length ? lista.map(pedidoHTML).join("")
       : `<div class="empty"><b>${ped.q ? "Sin resultados" : ped.estado === "pendiente" ? "No hay pedidos por confirmar" : "No hay pedidos aquí"}</b>${ped.q ? "Prueba con otro código, nombre o celular." : ""}</div>`;
     $("#pExcel").disabled = !lista.length;
+    const ahora = Date.now();
+    $$("[data-elimina]").forEach(el => (el.dataset.hasta = ahora + +el.dataset.elimina * 1000));
   };
   await cargar();
+  // Cada segundo: baja la cuenta regresiva; cuando un cancelado llega a 0, se vuelve a pedir la lista (el servidor lo borra en ese momento)
+  let recargando = false;
+  const reloj = setInterval(() => {
+    if (!$("#pLista")) return clearInterval(reloj);
+    let vencido = false;
+    $$("[data-hasta]").forEach(el => {
+      const seg = Math.ceil((+el.dataset.hasta - Date.now()) / 1000), t = el.querySelector("span");
+      if (seg <= 0) { vencido = true; t.textContent = "Eliminando…"; } else t.textContent = `Se elimina en ${mmss(seg)}`;
+    });
+    if (vencido && !recargando) { recargando = true; setTimeout(() => cargar().then(badges).catch(() => {}).finally(() => (recargando = false)), 1500); }
+  }, 1000);
   $("#pRef").addEventListener("click", () => cargar().then(badges).catch(e => toast(msg(e))));
   $("#pExcel").addEventListener("click", () => excelPedidos(lista));
   $("#pTabs").addEventListener("click", e => { const b = e.target.closest("[data-e]"); if (b) { ped.estado = b.dataset.e; cargar().catch(x => toast(msg(x))); } });
@@ -570,6 +590,12 @@ async function vPedidos(m) {
     const b = e.target.closest("[data-accion]"); if (!b) return;
     const p = lista.find(x => x.codigo === b.closest(".ped").dataset.cod); if (!p) return;
     if (b.dataset.accion === "editar") { if (await editarPedido(p)) { await cargar().catch(() => {}); badges(); } return; }
+    if (b.dataset.accion === "eliminar") {
+      if (!(await confirmar(`¿Eliminar el pedido ${p.codigo}?`, "<p>Se borra para siempre, con sus prendas. No se puede deshacer.</p>", "Sí, eliminar", "btn--bad"))) return;
+      try { await api(`pedidos/${p.codigo}/eliminar`, { method: "POST" }); toast(`Pedido ${p.codigo} eliminado.`); }
+      catch (x) { toast(msg(x)); }
+      await cargar().catch(() => {}); badges(); return;
+    }
     let origen = null;
     if (b.dataset.accion === "procede") {
       // ¿De dónde sale? Almacén: baja el virtual y el físico · Proveedor: solo el virtual
@@ -580,10 +606,10 @@ async function vPedidos(m) {
         acciones: [{ t: "Volver", v: null }, { t: `${I.caja}Lo envía el proveedor`, clase: "btn--dark", v: "proveedor" }, { t: `${I.stock}Sale de mi almacén`, clase: "btn--pri", v: "almacen" }],
       });
       if (!origen) return;
-    } else if (!(await confirmar(`¿Cancelar el pedido ${p.codigo}?`, "<p>El stock no cambia.</p>", "Sí, cancelar", "btn--bad"))) return;
+    } else if (!(await confirmar(`¿Cancelar el pedido ${p.codigo}?`, `<p>El stock no cambia. El pedido se eliminará para siempre en 1 minuto y medio.</p>${p.cupon && p.cupon.aplicado ? "<p>Usó un cupón: el cliente recupera sus puntos.</p>" : ""}`, "Sí, cancelar", "btn--bad"))) return;
     try {
       await api(`pedidos/${p.codigo}`, { method: "POST", body: { accion: b.dataset.accion, origen } });
-      toast(b.dataset.accion === "procede" ? `Pedido ${p.codigo} confirmado ${DESDE[origen]}. El stock ya se actualizó.` : `Pedido ${p.codigo} cancelado.`);
+      toast(b.dataset.accion === "procede" ? `Pedido ${p.codigo} confirmado ${DESDE[origen]}. El stock ya se actualizó.` : `Pedido ${p.codigo} cancelado. Se eliminará en 1 minuto y medio.`);
     } catch (x) {
       if (x.codigo === "sin_stock") await avisar("No hay stock virtual suficiente", `<p>El pedido sigue por confirmar y no se descontó nada.</p>${listaFaltan(x.data.faltan)}`);
       else if (x.codigo === "sin_stock_fisico") await avisar("No hay stock físico suficiente", `<p>El pedido sigue por confirmar y no se descontó nada. Registra una entrada en Stock › Físico o elige «Lo envía el proveedor».</p>${listaFaltan(x.data.faltan)}`);

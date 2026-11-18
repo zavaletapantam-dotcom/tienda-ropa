@@ -99,6 +99,7 @@ export async function activar({ env, request }) {
 /* GET /api/admin/resumen → ventas, pendientes, lo más vendido y consultado, stock bajo (datos reales de la base) */
 export async function resumen({ env, request }) {
   await adminDe(env, request);
+  await purgarCancelados(env);
   const venta = cond => `SELECT COALESCE(SUM(total), 0) AS monto, COUNT(*) AS n FROM pedidos WHERE estado = 'procede' AND ${cond}`;
   const MES = "strftime('%Y-%m', 'now', '-5 hours')";
   const [hoy, semana, mes, pend, rec, cli, top, cons, bajo, stock, fisico, menor, mayor] = await env.DB.batch([
@@ -165,10 +166,18 @@ export async function ventasDias({ env, request }) {
 
 /* ---------- Pedidos ---------- */
 
+/* Los pedidos CANCELADOS se borran para siempre a los 90 segundos de cancelarse (con sus prendas).
+   Pages no tiene un reloj propio: se borran la siguiente vez que el panel pide los pedidos o el resumen
+   (el panel lo hace solo cada 90 s y al terminar la cuenta regresiva). Si llevaban cupón, los puntos ya se devolvieron al cancelar. */
+const SEG_BORRAR_CANCELADO = 90;
+const purgarCancelados = env => env.DB.prepare(`DELETE FROM pedidos WHERE estado = 'cancelado'
+    AND COALESCE(procesado, creado) <= datetime('now', '-${SEG_BORRAR_CANCELADO} seconds')`).run();
+
 const PEDIDO_SQL = `SELECT p.id, p.codigo, p.creado, p.origen, p.estado, p.procesado, a.nombre AS procesado_por, p.cliente_id,
     COALESCE(p.nombre, c.nombre) AS nombre, c.email, p.celular, p.entrega, p.distrito, p.direccion, p.referencia, p.destino, p.agencia,
     p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente, p.origen_stock, p.editado, e.nombre AS editado_por,
     p.cupon_codigo, p.cupon_nombre, p.cupon_tipo, p.cupon_valor, p.cupon_desc,
+    CASE WHEN p.estado = 'cancelado' THEN MAX(0, CAST(${SEG_BORRAR_CANCELADO} - (julianday('now') - julianday(COALESCE(p.procesado, p.creado))) * 86400 AS INTEGER)) END AS elimina_en,
     (SELECT cantidad FROM puntos WHERE pedido_id = p.id AND motivo = 'pedido') AS puntos_dados
   FROM pedidos p LEFT JOIN clientes c ON c.id = p.cliente_id LEFT JOIN admins a ON a.id = p.procesado_por LEFT JOIN admins e ON e.id = p.editado_por`;
 async function conItems(env, pedidos) {
@@ -183,6 +192,7 @@ async function conItems(env, pedidos) {
     entrega: { tipo: p.entrega, distrito: p.distrito, direccion: p.direccion, referencia: p.referencia, destino: p.destino, agencia: p.agencia },
     subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total, consultar: !!p.precio_pendiente, origen_stock: p.origen_stock,
     editado: iso(p.editado), editado_por: p.editado_por,
+    elimina_en: p.elimina_en ?? null, // cancelado: segundos que faltan para que se borre solo
     // Cupón: aplicado (con su descuento) o "no_disponible" si el cliente lo quiso usar pero ya no servía
     cupon: !p.cupon_codigo ? null : p.cupon_tipo
       ? { codigo: p.cupon_codigo, nombre: p.cupon_nombre, tipo: p.cupon_tipo, valor: p.cupon_valor, desc: p.cupon_desc, aplicado: true }
@@ -197,6 +207,7 @@ async function conItems(env, pedidos) {
 /* GET /api/admin/pedidos?estado=pendiente|procede|cancelado|todos&q=texto */
 export async function pedidos({ env, request, url }) {
   await adminDe(env, request);
+  await purgarCancelados(env);
   const estado = url.searchParams.get("estado") || "pendiente", q = texto(url.searchParams.get("q"), 60);
   const w = [], b = [];
   if (["pendiente", "procede", "cancelado"].includes(estado)) { w.push("p.estado = ?"); b.push(estado); }
@@ -251,6 +262,17 @@ export async function procesarPedido({ env, request, params }) {
   if (!res[1].meta.changes) throw new ErrorHttp(409, "ya_procesado");
   const [pedido] = await conItems(env, (await env.DB.prepare(`${PEDIDO_SQL} WHERE p.id = ?`).bind(p.id).all()).results);
   return json({ ok: true, pedido });
+}
+
+/* POST /api/admin/pedidos/:codigo/eliminar → borra para siempre un pedido CANCELADO (con sus prendas), sin esperar los 90 segundos.
+   Solo los cancelados: los pendientes y los confirmados no se pueden borrar. */
+export async function eliminarPedido({ env, request, params }) {
+  await adminDe(env, request);
+  const p = await env.DB.prepare("SELECT estado FROM pedidos WHERE codigo = ?").bind(params[0]).first();
+  if (!p) return json({ ok: true, ya: true }); // ya se había borrado solo
+  if (p.estado !== "cancelado") throw new ErrorHttp(409, "solo_cancelados", { estado: p.estado });
+  await env.DB.prepare("DELETE FROM pedidos WHERE codigo = ? AND estado = 'cancelado'").bind(params[0]).run();
+  return json({ ok: true });
 }
 
 /* POST /api/admin/pedidos/:codigo/editar { items: [{ slug, color, talla, cantidad, precio }], descuento, envio, envio_manual }
@@ -419,6 +441,7 @@ export async function movimientos({ env, request, url }) {
 /* GET /api/admin/clientes → clientes con cuenta, lo que compraron (pedidos que procedieron), sus puntos y si aceptan promociones */
 export async function clientes({ env, request }) {
   await adminDe(env, request);
+  await purgarCancelados(env);
   const r = await env.DB.prepare(`SELECT c.id, c.nombre, c.email, c.promos, c.cumple, c.creado, c.ultimo_acceso,
       COUNT(p.id) AS pedidos, COALESCE(SUM(p.total), 0) AS total, MAX(p.procesado) AS ultima_compra,
       (SELECT COALESCE(SUM(cantidad), 0) FROM puntos WHERE cliente_id = c.id) AS puntos
