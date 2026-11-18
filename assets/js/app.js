@@ -2051,7 +2051,7 @@ async function initMiCuenta() {
           <div class="pf-rec__head"><h3>Recompensas disponibles</h3><span>(con tus puntos)</span></div>
           ${D.recompensas.length ? `<div class="pf-rec__wrap">
             <button type="button" class="pf-rec__arr" data-dir="-1" aria-label="Recompensas anteriores" hidden>${I.prev}</button>
-            <div class="pf-rec__list" id="pfRecList">${recs().map(x => {
+            <div class="pf-rec__list" id="pfRecList" style="--cols:${D.recompensas.length <= 4 ? D.recompensas.length : 3}">${recs().map(x => {
               const ok = D.puntos >= x.puntos;
               return `<button type="button" class="pf-rw${ok ? " is-ok" : ""}" data-recompensas>${I.gift}<b>${pts(x.puntos)} pts</b><span>${esc(x.nombre)}</span><em>${ok ? "Canjear" : `Faltan ${pts(x.puntos - D.puntos)}`}</em></button>`;
             }).join("")}</div>
@@ -2245,12 +2245,14 @@ async function initMiCuenta() {
     const arrs = $$(".pf-rec__arr", root), dots = $("#pfRecDots");
     const act = () => {
       if (!list.isConnected) return removeEventListener("resize", act);
-      const sobra = list.scrollWidth > list.clientWidth + 4, pags = sobra ? Math.ceil(list.scrollWidth / list.clientWidth) : 0;
+      // Páginas de 3 tarjetas: cada página mide el ancho visible más el espacio entre tarjetas
+      const gap = parseFloat(getComputedStyle(list).columnGap) || 0, paso = Math.max(1, list.clientWidth + gap);
+      const sobra = list.scrollWidth > list.clientWidth + 4, pags = sobra ? Math.ceil((list.scrollWidth - gap) / paso) : 0;
       arrs.forEach(a => (a.hidden = !sobra));
-      const i = Math.round(list.scrollLeft / Math.max(1, list.clientWidth));
+      const i = Math.min(pags - 1, Math.round(list.scrollLeft / paso));
       dots.innerHTML = pags > 1 ? Array.from({ length: pags }, (_, k) => `<span class="${k === i ? "on" : ""}"></span>`).join("") : "";
     };
-    arrs.forEach(a => a.addEventListener("click", () => list.scrollBy({ left: list.clientWidth * +a.dataset.dir, behavior: "smooth" })));
+    arrs.forEach(a => a.addEventListener("click", () => list.scrollBy({ left: (list.clientWidth + (parseFloat(getComputedStyle(list).columnGap) || 0)) * +a.dataset.dir, behavior: "smooth" })));
     list.addEventListener("scroll", act, { passive: true });
     addEventListener("resize", act);
     act();

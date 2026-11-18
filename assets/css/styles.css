@@ -1605,7 +1605,7 @@ img.fade.ok{opacity:1}
   .pf-rec{margin-top:24px}
   .pf-rec__head h3{font-family:var(--serif);font-size:26px}
   .pf-rec__head span{font-size:14px}
-  .pf-rec__list{grid-auto-flow:row;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));overflow:visible;gap:14px}
+  .pf-rec__list{grid-auto-flow:row;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));overflow:visible;gap:14px}
   .pf-rec__arr,.pf-rec__dots{display:none}
   .pf-rw{padding:20px 10px 16px}
   .pf-rw svg{width:28px;height:28px}
