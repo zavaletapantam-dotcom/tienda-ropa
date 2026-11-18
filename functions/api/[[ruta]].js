@@ -46,6 +46,7 @@ const RUTAS = [
   ["POST", /^\/api\/admin\/clientes\/(\d+)\/cumple$/, admin.corregirCumple],
   ["POST", /^\/api\/admin\/cupones\/(MC[A-Z0-9]{6})\/anular$/, admin.anularCupon],
   ["GET", "/api/admin/recompensas", admin.recompensas],
+  ["POST", "/api/admin/puntos-tope", admin.guardarTope],
   ["POST", "/api/admin/recompensas", admin.guardarRecompensa],
   ["POST", /^\/api\/admin\/recompensas\/(\d+)$/, admin.guardarRecompensa],
   ["GET", "/api/admin/reclamos", admin.reclamos],

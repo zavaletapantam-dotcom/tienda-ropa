@@ -143,6 +143,8 @@ const MSG = {
   puntos_invalidos: "Los puntos van de 1 a 100 000.",
   valor_invalido: "Revisa el monto o el porcentaje.",
   no_existe: "Ya no existe. Recarga la página.",
+  supera_tope: d => `El máximo de puntos por pedido es ${Number(d.tope || 0).toLocaleString("es-PE")} pts: una recompensa encendida no puede costar más.`,
+  tope_invalido: "Escribe un número de puntos (de 1 a 100 000).",
   error: "No se pudo completar. Inténtalo de nuevo.",
 };
 const msg = e => { const m = MSG[e.codigo] || MSG.error; return typeof m === "function" ? m(e.data || {}) : m; };
@@ -1553,23 +1555,26 @@ async function vRecompensas(m) {
   const r = await api("recompensas");
   m.innerHTML = `<header class="top"><h1>Recompensas</h1><div class="top__acts"><button class="btn btn--pri" type="button" id="rNueva">${I.mas}Nueva recompensa</button></div></header>
     <p class="top__sub">Puntos MAISON: cada cliente con cuenta gana 1 punto por cada sol de sus pedidos confirmados (prendas menos descuentos, sin envío). Con sus puntos canjea estas recompensas: recibe un cupón y lo usa en el carrito (uno por pedido). Si el pedido se cancela, recupera sus puntos.</p>
+    <div class="card tope"><div><span>Máximo de puntos por pedido</span><b>${pts(r.tope)}</b><em>En cada pedido se usa un solo cupón, así que ninguna recompensa puede costar más. Lo que le sobre al cliente queda para su próxima compra.</em></div>
+      <button class="btn" type="button" id="rTope">${I.editar}Cambiar</button></div>
     <section class="kpis">
       <div class="kpi"><span>Puntos de los clientes</span><b>${pts(r.totales.saldo)}</b><em>sin canjear todavía</em></div>
       <div class="kpi"><span>Puntos dados con pedidos</span><b>${pts(r.totales.ganados)}</b></div>
       <div class="kpi"><span>Cupones sin usar</span><b>${r.totales.cupones_activos}</b></div>
     </section>
     <div class="card wrap-tbl">${r.recompensas.length ? `<table class="tbl"><thead><tr><th>Recompensa</th><th class="num">Cuesta</th><th>Qué da</th><th class="num">Canjes</th><th>En la tienda</th><th></th></tr></thead><tbody>
-      ${r.recompensas.map(x => `<tr${x.activa ? "" : ' class="apagada"'}><td><b>${esc(x.nombre)}</b></td><td class="num"><b>${pts(x.puntos)}</b></td><td>${queDa(x)}</td>
+      ${r.recompensas.map(x => `<tr${x.activa ? "" : ' class="apagada"'}><td><b>${esc(x.nombre)}</b>${x.activa && x.puntos > r.tope ? `<br><span class="chip chip--warn">Supera el máximo: no se ve en la tienda</span>` : ""}</td><td class="num"><b>${pts(x.puntos)}</b></td><td>${queDa(x)}</td>
         <td class="num">${x.canjes}${x.usados ? `<br><small>${x.usados} ${x.usados === 1 ? "usado" : "usados"}</small>` : ""}</td>
         <td><label class="sw" title="${x.activa ? "Se ve en la tienda" : "Apagada: no se ve ni se puede canjear"}"><input type="checkbox" data-sw="${x.id}"${x.activa ? " checked" : ""} aria-label="Mostrar ${esc(x.nombre)} en la tienda"><b></b></label></td>
         <td><button class="btn btn--sm" type="button" data-editar="${x.id}">${I.editar}Editar</button></td></tr>`).join("")}</tbody></table>`
       : `<div class="empty"><b>Todavía no hay recompensas</b>Crea la primera con «Nueva recompensa».</div>`}</div>
     <p class="bar__nota">Apagar una recompensa la quita de la tienda: nadie más la puede canjear, pero los cupones que ya se canjearon siguen sirviendo. Editarla tampoco cambia esos cupones.</p>`;
   const recargar = () => vRecompensas(m).catch(x => toast(msg(x)));
-  $("#rNueva").addEventListener("click", async () => { if (await editarRecompensa()) recargar(); });
+  $("#rNueva").addEventListener("click", async () => { if (await editarRecompensa(null, r.tope)) recargar(); });
+  $("#rTope").addEventListener("click", async () => { if (await cambiarTope(r.tope)) recargar(); });
   m.querySelector(".tbl")?.addEventListener("click", async e => {
     const b = e.target.closest("[data-editar]"); if (!b) return;
-    if (await editarRecompensa(r.recompensas.find(x => x.id === +b.dataset.editar))) recargar();
+    if (await editarRecompensa(r.recompensas.find(x => x.id === +b.dataset.editar), r.tope)) recargar();
   });
   m.querySelector(".tbl")?.addEventListener("change", async e => {
     const sw = e.target.closest("[data-sw]"); if (!sw) return;
@@ -1578,7 +1583,27 @@ async function vRecompensas(m) {
     catch (err) { sw.checked = !sw.checked; sw.disabled = false; toast(msg(err)); }
   });
 }
-async function editarRecompensa(x) {
+async function cambiarTope(actual) {
+  let ok = false;
+  await ventana({
+    titulo: "Máximo de puntos por pedido", html: `<div class="frm">
+      <p class="frm__lead">Es lo máximo que un cliente puede usar en un solo pedido. Si tiene más puntos, el resto le queda para su próxima compra.</p>
+      <div class="f"><label for="toN">Puntos</label><input class="inp" id="toN" inputmode="numeric" autocomplete="off" value="${actual}"></div>
+      <div class="alert alert--bad" id="toErr" hidden></div></div>`,
+    acciones: [{ t: "Volver", v: false }, { t: `${I.check}Guardar`, clase: "btn--pri", antes: async d => {
+      const n = +$("#toN", d).value.replace(/\D/g, ""), err = $("#toErr", d);
+      if (!(n >= 1 && n <= 100000)) { err.textContent = "Escribe un número de puntos (de 1 a 100 000)."; err.hidden = false; return false; }
+      try {
+        const x = await api("puntos-tope", { method: "POST", body: { tope: n } }); ok = true;
+        toast(x.fuera ? `Máximo: ${pts(n)}. ${plural(x.fuera, "recompensa cuesta", "recompensas cuestan")} más y ya no se ve en la tienda.` : `Máximo por pedido: ${pts(n)}.`);
+        return true;
+      } catch (e) { err.textContent = msg(e); err.hidden = false; return false; }
+    } }],
+    alAbrir: d => $("#toN", d).select(),
+  });
+  return ok;
+}
+async function editarRecompensa(x, tope) {
   let ok = false, nombreAMano = !!x && x.nombre !== queDa(x);
   await ventana({
     titulo: x ? "Editar recompensa" : "Nueva recompensa", html: `<div class="frm">
@@ -1595,6 +1620,7 @@ async function editarRecompensa(x) {
       const tipo = $("#reT", d).value, puntos = +$("#reP", d).value.replace(/\D/g, ""), valor = +$("#reV", d).value.replace(",", "."), nombre = $("#reN", d).value.trim(), err = $("#reErr", d);
       const mal = t => { err.textContent = t; err.hidden = false; return false; };
       if (!(puntos >= 1 && puntos <= 100000)) return mal("Escribe cuántos puntos cuesta (de 1 a 100 000).");
+      if ((x ? x.activa : $("#reA", d).checked) && puntos > tope) return mal(`El máximo de puntos por pedido es ${pts(tope)}: una recompensa no puede costar más. Cambia el máximo arriba si hace falta.`);
       if (tipo === "monto" && !(valor >= 1 && valor <= 10000)) return mal("Escribe el monto del descuento (desde S/1).");
       if (tipo === "porcentaje" && !(Number.isInteger(valor) && valor >= 1 && valor <= 90)) return mal("El porcentaje va de 1 a 90, sin decimales.");
       if (nombre.length < 3) return mal("Escribe el nombre que verá el cliente.");

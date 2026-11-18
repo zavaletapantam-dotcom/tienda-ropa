@@ -2,7 +2,7 @@
    Rutas públicas de la tienda: catálogo, sesión, pedidos, cuenta del cliente y Libro de Reclamaciones
    ========================================================= */
 import { ErrorHttp, json, leerJson, texto, leerSesion, cerrarSesion, limitar, ipDe, catalogo, config, iso, COOKIE, borrarCookie, cumpleValido,
-  aleatorio, codigoCupon, CUPON_RE, efectoCupon } from "./util.js";
+  aleatorio, codigoCupon, CUPON_RE, efectoCupon, topePuntos } from "./util.js";
 
 const googleListo = env => !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 const r2 = n => Math.round(n * 100) / 100;
@@ -118,6 +118,7 @@ async function clienteObligatorio(env, request) {
    Los pedidos que la tienda cancela en el panel no se muestran al cliente: solo ve los que están en confirmación o confirmados. */
 export async function cuenta({ env, request }) {
   const ses = await clienteObligatorio(env, request);
+  const tope = await topePuntos(env);
   const [cli, peds, items, tot, pts, recs, cups] = await env.DB.batch([
     env.DB.prepare("SELECT nombre, email, foto, promos, cumple, creado FROM clientes WHERE id = ?").bind(ses.id),
     env.DB.prepare(`SELECT p.id, p.codigo, p.creado, p.estado, p.origen, p.subtotal, p.descuento, p.envio, p.total, p.precio_pendiente,
@@ -126,7 +127,7 @@ export async function cuenta({ env, request }) {
     env.DB.prepare("SELECT i.pedido_id, i.slug, i.nombre, i.color, i.talla, i.cantidad, i.precio FROM pedido_items i JOIN pedidos p ON p.id = i.pedido_id WHERE p.cliente_id = ? AND p.estado <> 'cancelado' ORDER BY i.id").bind(ses.id),
     env.DB.prepare("SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS n FROM pedidos WHERE cliente_id = ? AND estado = 'procede'").bind(ses.id),
     env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(ses.id),
-    env.DB.prepare("SELECT id, nombre, puntos, tipo, valor FROM recompensas WHERE activa = 1 ORDER BY puntos, id"),
+    env.DB.prepare("SELECT id, nombre, puntos, tipo, valor FROM recompensas WHERE activa = 1 AND puntos <= ? ORDER BY puntos, id").bind(tope),
     env.DB.prepare(`SELECT c.codigo, c.nombre, c.tipo, c.valor, c.estado, p.codigo AS pedido FROM cupones c LEFT JOIN pedidos p ON p.id = c.pedido_id
       WHERE c.cliente_id = ? AND c.estado IN ('activo', 'en_pedido') ORDER BY c.id`).bind(ses.id),
   ]);
@@ -140,6 +141,7 @@ export async function cuenta({ env, request }) {
     compras: { total: tot.results[0].total, pedidos: tot.results[0].n },
     puntos: pts.results[0].saldo,
     recompensas: recs.results,
+    tope, // máximo de puntos por pedido
     cupones: cups.results,
     pedidos: peds.results.map(p => ({
       codigo: p.codigo, fecha: iso(p.creado), estado: p.estado, origen: p.origen, subtotal: p.subtotal, descuento: p.descuento, envio: p.envio, total: p.total,
@@ -165,6 +167,7 @@ export async function canjear({ env, request }) {
   const b = await leerJson(request);
   const rid = Math.trunc(+b.recompensa);
   if (!(rid > 0)) throw new ErrorHttp(400, "datos_invalidos");
+  const tope = await topePuntos(env);
   let codigo;
   for (let intento = 0; intento < 3 && !codigo; intento++) {
     const cod = codigoCupon();
@@ -172,7 +175,7 @@ export async function canjear({ env, request }) {
       await env.DB.batch([
         env.DB.prepare(`INSERT INTO cupones (codigo, cliente_id, recompensa_id, nombre, tipo, valor, puntos)
             SELECT ?, ?, id, nombre, tipo, valor, puntos FROM recompensas
-             WHERE id = ? AND activa = 1 AND puntos <= COALESCE((SELECT SUM(cantidad) FROM puntos WHERE cliente_id = ?), 0)`).bind(cod, ses.id, rid, ses.id),
+             WHERE id = ? AND activa = 1 AND puntos <= ? AND puntos <= COALESCE((SELECT SUM(cantidad) FROM puntos WHERE cliente_id = ?), 0)`).bind(cod, ses.id, rid, tope, ses.id),
         env.DB.prepare("INSERT INTO puntos (cliente_id, cantidad, motivo, cupon_id) SELECT cliente_id, -puntos, 'canje', id FROM cupones WHERE codigo = ?").bind(cod),
       ]);
       codigo = cod;
@@ -184,7 +187,7 @@ export async function canjear({ env, request }) {
   }
   const [cup, rec, pts] = await env.DB.batch([
     env.DB.prepare("SELECT codigo, nombre, tipo, valor, puntos FROM cupones WHERE codigo = ? AND cliente_id = ?").bind(codigo || "", ses.id),
-    env.DB.prepare("SELECT activa FROM recompensas WHERE id = ?").bind(rid),
+    env.DB.prepare("SELECT activa FROM recompensas WHERE id = ? AND puntos <= ?").bind(rid, tope),
     env.DB.prepare("SELECT COALESCE(SUM(cantidad), 0) AS saldo FROM puntos WHERE cliente_id = ?").bind(ses.id),
   ]);
   if (!cup.results[0]) {

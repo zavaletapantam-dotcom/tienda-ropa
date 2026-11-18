@@ -150,6 +150,15 @@ export const ctxStock = (env, motivo, { pedido = null, admin = null, costo = nul
 ];
 export const ctxFin = env => [env.DB.prepare("DELETE FROM ajustes WHERE clave IN ('ctx_motivo', 'ctx_pedido', 'ctx_admin', 'ctx_costo', 'ctx_proveedor', 'ctx_nota')")];
 
+/* Máximo de puntos que se pueden usar en un pedido (un cupón por pedido: ninguna recompensa puede costar más).
+   Se cambia en el panel → Recompensas. Si nunca se cambió: 500. */
+export const TOPE_PUNTOS_INICIAL = 500;
+export async function topePuntos(env) {
+  const r = await env.DB.prepare("SELECT valor FROM ajustes WHERE clave = 'puntos_tope'").first();
+  const n = r ? Math.trunc(+r.valor) : 0;
+  return n >= 1 ? n : TOPE_PUNTOS_INICIAL;
+}
+
 export async function config(env) {
   const r = await env.DB.prepare("SELECT valor FROM ajustes WHERE clave = 'config'").first();
   return r ? JSON.parse(r.valor) : { envio: 10, gratisDesde: 200, packDescuento: 0.2, packPasos: 3 };

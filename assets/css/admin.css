@@ -208,6 +208,12 @@ a.kpi:hover{border-color:var(--teal)}
 .cli__acts{display:flex;flex-wrap:wrap;gap:10px}
 .cli .tbl small,.tbl small{color:var(--muted);font-size:12.5px}
 .tbl tr.apagada td{color:var(--muted)}
+.tope{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+.tope > div{display:grid;gap:4px;flex:1}
+.tope span{font-size:14.5px;font-weight:500;color:var(--muted)}
+.tope b{font-size:26px;font-weight:600}
+.tope em{font-style:normal;font-size:14px;color:var(--muted)}
+.tbl .chip{margin-top:6px;height:24px;font-size:12.5px}
 .opcs--mb{margin-bottom:18px}
 .chk--txt{white-space:normal;align-items:flex-start;line-height:1.45}
 .chk--txt input{margin-top:1px;flex:none}

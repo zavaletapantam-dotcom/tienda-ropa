@@ -3,7 +3,7 @@
    ========================================================= */
 import {
   ErrorHttp, json, leerJson, texto, cifrarClave, verificarClave, sha256, crearSesion, leerSesion, cerrarSesion,
-  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE, config, cumpleValido, efectoCupon,
+  limitar, ipDe, ctxStock, ctxFin, iso, cookie, borrarCookie, COOKIE, config, cumpleValido, efectoCupon, topePuntos,
 } from "./util.js";
 
 const HORAS_SESION = 12;
@@ -530,9 +530,10 @@ export async function anularCupon({ env, request, params }) {
 }
 
 const TIPOS_RECOMPENSA = ["monto", "porcentaje", "envio"];
-/* GET /api/admin/recompensas → todas (encendidas y apagadas) con cuántas veces se canjearon */
+/* GET /api/admin/recompensas → todas (encendidas y apagadas) con cuántas veces se canjearon, y el máximo de puntos por pedido */
 export async function recompensas({ env, request }) {
   await adminDe(env, request);
+  const tope = await topePuntos(env);
   const [r, t] = await env.DB.batch([
     env.DB.prepare(`SELECT r.id, r.nombre, r.puntos, r.tipo, r.valor, r.activa, r.creado, r.actualizado,
         (SELECT COUNT(*) FROM cupones c WHERE c.recompensa_id = r.id) AS canjes,
@@ -542,7 +543,7 @@ export async function recompensas({ env, request }) {
         (SELECT COALESCE(SUM(cantidad), 0) FROM puntos WHERE motivo = 'pedido') AS ganados,
         (SELECT COUNT(*) FROM cupones WHERE estado = 'activo') AS cupones_activos`),
   ]);
-  return json({ ok: true, recompensas: r.results.map(x => ({ ...x, activa: !!x.activa, creado: iso(x.creado), actualizado: iso(x.actualizado) })), totales: t.results[0] });
+  return json({ ok: true, tope, recompensas: r.results.map(x => ({ ...x, activa: !!x.activa, creado: iso(x.creado), actualizado: iso(x.actualizado) })), totales: t.results[0] });
 }
 
 /* POST /api/admin/recompensas (nueva) · /api/admin/recompensas/:id (editar) { nombre, puntos, tipo, valor, activa }
@@ -558,6 +559,9 @@ export async function guardarRecompensa({ env, request, params }) {
   if (!TIPOS_RECOMPENSA.includes(tipo)) throw new ErrorHttp(400, "tipo_invalido");
   if (tipo === "monto" && !(valor >= 1 && valor <= 10000)) throw new ErrorHttp(400, "valor_invalido");
   if (tipo === "porcentaje" && !(Number.isInteger(valor) && valor >= 1 && valor <= 90)) throw new ErrorHttp(400, "valor_invalido");
+  // Una recompensa encendida no puede costar más que el máximo de puntos por pedido
+  const tope = await topePuntos(env);
+  if (activa && puntos > tope) throw new ErrorHttp(400, "supera_tope", { tope });
   if (id) {
     const r = await env.DB.prepare("UPDATE recompensas SET nombre = ?, puntos = ?, tipo = ?, valor = ?, activa = ?, actualizado = datetime('now') WHERE id = ?")
       .bind(nombre, puntos, tipo, valor, activa, id).run();
@@ -566,6 +570,20 @@ export async function guardarRecompensa({ env, request, params }) {
   }
   const r = await env.DB.prepare("INSERT INTO recompensas (nombre, puntos, tipo, valor, activa) VALUES (?, ?, ?, ?, ?) RETURNING id").bind(nombre, puntos, tipo, valor, activa).first();
   return json({ ok: true, id: r.id });
+}
+
+/* POST /api/admin/puntos-tope { tope } → máximo de puntos que se pueden usar en un pedido.
+   Las recompensas encendidas que cuesten más dejan de verse en la tienda (no se apagan solas); los cupones ya canjeados siguen sirviendo. */
+export async function guardarTope({ env, request }) {
+  await adminDe(env, request);
+  const b = await leerJson(request);
+  const tope = Number(b.tope);
+  if (!Number.isInteger(tope) || tope < 1 || tope > 100000) throw new ErrorHttp(400, "tope_invalido");
+  const [, fuera] = await env.DB.batch([
+    env.DB.prepare("INSERT INTO ajustes (clave, valor) VALUES ('puntos_tope', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor").bind(String(tope)),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM recompensas WHERE activa = 1 AND puntos > ?").bind(tope),
+  ]);
+  return json({ ok: true, tope, fuera: fuera.results[0].n });
 }
 
 /* ---------- Libro de Reclamaciones ---------- */

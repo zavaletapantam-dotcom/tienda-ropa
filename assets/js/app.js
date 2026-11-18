@@ -2192,7 +2192,7 @@ async function initMiCuenta() {
       <ul>
         <li>Ganas 1 punto por cada sol de tus pedidos confirmados (el envío no suma).</li>
         <li>Los puntos se suman cuando confirmamos tu pedido.</li>
-        <li>Al canjear recibes un cupón: lo eliges en el carrito al hacer tu pedido. Un cupón por pedido.</li>
+        <li>Al canjear recibes un cupón: lo eliges en el carrito al hacer tu pedido. Un cupón por pedido${D.tope ? `, así que puedes usar hasta ${pts(D.tope)} puntos en cada compra; los demás te quedan para la siguiente` : ""}.</li>
         <li>Si tu pedido se cancela, te devolvemos los puntos del cupón.</li>
         <li>Tus puntos y cupones no vencen.</li>
       </ul></div>`, "Mis recompensas");
