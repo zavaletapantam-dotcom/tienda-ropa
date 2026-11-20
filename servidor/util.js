@@ -123,12 +123,17 @@ export async function catalogo(env) {
   const [ver, prod, vars, ocu] = await env.DB.batch([
     env.DB.prepare("SELECT valor FROM ajustes WHERE clave = 'catalogo_ver'"),
     env.DB.prepare("SELECT slug, precio, precio_antes, estado FROM productos"),
-    env.DB.prepare("SELECT slug, color, talla, stock FROM variantes WHERE stock IS NOT NULL"),
+    env.DB.prepare("SELECT slug, color, talla, stock, fisico FROM variantes WHERE stock IS NOT NULL OR fisico > 0"),
     env.DB.prepare("SELECT slug, color FROM colores_ocultos"),
   ]);
   const v = ver.results[0]?.valor || "0", out = { v, p: {} };
   for (const r of prod.results) out.p[r.slug] = { precio: r.precio, antes: r.precio_antes, estado: r.estado, stock: {} };
-  for (const r of vars.results) { const s = out.p[r.slug]; if (s) (s.stock[r.color] ||= {})[r.talla] = r.stock; }
+  for (const r of vars.results) {
+    const s = out.p[r.slug]; if (!s) continue;
+    if (r.stock != null) (s.stock[r.color] ||= {})[r.talla] = r.stock;
+    // Stock físico (almacén de Chimbote): la tienda lo usa para «Entrega en 24 horas»
+    if (r.fisico > 0) ((s.fisico ||= {})[r.color] ||= {})[r.talla] = r.fisico;
+  }
   // Colores apagados en el panel (Stock): la página no los muestra
   for (const r of ocu.results) { const s = out.p[r.slug]; if (s) (s.ocultos ||= []).push(r.color); }
   const txt = JSON.stringify(out);

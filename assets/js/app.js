@@ -91,6 +91,54 @@ const stockDe = (p, color, talla) => { const s = p.stock && p.stock[color]; retu
 /* Una talla se puede pedir si la prenda no está agotada y su stock no está en 0 (en ese color, o en alguno si no se indica) */
 const tallaLibre = (p, talla, color) => !p.agotado && (color ? stockDe(p, color, talla) !== 0 : p.colors.some(([c]) => stockDe(p, c, talla) !== 0));
 const colorLibre = (p, color) => p.sizes.some(t => tallaLibre(p, t, color));
+/* ---------- Entrega según el stock FÍSICO que marca el panel para cada prenda, color y talla ----------
+   Con stock físico (almacén de Chimbote): entrega en 24 horas · a provincia, sale en 24 horas por el courier.
+   Sin stock físico: viene de Lima, llega en 2 días. Si se piden más unidades de las que hay en el almacén,
+   el resto viene de Lima: el pedido llega en dos entregas y el segundo envío no tiene costo adicional. */
+const fisicoDe = (p, color, talla) => +((p.fisico && p.fisico[color] && p.fisico[color][talla]) || 0);
+const reparto = (p, color, talla, cant = 1) => { const rap = Math.min(cant, fisicoDe(p, color, talla)); return { rap, lima: cant - rap }; };
+const plazoRap = () => C.entregaAlmacen || "24 horas", plazoLima = () => C.entregaLima || "2 días";
+const corto = t => t.replace(/ horas?$/, " h");
+const yLista = a => (a.length > 1 ? a.slice(0, -1).join(", ") + " y " + a[a.length - 1] : a[0] || "");
+const prendas = n => `${n} ${n === 1 ? "prenda" : "prendas"}`;
+const vienen = n => (n === 1 ? "viene" : "vienen");
+/* Tarjeta de la tienda: todas las tallas disponibles en almacén, solo algunas (con cuáles) o ninguna */
+function entregaChip(p) {
+  if (p.agotado) return "";
+  const libres = p.colors.flatMap(([c]) => p.sizes.filter(t => tallaLibre(p, t, c)).map(t => [c, t]));
+  const rap = libres.filter(([c, t]) => fisicoDe(p, c, t) > 0);
+  if (!rap.length) return `<span class="ent">${I.truck}Llega en ${plazoLima()}</span>`;
+  if (rap.length === libres.length) return `<span class="ent ent--rap">${I.rayo}Entrega en ${corto(plazoRap())}</span>`;
+  const tallas = p.colors.length === 1 ? [...new Set(rap.map(x => x[1]))] : null;
+  return `<span class="ent ent--rap">${I.rayo}${corto(plazoRap())} en ${tallas ? `talla${tallas.length > 1 ? "s" : ""} ${yLista(tallas)}` : "algunas tallas"}</span>`;
+}
+/* Punto en el botón de la talla que está en el almacén */
+const tallaRap = (p, color, s) => (fisicoDe(p, color, s) > 0 ? `<i class="rap-dot" aria-hidden="true"></i>` : "");
+const tallaAria = (p, color, s) => `Talla ${s}, ${fisicoDe(p, color, s) > 0 ? `entrega en ${plazoRap()}` : `llega en ${plazoLima()}`}`;
+/* Línea bajo las tallas (ficha, vista rápida): { h: html, t: "rap" | "lima" | "mix" | "" } */
+function entregaLinea(p, color, talla, cant = 1) {
+  if (p.agotado || !color) return { h: "", t: "" };
+  const R = plazoRap(), L = plazoLima();
+  if (!talla) {
+    const libres = p.sizes.filter(t => tallaLibre(p, t, color)), rap = libres.filter(t => fisicoDe(p, color, t) > 0);
+    if (!libres.length) return { h: "", t: "" };
+    if (!rap.length) return { h: `${I.truck}<span>Llega en <b>${L}</b>: viene de Lima.</span>`, t: "lima" };
+    if (rap.length === libres.length) return { h: `${I.rayo}<span>Entrega en <b>${R}</b>: está en nuestro almacén de Chimbote.</span>`, t: "rap" };
+    return { h: `${I.rayo}<span>Las tallas con <i class="rap-dot" aria-hidden="true"></i> se entregan en <b>${R}</b> (almacén de Chimbote). Las demás llegan en <b>${L}</b> desde Lima.</span>`, t: "mix" };
+  }
+  const r = reparto(p, color, talla, cant);
+  if (!r.rap) return { h: `${I.truck}<span>Talla ${esc(talla)}: llega en <b>${L}</b>, viene de Lima. A provincia sale en ${L} por ${esc(C.courier)}.</span>`, t: "lima" };
+  if (!r.lima) return { h: `${I.rayo}<span>Talla ${esc(talla)}: entrega en <b>${R}</b>, está en nuestro almacén de Chimbote. A provincia sale en ${R} por ${esc(C.courier)}.</span>`, t: "rap" };
+  return { h: `${I.rayo}<span>Talla ${esc(talla)}: <b>${r.rap} en ${R}</b> (almacén) y <b>${r.lima} en ${L}</b> (${vienen(r.lima)} de Lima). Llegan en dos entregas, el segundo envío sin costo adicional.</span>`, t: "mix" };
+}
+const pintarEnt = (el, e) => { if (!el) return; el.innerHTML = e.h; el.className = "ent-line" + (e.t ? " ent-line--" + e.t : ""); };
+/* Línea de cada prenda en los mensajes de WhatsApp */
+function entregaMsg(p, color, talla, cant = 1, envio) {
+  const r = reparto(p, color, talla, cant), prov = envio === "provincia", R = plazoRap(), L = plazoLima();
+  if (!r.lima) return `⚡ ${prov ? `Sale en ${R} por ${C.courier}` : `Entrega en ${R}`} (almacén Chimbote)`;
+  if (!r.rap) return `🚚 ${prov ? "Sale" : "Llega"} en ${L} (desde Lima)`;
+  return `⚡ ${r.rap} en ${R} (almacén) · 🚚 ${r.lima} en ${L} (desde Lima)`;
+}
 function aplicarCatalogo(c) {
   if (!c || !c.p) return;
   for (let i = PRODUCTS.length - 1; i >= 0; i--) {
@@ -100,6 +148,7 @@ function aplicarCatalogo(c) {
     p.price = d.precio; p.old = d.antes;
     if (!p.old) p.deal = false;
     p.stock = d.stock || {};
+    p.fisico = d.fisico || {};
     // Colores apagados en el panel: no se muestran. Si se apagan todos, la prenda no se ve.
     if (d.ocultos && d.ocultos.length) {
       const fuera = new Set(d.ocultos);
@@ -128,6 +177,7 @@ function productMsg(p, o = {}) {
   if (o.color) l.push(`🎨 Color: ${o.color}`);
   if (o.size) l.push(`📏 Talla: ${o.size}`);
   if (o.qty > 1) l.push(`🔢 Cantidad: ${o.qty}`);
+  if (o.size && o.color && !p.agotado) l.push(entregaMsg(p, o.color, o.size, o.qty || 1));
   l.push(hasPrice(p) ? `💰 Precio: ${money(p.price)}${o.qty > 1 ? " c/u" : ""}` : "💰 Precio: a consultar");
   if (o.codigo) l.push(`🧾 Pedido: *${o.codigo}*`);
   l.push("", `🔗 ${absUrl(productUrl(p))}`);
@@ -173,6 +223,7 @@ const I = {
   user: svg('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   tag: svg('<path d="M3 12V3h9l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
   spark: svg('<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>'),
+  rayo: svg('<path d="M13 3 5 13h6l-1 8 8-10h-6l1-8Z"/>'),
   clock2: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>'),
   cake: svg('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M12 13V9.5M12 6.5c.9 0 1.5-.6 1.5-1.4C13.5 4 12 2.5 12 2.5S10.5 4 10.5 5.1c0 .8.6 1.4 1.5 1.4Z"/>'),
   cake3: svg('<path d="M3 21h18M5 21v-8h14v8M5 16.5c2.3 1.6 4.7 1.6 7 0s4.7-1.6 7 0M8 13V9.5M12 13V9.5M16 13V9.5M8 6.8c.7 0 1.1-.5 1.1-1.1C9.1 4.9 8 3.8 8 3.8s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM12 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1ZM16 6.8c.7 0 1.1-.5 1.1-1.1 0-.8-1.1-1.9-1.1-1.9s-1.1 1.1-1.1 1.9c0 .6.4 1.1 1.1 1.1Z"/>', 1.4),
@@ -349,7 +400,7 @@ function renderLayout() {
         <h2 class="pdp__name" id="qvName"></h2>
         <div class="pdp__price" id="qvPrice"></div>
         <div class="opt" id="qvColorsWrap"><div class="opt-label">Color <em id="qvColorName"></em></div><div class="swatches" id="qvColors"></div></div>
-        <div class="opt"><div class="opt-label">Talla</div><div class="size-btns" id="qvSizes"></div></div>
+        <div class="opt"><div class="opt-label">Talla</div><div class="size-btns" id="qvSizes"></div><p class="ent-line" id="qvEnt"></p></div>
         <button type="button" class="btn-cart" id="qvAdd">${I.bag}Agregar al carrito</button>
         <a class="pdp__direct" id="qvWa" href="#" target="_blank" rel="noopener">${I.wa}O pídelo directo por WhatsApp</a>
         <a class="qv__more" id="qvMore" href="#">Ver detalles del producto</a>
@@ -364,6 +415,7 @@ function renderLayout() {
       <div class="cart__foot" id="cartFoot">
         <div class="cart__row"><span>Subtotal</span><b id="cartSub"></b></div>
         <div class="cart__row cart__row--save" id="cartSaveRow"><span>Estás ahorrando</span><b id="cartSave"></b></div>
+        <p class="cart__ent" id="cartEnt" hidden></p>
         <p class="cart__note">En el siguiente paso eliges <b>envío a domicilio</b> (${C.distritos.map(esc).join(" y ")})${C.recojoActivo ? ", <b>recojo en tienda</b>" : ""} o <b>envío a provincia</b> por ${esc(C.courier)}.</p>
         <p class="cart__warn" id="cartWarn" hidden>Quita las prendas agotadas para continuar</p>
         <button type="button" class="btn-wa" id="cartNext">${I.wa}Comprar con un asesor</button>
@@ -373,7 +425,7 @@ function renderLayout() {
         <button type="button" class="co__back" id="coBack">${I.prev}Volver al carrito</button>
         <h3>¿Cómo quieres recibir tu pedido?</h3>
         <div class="co__opts" role="radiogroup" aria-label="Forma de entrega">
-          ${coOptHTML("domicilio", I.truck, "Envío a domicilio", [`Solo ${C.distritos.map(esc).join(" y ")}`, envioTxt(), `Llega en ${C.entrega}`])}
+          ${coOptHTML("domicilio", I.truck, "Envío a domicilio", [`Solo ${C.distritos.map(esc).join(" y ")}`, envioTxt(), `En ${plazoRap()} o ${plazoLima()}, según la prenda`])}
           ${!C.recojoActivo ? "" : coOptHTML("recojo", I.store, "Recojo en tienda", ["Sin costo", esc(C.recojo || "Dirección por confirmar") + (C.recojoRef ? ` (${esc(C.recojoRef)})` : "")])}
           ${coOptHTML("provincia", I.box, "Envío a provincia", [`A todo el Perú por ${esc(C.courier)}`, `Recoges tu pedido en la agencia ${esc(C.courier)} que elijas`, esc(C.provinciaCosto)])}
         </div>
@@ -385,7 +437,7 @@ function renderLayout() {
             <div class="co__f"><label for="coDist">Distrito *</label><select id="coDist"><option value="">Elige tu distrito</option>${C.distritos.map(x => `<option>${esc(x)}</option>`).join("")}</select></div>
             <div class="co__f"><label for="coAddr">Dirección *</label><input id="coAddr" autocomplete="street-address" placeholder="Av. / Jr. / Calle, número, Mz. y Lt."></div>
             <div class="co__f"><label for="coRef">Referencia</label><input id="coRef" placeholder="Ej. frente al parque, casa de dos pisos"></div>
-            <p class="co__eta">${I.truck}Se le entregará de ${C.entrega} como máximo.</p>
+            <p class="co__eta" id="coEtaD">${I.truck}<span></span></p>
           </div>
           <div class="co__grp" id="coProv">
             <div class="co__row">
@@ -395,6 +447,7 @@ function renderLayout() {
             <div class="co__f"><label for="coDistP">Distrito *</label><select id="coDistP" disabled><option value="">Elige tu distrito</option></select></div>
             <div class="co__f"><label for="coAg">Agencia ${esc(C.courier)} *</label><input id="coAg" placeholder="Nombre o dirección de la agencia donde lo recogerás"></div>
             <div class="co__f"><label for="coAgAlt">¿No hay agencia ${esc(C.courier)} donde vives?</label><input id="coAgAlt" placeholder="Dinos en qué agencia te gustaría recibir tu pedido"></div>
+            <p class="co__eta" id="coEtaP">${I.truck}<span></span></p>
             <p class="co__eta">${I.box}Te confirmamos por WhatsApp el costo del envío por ${esc(C.courier)}.</p>
           </div>
         </div>
@@ -542,6 +595,7 @@ function cardHTML(p, opts) {
         <a class="card__name" href="${url}">${esc(p.name)}</a>
         ${p.colors.length > 1 ? `<span class="card__dots" title="${p.colors.length} colores">${p.colors.slice(0, 6).map(c => `<i style="background:${c[1]}"></i>`).join("")}${p.colors.length > 6 ? `<small>+${p.colors.length - 6}</small>` : ""}</span>` : ""}
         <div class="price">${priceHTML(p)}</div>
+        ${entregaChip(p)}
       </div>
       <a class="wa-mini" href="${waLink(productMsg(p))}" target="_blank" rel="noopener" aria-label="Consultar ${esc(p.name)} por WhatsApp" title="Consultar por WhatsApp">${I.wa}</a>
     </div>
@@ -565,7 +619,7 @@ function perksHTML() {
   const items = [
     [I.truck, "Envío a domicilio", `${envioTxt()}`],
     C.recojoActivo ? [I.pin, "Recojo en tienda", "Sin costo adicional"] : [I.box, "Envío a provincia", `A todo el Perú por ${C.courier}`],
-    [I.clock, "Entrega rápida", `De ${C.entrega} como máximo`],
+    [I.clock, "Entrega rápida", `${plazoRap()} si está en almacén · ${plazoLima()} desde Lima`],
     [I.swap, "Cambios", `Hasta ${C.diasCambio} días después de tu compra`],
     [I.card, "Pagos", "Débito, Yape, Plin y transferencia"],
     [I.chat, "Asesoría", "Te atendemos por WhatsApp"],
@@ -808,7 +862,7 @@ function orderMsg(o, codigo, cup) {
   l.push(L, "");
   cart.forEach(x => {
     const p = findProduct(x.slug);
-    l.push(`🛍️ *${p.name.toUpperCase()}*`, `${lineName(p)} · Color: ${x.color} · Talla: ${x.size}`);
+    l.push(`🛍️ *${p.name.toUpperCase()}*`, `${lineName(p)} · Color: ${x.color} · Talla: ${x.size}`, entregaMsg(p, x.color, x.size, x.qty, o.entrega));
     l.push(hasPrice(p) ? `_Cant:_ ${x.qty}  ×  _P.U:_ ${money(p.price)}` : `_Cant:_ ${x.qty}  ×  _P.U:_ a consultar`);
     l.push(hasPrice(p) ? `*Subtotal: ${money(p.price * x.qty)}*` : "*Subtotal: a consultar*", "");
   });
@@ -817,7 +871,7 @@ function orderMsg(o, codigo, cup) {
     l.push(`📦 *Entrega:* Envío a provincia por ${C.courier}`, `🗺️ *Destino:* ${o.distP}, ${o.prov} – ${o.dep}`);
     if (o.agencia) l.push(`🏢 *Agencia ${C.courier}:* ${o.agencia}`);
     if (o.agenciaAlt) l.push(`📝 *No hay agencia donde vive, prefiere recibirlo en:* ${o.agenciaAlt}`);
-    l.push(`🚚 *Envío:* ${C.provinciaCosto}`);
+    l.push(`🚚 *Envío:* ${C.provinciaCosto}`, entregaResumenMsg("provincia"));
   } else if (o.entrega === "recojo") {
     l.push("🏬 *Entrega:* Recojo en tienda", `📍 *Dirección de recojo:* ${C.recojo || "por confirmar"}`);
     if (C.recojoRef) l.push(`📝 *Referencia:* ${C.recojoRef}`);
@@ -825,13 +879,20 @@ function orderMsg(o, codigo, cup) {
   } else {
     l.push("🚚 *Entrega:* Envío a domicilio", `📍 *Dirección:* ${o.direccion}`, `🏙️ *Distrito:* ${o.distrito}`);
     if (o.referencia) l.push(`📝 *Referencia:* ${o.referencia}`);
-    l.push(`📦 *Envío:* ${env ? money(env) : ef && cup.tipo === "envio" ? "GRATIS (cupón)" : "GRATIS"}`, `🕒 Se le entregará de ${C.entrega} como máximo.`);
+    l.push(`📦 *Envío:* ${env ? money(env) : ef && cup.tipo === "envio" ? "GRATIS (cupón)" : "GRATIS"}`, entregaResumenMsg("domicilio"));
   }
   if (ef) l.push(L, cup.recompensa
     ? `🎟️ *Canje Puntos MAISON:* ${cup.puntos.toLocaleString("es-PE")} pts → ${cup.nombre}${desc ? ` −${money(desc)}` : ""}`
     : `🎟️ *Cupón Puntos MAISON:* ${cup.nombre} (${cup.codigo})${desc ? ` −${money(desc)}` : ""}`);
   l.push(L, `💰 *TOTAL: ${money(sub - desc + env)}*${cartAsk() ? " + prendas con precio a consultar" : ""}${o.entrega === "provincia" ? ` + envío ${C.courier}` : ""}`, L, "", `✅ ¡Hola ${C.store}, te envío mi pedido!`);
   return l.join("\n");
+}
+/* Resumen de la entrega para el mensaje de WhatsApp */
+function entregaResumenMsg(envio) {
+  const en = entregaCarrito(), R = plazoRap(), L = plazoLima(), prov = envio === "provincia";
+  if (!en.lima) return prov ? `🕒 *Sale por ${C.courier}:* en ${R} (todo en almacén)` : `🕒 *Entrega:* en ${R} (todo en almacén)`;
+  if (!en.rap) return prov ? `🕒 *Sale por ${C.courier}:* en ${L} (desde Lima)` : `🕒 *Entrega:* en ${L} (desde Lima)`;
+  return `🕒 *${prov ? `Sale en dos envíos por ${C.courier}` : "Entrega en dos partes"}:* ${prendas(en.rap)} en ${R} y ${prendas(en.lima)} en ${L} (2.º envío sin costo adicional)`;
 }
 function renderCheckout() {
   const o = coData(), cup = cuponElegido(), ef = efectoCuponCarrito(cup, o.entrega), env = ef ? ef.envio : shipCost(o.entrega), desc = ef ? ef.desc : 0;
@@ -849,6 +910,13 @@ function renderCheckout() {
   $("#coFields").hidden = !o.entrega; $("#coHint").hidden = !!o.entrega;
   $("#coShip").hidden = o.entrega !== "domicilio"; $("#coProv").hidden = o.entrega !== "provincia";
   if (o.entrega === "provincia") loadUbigeo().catch(() => {});
+  const en = entregaCarrito(), R = plazoRap(), L = plazoLima();
+  $("#coEtaD span").innerHTML = !en.lima ? `Llega en <b>${R}</b>: todo está en nuestro almacén de Chimbote.`
+    : !en.rap ? `Llega en <b>${L}</b>: tus prendas vienen de Lima.`
+    : `Llega en dos entregas: <b>${prendas(en.rap)} en ${R}</b> y <b>${prendas(en.lima)} en ${L}</b> (${vienen(en.lima)} de Lima). El segundo envío no tiene costo adicional.`;
+  $("#coEtaP span").innerHTML = !en.lima ? `Sale por ${esc(C.courier)} en <b>${R}</b>: todo está en nuestro almacén de Chimbote.`
+    : !en.rap ? `Sale por ${esc(C.courier)} en <b>${L}</b>: tus prendas vienen de Lima.`
+    : `Sale en dos envíos por ${esc(C.courier)}: <b>${prendas(en.rap)} en ${R}</b> y <b>${prendas(en.lima)} en ${L}</b>. El segundo envío no tiene costo adicional.`;
   $("#coSub").textContent = money(cartSub()) + (cartAsk() ? " + a consultar" : "");
   $("#coShipCost").textContent = { "": "—", recojo: "Sin costo", provincia: C.provinciaCosto }[o.entrega] ?? (env ? money(env) : ef && cup.tipo === "envio" ? "Gratis (cupón)" : "Gratis");
   $("#coTotal").textContent = money(cartSub() - desc + env) + (cartAsk() ? " + a consultar" : "") + (o.entrega === "provincia" ? " + envío" : "");
@@ -890,6 +958,7 @@ function renderCart() {
         <small>${esc(lineName(p))}</small>
         <a class="ci__name" href="${productUrl(p)}">${esc(p.name)}</a>
         <span class="ci__opts">${esc(x.color)} · Talla ${esc(x.size)}${out ? ` · <b class="ci__out">Agotado</b>` : ""}</span>
+        ${out ? "" : ciEntrega(p, x)}
         <div class="ci__row">
           <div class="qty qty--sm"><button type="button" data-cq="-1" aria-label="Quitar uno de ${esc(p.name)}">−</button><output>${x.qty}</output><button type="button" data-cq="1" aria-label="Agregar uno de ${esc(p.name)}">+</button></div>
           <span class="ci__price">${!hasPrice(p) ? `<small>Precio</small><b class="price-ask">A consultar</b>` : `${x.qty > 1 ? `<small>${money(p.price)} c/u</small>` : ""}<b>${money(p.price * x.qty)}</b>`}</span>
@@ -903,6 +972,24 @@ function renderCart() {
   $("#cartSave").textContent = "−" + money(save);
   $("#cartSaveRow").hidden = !save;
   $("#cartWarn").hidden = !outs; $("#cartNext").disabled = !!outs;
+  const en = entregaCarrito(), ce = $("#cartEnt");
+  ce.hidden = !(en.rap + en.lima);
+  ce.className = "cart__ent" + (en.lima && en.rap ? " cart__ent--mix" : en.rap ? " cart__ent--rap" : "");
+  ce.innerHTML = !en.lima ? `${I.rayo}<span>Todo tu pedido se entrega en <b>${plazoRap()}</b>: está en nuestro almacén de Chimbote.</span>`
+    : !en.rap ? `${I.truck}<span>Tu pedido llega en <b>${plazoLima()}</b>: viene de Lima.</span>`
+    : `${I.rayo}<span>Llega en dos entregas: <b>${prendas(en.rap)} en ${plazoRap()}</b> y <b>${prendas(en.lima)} en ${plazoLima()}</b> (${vienen(en.lima)} de Lima). El segundo envío no tiene costo adicional.</span>`;
+}
+/* Entrega de cada prenda del carrito y del pedido completo (en unidades), según el stock físico */
+function ciEntrega(p, x) {
+  const r = reparto(p, x.color, x.size, x.qty);
+  if (!r.lima) return `<span class="ci__ent ci__ent--rap">${I.rayo}Entrega en ${corto(plazoRap())}</span>`;
+  if (!r.rap) return `<span class="ci__ent">${I.truck}Llega en ${plazoLima()}</span>`;
+  return `<span class="ci__ent ci__ent--rap">${I.rayo}${r.rap} en ${corto(plazoRap())} · ${r.lima} en ${plazoLima()}</span>`;
+}
+function entregaCarrito() {
+  let rap = 0, lima = 0;
+  cart.forEach(x => { const p = findProduct(x.slug); if (!p || !tallaLibre(p, x.size, x.color)) return; const r = reparto(p, x.color, x.size, x.qty); rap += r.rap; lima += r.lima; });
+  return { rap, lima };
 }
 /* Prendas del carrito que se agotaron después de agregarlas (no se pueden pedir) */
 const cartOut = () => cart.filter(x => !tallaLibre(findProduct(x.slug), x.size, x.color)).length;
@@ -1157,14 +1244,14 @@ function qvSizes() {
   const p = qv.p;
   if (qv.size && !tallaLibre(p, qv.size, qv.color)) qv.size = null;
   $("#qvSizes").innerHTML = p.sizes.map(s => tallaLibre(p, s, qv.color)
-    ? `<button type="button"${s === qv.size ? ' class="on"' : ""}>${s}</button>`
+    ? `<button type="button"${s === qv.size ? ' class="on"' : ""} aria-label="${tallaAria(p, qv.color, s)}">${s}${tallaRap(p, qv.color, s)}</button>`
     : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("");
   $$("#qvSizes button:not(:disabled)").forEach(b => b.addEventListener("click", () => {
     $$("#qvSizes button").forEach(x => x.classList.remove("on")); b.classList.add("on");
     qv.size = b.textContent; updateQV();
   }));
 }
-function updateQV() { $("#qvWa").href = waLink(productMsg(qv.p, { size: qv.size, color: qv.color })); }
+function updateQV() { $("#qvWa").href = waLink(productMsg(qv.p, { size: qv.size, color: qv.color })); pintarEnt($("#qvEnt"), entregaLinea(qv.p, qv.color, qv.size)); }
 function closeQV() {
   const m = $("#modal"); if (!m || !m.classList.contains("open")) return;
   m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); document.body.style.overflow = "";
@@ -1655,6 +1742,7 @@ function initProducto() {
         <div class="opt">
           <div class="opt-label">Talla <button type="button" class="link-btn" id="guideBtn" aria-expanded="false" aria-controls="guide">Guía de tallas</button></div>
           <div class="size-btns" id="pSizes"></div>
+          <p class="ent-line" id="pEnt"></p>
           <div class="guide" id="guide">${guideHTML(p, state.color)}</div>
         </div>
         <div class="opt">
@@ -1668,14 +1756,14 @@ function initProducto() {
           <button type="button" class="pdp__share" id="pShare">${I.share}Compartir este producto</button>
         </div>
         <div class="pdp__trust">
-          <div>${I.truck}<span><b>Envío a domicilio</b> en ${C.distritos.map(esc).join(" y ")}: ${envioTxt()}. Llega en ${C.entrega}. También puedes ${C.recojoActivo ? "<b>recoger en tienda</b> o " : ""}pedir <b>envío a provincia</b> por ${esc(C.courier)}.</span></div>
+          <div>${I.truck}<span><b>Envío a domicilio</b> en ${C.distritos.map(esc).join(" y ")}: ${envioTxt()}. Llega en ${plazoRap()} si la talla está en nuestro almacén o en ${plazoLima()} si viene de Lima. También puedes ${C.recojoActivo ? "<b>recoger en tienda</b> o " : ""}pedir <b>envío a provincia</b> por ${esc(C.courier)}.</span></div>
           <div>${I.swap}<span><b>Cambios</b> hasta ${C.diasCambio} días después de recibir tu pedido</span></div>
           <div>${I.card}<span><b>Paga como prefieras:</b> ${PAGOS.charAt(0).toLowerCase() + PAGOS.slice(1)}</span></div>
         </div>
         <div class="acc">
           <details open><summary>Detalles de la prenda</summary><div class="acc__body"><dl><dt>Línea</dt><dd>${esc(lineName(p))}</dd><dt>Mundo</dt><dd>${st.name}</dd><dt>Ajuste</dt><dd>${esc(p.fit)}</dd>${p.material ? `<dt>Material</dt><dd>${esc(p.material)}</dd>` : ""}<dt>Tallas</dt><dd>${p.sizes.join(" · ")}</dd><dt>Colores</dt><dd>${p.colors.map(c => c[0]).join(", ")}</dd></dl></div></details>
           <details><summary>Cuidado</summary><div class="acc__body">${p.cat === "calzado" ? "Limpiar con un paño húmedo y crema para cuero. Guardar con horma o papel para mantener la forma." : "Lavar a máquina en agua fría con colores similares. Planchar al revés a temperatura media. No usar secadora ni lejía para mantener el color y la forma."}</div></details>
-          <details><summary>Envíos y cambios</summary><div class="acc__body">Envío a domicilio: ${envioTxt()}, en ${C.entrega} como máximo.${C.recojoActivo ? " Recojo en tienda sin costo." : ""} Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
+          <details><summary>Envíos y cambios</summary><div class="acc__body">Envío a domicilio: ${envioTxt()}, en ${plazoRap()} si está en nuestro almacén de Chimbote o en ${plazoLima()} si viene de Lima.${C.recojoActivo ? " Recojo en tienda sin costo." : ""} Puedes cambiar tu prenda hasta ${C.diasCambio} días después de recibirla, sin uso y con etiqueta. <a class="link-btn" href="ayuda.html#cambios">Ver políticas</a></div></details>
         </div>
       </div>
     </div>
@@ -1720,12 +1808,12 @@ function initProducto() {
 
   // Opciones
   const aviso = waLink(`Hola ${C.store} 👋, quisiera saber cuándo vuelve *${p.name}*.\n\n🔗 ${absUrl(productUrl(p))}`);
-  const update = () => { $("#pWa").href = out ? aviso : waLink(productMsg(p, state)); };
+  const update = () => { $("#pWa").href = out ? aviso : waLink(productMsg(p, state)); pintarEnt($("#pEnt"), entregaLinea(p, state.color, state.size, state.qty)); };
   // Tallas del color elegido: las que están en 0 se ven tachadas y no se pueden elegir
   const pSizes = () => {
     if (state.size && !tallaLibre(p, state.size, state.color)) state.size = null;
     $("#pSizes").innerHTML = p.sizes.map(s => tallaLibre(p, s, state.color)
-      ? `<button type="button" data-s="${s}"${s === state.size ? ' class="on"' : ""}>${s}</button>`
+      ? `<button type="button" data-s="${s}"${s === state.size ? ' class="on"' : ""} aria-label="${tallaAria(p, state.color, s)}">${s}${tallaRap(p, state.color, s)}</button>`
       : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("");
   };
   pSizes();
@@ -1817,7 +1905,7 @@ function initPack() {
     z.hidden = false;
     z.innerHTML = `${p.colors.length > 1 ? `<span>Color <em>${esc(x.color)}</em></span><div class="swatches">${p.colors.map(([n, c]) => `<button type="button" class="${n === x.color ? "on" : ""}${colorLibre(p, n) ? "" : " sw-out"}" style="background:${c}" title="${n}" aria-label="Color ${n}" data-step="${i}" data-col="${esc(n)}"></button>`).join("")}</div>` : ""}
       <span>Talla</span><div class="size-btns">${p.sizes.map(s => tallaLibre(p, s, x.color)
-        ? `<button type="button" data-step="${i}" data-s="${s}"${s === x.size ? ' class="on"' : ""}>${s}</button>`
+        ? `<button type="button" data-step="${i}" data-s="${s}"${s === x.size ? ' class="on"' : ""} aria-label="${tallaAria(p, x.color, s)}">${s}${tallaRap(p, x.color, s)}</button>`
         : `<button type="button" class="no" disabled aria-label="Talla ${s} agotada">${s}</button>`).join("")}</div>`;
   }
   $("#packSteps").addEventListener("click", e => {
@@ -1864,7 +1952,7 @@ function initPack() {
     $("#sumList").innerHTML = steps.map((s, i) => {
       const p = chosen[i];
       return p
-        ? `<div class="summary__item">${pic(colorImgs(p, sel[i].color)[0], "48px", { lazy: false })}<span><b>${esc(p.name)}</b>${p.colors.length > 1 ? `${esc(sel[i].color)} · ` : ""}${sel[i].size ? `Talla ${sel[i].size}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
+        ? `<div class="summary__item">${pic(colorImgs(p, sel[i].color)[0], "48px", { lazy: false })}<span><b>${esc(p.name)}</b>${p.colors.length > 1 ? `${esc(sel[i].color)} · ` : ""}${sel[i].size ? `Talla ${sel[i].size} · ${fisicoDe(p, sel[i].color, sel[i].size) > 0 ? `<span class="ent-txt ent-txt--rap">${corto(plazoRap())}</span>` : `<span class="ent-txt">${plazoLima()}</span>`}` : `<span style="color:var(--teal)">Elige talla</span>`}</span><em>${money(p.price)}</em></div>`
         : `<div class="summary__item"><span class="ph">${i + 1}</span><span>${s.title}</span><em>—</em></div>`;
     }).join("");
     $("#sumSub").textContent = money(sub);
@@ -1877,7 +1965,7 @@ function initPack() {
     $("#pbInfo").textContent = complete ? `Pack completo · −${off}%` : `${done} de ${steps.length} prendas`;
 
     const msg = codigo => [`Hola ${C.store} 👋, quiero armar mi *${PACK.name} ${st.name}*:`, `🧾 Pedido: *${codigo}*`, "",
-      ...chosen.map((p, i) => (p ? `${i + 1}. ${p.name}${p.colors.length > 1 ? ` — ${sel[i].color}` : ""} — Talla ${sel[i].size || "?"} — ${money(p.price)}` : "")),
+      ...chosen.map((p, i) => (p ? `${i + 1}. ${p.name}${p.colors.length > 1 ? ` — ${sel[i].color}` : ""} — Talla ${sel[i].size || "?"} — ${money(p.price)}${sel[i].size ? `\n   ${entregaMsg(p, sel[i].color, sel[i].size, 1)}` : ""}` : "")),
       "", `Precio normal: ${money(sub)}`, `Precio pack (−${off}%): ${money(total)}`].join("\n");
     [$("#sumWa"), $("#pbWa")].forEach(a => {
       a.href = complete ? waLink(msg("")) : "#"; a.setAttribute("aria-disabled", !complete);
@@ -1934,7 +2022,7 @@ function initContacto() {
 
   const faqs = [
     ["¿Cuánto cuesta el envío?", `El envío a domicilio cuesta ${money(C.envio)} y es gratis en compras desde ${money(C.envioGratisDesde)}.${C.recojoActivo ? " También puedes recoger tu pedido en tienda sin costo." : ` También enviamos a todo el Perú por ${C.courier}.`}`],
-    ["¿Cuánto demora mi pedido?", `Con envío a domicilio, tu pedido se entrega de ${C.entrega} como máximo.`],
+    ["¿Cuánto demora mi pedido?", `En ${plazoRap()} si la prenda está en nuestro almacén de Chimbote y en ${plazoLima()} si viene de Lima: lo ves en cada talla antes de pedir. Si tu pedido tiene de las dos, te lo entregamos en dos partes y el segundo envío no tiene costo adicional. A provincia sale por ${C.courier} en esos mismos plazos.`],
     ["¿Qué diferencia hay entre Badass y Martir Atelier?", "Badass es el lado urbano, cómodo y expresivo: Bassic (lo básico, siempre) y Bleesst (el lado más atrevido). Martir Atelier es el lado refinado y estructurado, con la colección Maison × Uomo Cattivo. Una misma persona puede ser ambos: combina prendas de los dos mundos."],
     ["¿Cómo sé cuál es mi talla?", "Cada producto tiene su guía de tallas con medidas en centímetros. Si tienes dudas, escríbenos por WhatsApp con tu altura y peso y te recomendamos la mejor talla."],
     ["¿Puedo cambiar una prenda?", `Sí. Tienes hasta ${C.diasCambio} días después de recibir tu pedido para cambiarla por otra talla o modelo, siempre que esté sin uso y con etiqueta.`],

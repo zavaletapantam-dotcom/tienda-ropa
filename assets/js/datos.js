@@ -18,7 +18,9 @@ window.CONFIG = {
   hours: "Atención 24 horas",
   envio: 10,                 // envío a domicilio (S/)
   envioGratisDesde: 200,     // envío gratis desde este monto
-  entrega: "1 a 2 días hábiles",
+  entrega: "24 horas o 2 días",
+  entregaAlmacen: "24 horas",  // prendas con stock físico en el almacén de Chimbote (lo marca el panel)
+  entregaLima: "2 días",       // prendas sin stock físico: vienen de Lima
   recojoActivo: false,       // recojo en tienda: false = por ahora no se ofrece (para volver a ofrecerlo, cambiar a true)
   recojo: "Urb. Luis Felipe De Las Casas, Mz. D Lt. 09, Bellamar, Nuevo Chimbote",   // dirección de la tienda para recojo
   recojoRef: "",                                 // referencia para llegar (opcional)

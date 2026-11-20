@@ -569,6 +569,19 @@ html[data-estilo="martir"].vt-in::after{--vt-from:var(--shade-om-panel)}
 .size-btns button{min-width:56px;height:48px;padding:0 10px;border:1px solid var(--line);font-weight:600;color:var(--ink);letter-spacing:1px;transition:.2s}
 .size-btns button:hover{border-color:var(--ink)}
 .size-btns button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+/* Entrega según el stock físico: 24 horas (almacén de Chimbote) o 2 días (desde Lima) */
+.size-btns button{position:relative}
+.rap-dot{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;background:#1D9E75;border:2px solid #fff}
+.ent-line .rap-dot{position:static;display:inline-block;vertical-align:-1px;width:9px;height:9px;border:0;margin:0 1px}
+.ent{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:3px 9px;border-radius:999px;background:#F1F0EC;color:#5F5E5A;font-size:11.5px;font-weight:600;line-height:1.35;letter-spacing:.2px}
+.ent svg{width:13px;height:13px;flex:none}
+.ent--rap{background:#E1F2EE;color:var(--teal)}
+.ent-line{display:flex;gap:9px;align-items:flex-start;margin:12px 0 0;padding:10px 12px;background:#F4F3EF;color:#444441;font-size:13px;line-height:1.5}
+.ent-line:empty{display:none}
+.ent-line svg{width:17px;height:17px;flex:none;margin-top:1px}
+.ent-line--rap,.ent-line--mix{background:#E9F5F2;color:var(--teal)}
+.ent-txt{font-weight:600;color:#5F5E5A}
+.ent-txt--rap{color:var(--teal)}
 .size-btns.shake{animation:shake .35s}
 @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 .guide{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
@@ -1106,6 +1119,9 @@ img.fade.ok{opacity:1}
 .ci__info small{font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:var(--teal);font-weight:500}
 .ci__name{font-size:14px;font-weight:600;color:var(--ink);line-height:1.3}
 .ci__opts{font-size:12.5px;color:var(--muted)}
+.ci__ent{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:11.5px;font-weight:600;color:#5F5E5A}
+.ci__ent svg{width:12px;height:12px;flex:none}
+.ci__ent--rap{color:var(--teal)}
 .ci__row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px}
 .qty--sm{height:34px}
 .qty--sm button{width:32px;font-size:16px}
@@ -1121,6 +1137,9 @@ img.fade.ok{opacity:1}
 .cart__row b{font-size:20px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
 .cart__row--save b{font-size:14px;color:var(--teal)}
 .cart__note{font-size:12px;line-height:1.5;margin:2px 0 6px}
+.cart__ent{display:flex;gap:8px;align-items:flex-start;margin:4px 0 8px;padding:9px 11px;background:#F4F3EF;color:#444441;font-size:12.5px;line-height:1.45}
+.cart__ent svg{width:16px;height:16px;flex:none;margin-top:1px}
+.cart__ent--rap,.cart__ent--mix{background:#E9F5F2;color:var(--teal)}
 .cart__note b{color:var(--ink);font-weight:500}
 .cart__links{display:flex;justify-content:space-between;margin-top:4px}
 .cart__links button{font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:6px;padding:6px 0}
