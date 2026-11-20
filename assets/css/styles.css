@@ -570,16 +570,13 @@ html[data-estilo="martir"].vt-in::after{--vt-from:var(--shade-om-panel)}
 .size-btns button:hover{border-color:var(--ink)}
 .size-btns button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 /* Entrega según el stock físico: 24 horas (almacén de Chimbote) o 2 días (desde Lima) */
-.size-btns button{position:relative}
-.rap-dot{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;background:#1D9E75;border:2px solid #fff}
-.ent-line .rap-dot{position:static;display:inline-block;vertical-align:-1px;width:9px;height:9px;border:0;margin:0 1px}
 .ent{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:3px 9px;border-radius:999px;background:#F1F0EC;color:#5F5E5A;font-size:11.5px;font-weight:600;line-height:1.35;letter-spacing:.2px}
 .ent svg{width:13px;height:13px;flex:none}
 .ent--rap{background:#E1F2EE;color:var(--teal)}
-.ent-line{display:flex;gap:9px;align-items:flex-start;margin:12px 0 0;padding:10px 12px;background:#F4F3EF;color:#444441;font-size:13px;line-height:1.5}
-.ent-line:empty{display:none}
-.ent-line svg{width:17px;height:17px;flex:none;margin-top:1px}
-.ent-line--rap,.ent-line--mix{background:#E9F5F2;color:var(--teal)}
+.ent-tag{margin-top:12px}
+.ent-tag:empty{display:none}
+.ent-tag .ent{margin-top:0;padding:5px 12px;font-size:12.5px}
+.ent-tag .ent svg{width:14px;height:14px}
 .ent-txt{font-weight:600;color:#5F5E5A}
 .ent-txt--rap{color:var(--teal)}
 .size-btns.shake{animation:shake .35s}
